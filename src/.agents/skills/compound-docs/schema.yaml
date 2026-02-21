@@ -1,0 +1,119 @@
+# Portable Solution Documentation Schema
+#
+# This schema defines a portable, repo-agnostic frontmatter contract for
+# `docs/solutions/**` documentation.
+#
+# Repos may optionally provide a stricter overlay at:
+#   .agents/skills/compound-docs/schema.project.yaml
+
+required_fields:
+  module:
+    type: string
+    description: "Product area, subsystem, or module affected"
+    examples:
+      - "Authentication"
+      - "Billing"
+      - "Search"
+
+  date:
+    type: string
+    pattern: '^\d{4}-\d{2}-\d{2}$'
+    description: "Date when this problem was solved (YYYY-MM-DD)"
+
+  problem_type:
+    type: enum
+    values:
+      - build_error
+      - test_failure
+      - runtime_error
+      - performance_issue
+      - database_issue
+      - security_issue
+      - ui_bug
+      - integration_issue
+      - logic_error
+      - developer_experience
+      - workflow_issue
+      - best_practice
+      - documentation_gap
+    description: "Primary category of the problem"
+
+  component:
+    type: string
+    description: "Component area (free text). Prefer stable slugs."
+    examples:
+      - "backend"
+      - "frontend"
+      - "database"
+      - "infra"
+      - "ci"
+      - "auth"
+      - "api"
+      - "docs"
+      - "tooling"
+
+  symptoms:
+    type: array[string]
+    min_items: 1
+    max_items: 5
+    description: "Observable symptoms (exact error messages, behavior)"
+
+  root_cause:
+    type: string
+    description: "Actual underlying cause (free text or stable slug)"
+
+  resolution_type:
+    type: enum
+    values:
+      - code_fix
+      - migration
+      - config_change
+      - test_fix
+      - dependency_update
+      - environment_setup
+      - workflow_improvement
+      - documentation_update
+      - tooling_addition
+      - seed_data_update
+    description: "Type of fix applied"
+
+  severity:
+    type: enum
+    values:
+      - critical
+      - high
+      - medium
+      - low
+    description: "Impact severity"
+
+optional_fields:
+  tags:
+    type: array[string]
+    max_items: 8
+    description: "Searchable keywords (lowercase, hyphen-separated)"
+
+  framework:
+    type: string
+    description: "Framework/library involved (if relevant)"
+
+  framework_version:
+    type: string
+    description: "Framework version (if known)"
+
+  runtime_version:
+    type: string
+    description: "Runtime version (if known)"
+
+  environment:
+    type: string
+    description: "dev|staging|prod|other"
+
+validation_rules:
+  - "module must be non-empty"
+  - "date must be in YYYY-MM-DD format"
+  - "problem_type must match one of the enum values"
+  - "severity must match one of the enum values"
+  - "resolution_type must match one of the enum values"
+  - "symptoms must be specific and observable (not vague)"
+  - "root_cause must be the actual cause, not a symptom"
+  - "tags should be lowercase, hyphen-separated"

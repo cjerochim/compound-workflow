@@ -1,0 +1,18 @@
+# Optional Project Overlay Schema
+#
+# If you want stricter enums for a specific repository, fill in this file.
+# The `compound-docs` flow should prefer validating against this overlay
+# (in addition to the portable core schema.yaml).
+#
+# Notes:
+# - You can convert `component` or `root_cause` into enums for this repo.
+# - Keep `problem_type`, `severity`, and `resolution_type` aligned with core.
+
+required_fields:
+  component:
+    # Set type to enum to enforce repo-specific taxonomy.
+    type: string
+
+  root_cause:
+    # Set type to enum to enforce repo-specific taxonomy.
+    type: string
