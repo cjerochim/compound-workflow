@@ -27,3 +27,5 @@ coverage/
 # Editor/IDE
 .vscode/
 .idea/
+
+.DS_Store
