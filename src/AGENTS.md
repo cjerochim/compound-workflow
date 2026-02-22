@@ -2,6 +2,17 @@
 
 This `.agents` workspace is portable and command-first.
 
+## Contents
+
+- Canonical Workflow
+- Planning Fidelity Model
+- Routing Rules
+- Repo Configuration (Optional)
+- Directory Layout
+- Implemented Components (Current Scope)
+- Skill Index (When to Use What)
+- Reference Standards Policy (Anti-Skill-Sprawl)
+
 ## Core Principles
 
 1. Commands are the public API. Skills and agents are composable internals.
@@ -99,12 +110,13 @@ project_tracker: github
 
 - Commands: `.agents/commands/*.md`
 - Skills: `.agents/skills/*/SKILL.md`
+- References: `.agents/references/**`
 - Agents: `.agents/agents/**/*.md`
 
 ## Implemented Components (Current Scope)
 
 - Commands: `brainstorm`, `plan`, `work`, `triage`, `review`, `compound`, `test-browser`, `metrics`, `assess`, `setup`
-- Skills: `brainstorming`, `document-review`, `compound-docs`, `file-todos`, `agent-browser`, `git-worktree`, `process-metrics`
+- Skills: `brainstorming`, `document-review`, `compound-docs`, `file-todos`, `agent-browser`, `git-worktree`, `process-metrics`, `pii-protection-prisma`, `financial-workflow-integrity`, `audit-traceability`, `data-foundations`
 - Agents:
   - `repo-research-analyst`
   - `learnings-researcher`
@@ -114,3 +126,60 @@ project_tracker: github
   - `spec-flow-analyzer`
   - `lint`
   - `bug-reproduction-validator`
+
+## Skill Index (When to Use What)
+
+Skills fall into two buckets:
+
+1. Workflow skills: invoked by commands to do work (e.g. `/review`, `/compound`).
+2. Reference standards: enforce design/build guardrails when the work touches security, privacy, money, or multi-tenant data.
+
+Use reference standards proactively during `/plan`, `/work`, and PR review.
+
+## Reference Standards Policy (Anti-Skill-Sprawl)
+
+To keep this workspace usable and portable, reference standards are intentionally limited.
+
+Rules:
+
+- Cap: MAX 12 reference standards skills under `.agents/skills/`.
+- Promotion: create a new reference standard skill only if it meets at least 2 criteria:
+  - introduces MUST/MUST NOT rules that change build decisions
+  - includes required schema/contracts/checklists that can be enforced in review
+  - has operational failure modes/runbooks
+  - applies across multiple features (not one-off project trivia)
+  - prevents a high-cost incident if followed
+- Overlap: each domain has a single "owner" skill; overlapping material MUST be added to the owner skill (as a new section) or demoted to a non-skill reference doc.
+- References location: non-skill references live in `.agents/references/` (this repo: `src/.agents/references/`) and are linked from `src/AGENTS.md` or the owning skill.
+
+Owner skills:
+
+- `data-foundations`: multi-tenant boundaries (views/functions), RLS, grants/revokes, tenant context.
+- `pii-protection-prisma`: PII placement, envelope encryption, key rotation, logging restrictions.
+- `financial-workflow-integrity`: idempotency, concurrency, webhooks, approvals for money-adjacent workflows.
+- `audit-traceability`: append-only audit logs, actor attribution, correlation IDs, privileged access audit.
+
+Maintenance:
+
+- If a reference standard becomes mostly examples/links, demote it into `.agents/references/` (this repo: `src/.agents/references/`) and keep the skill as the enforceable rules/checklists only.
+
+### Workflow skills
+
+| Skill | Use when |
+| --- | --- |
+| `brainstorming` | You need structured idea exploration and clarification without writing code. |
+| `document-review` | You need to review a document/spec and extract issues, gaps, and concrete next actions. |
+| `compound-docs` | A non-trivial problem is solved and should be captured as durable institutional knowledge. |
+| `file-todos` | You need a file-backed todo workflow for iterative multi-step changes. |
+| `agent-browser` | You need to inspect available agents/skills and route deterministically. |
+| `git-worktree` | You need isolated parallel work (review/feature) using git worktrees. |
+| `process-metrics` | You want to log and assess session performance and process improvements. |
+
+### Reference standards (guardrails)
+
+| Skill | Use when |
+| --- | --- |
+| `data-foundations` | You are designing multi-tenant schema/access boundaries (views/functions, RLS, grants/revokes). |
+| `pii-protection-prisma` | You store/process PII and need table separation + envelope encryption + rotation + logging rules. |
+| `financial-workflow-integrity` | A workflow has money/regulatory outcomes and must be correct under retries/concurrency/webhooks/approvals. |
+| `audit-traceability` | You need append-only auditing with actor attribution + correlation IDs without leaking PII. |
