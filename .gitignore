@@ -1,0 +1,29 @@
+.DS_Store
+
+# Git worktrees
+.worktrees/
+
+# Environment files
+.env
+.env.*
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Build artifacts
+dist/
+build/
+coverage/
+
+# Editor/IDE
+.vscode/
+.idea/

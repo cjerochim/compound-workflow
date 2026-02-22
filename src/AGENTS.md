@@ -27,23 +27,13 @@ Continuous improvement:
 - `/metrics` -> log + assess a session and suggest improvements
 - `/assess` -> aggregate daily metrics (weekly/monthly) and propose improvements
 
+Onboarding:
+
+- `/setup` -> configure repo defaults in `AGENTS.md` (Repo Config Block)
+
 This workspace currently implements `brainstorm`, `plan`, `work`, `review`, `compound`, and optional QA utilities.
 
-## Compatibility Aliases
-
-For users coming from Compound Engineering plugin naming, these aliases are included:
-
-- `/workflows:brainstorm` -> `/brainstorm`
-- `/workflows:plan` -> `/plan`
-- `/workflows:work` -> `/work`
-- `/workflows:review` -> `/review`
-- `/workflows:triage` -> `/triage`
-- `/workflows:compound` -> `/compound`
-
-Optional aliases:
-
-- `/workflows:metrics` -> `/metrics`
-- `/workflows:assess` -> `/assess`
+Use the canonical command names (`/plan`, `/work`, `/review`, etc.). This template does not ship aliases.
 
 ## Planning Fidelity Model
 
@@ -113,7 +103,7 @@ project_tracker: github
 
 ## Implemented Components (Current Scope)
 
-- Commands: `brainstorm`, `plan`, `work`, `triage`, `review`, `compound`, `test-browser`, `metrics`, `assess`
+- Commands: `brainstorm`, `plan`, `work`, `triage`, `review`, `compound`, `test-browser`, `metrics`, `assess`, `setup`
 - Skills: `brainstorming`, `document-review`, `compound-docs`, `file-todos`, `agent-browser`, `git-worktree`, `process-metrics`
 - Agents:
   - `repo-research-analyst`
