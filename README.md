@@ -47,10 +47,10 @@ Most delivery failures come from:
 
 This workflow makes those failure modes explicit:
 
-- `/plan` selects fidelity + confidence (how much planning depth you need)
-- `/work` executes from a persistent queue (`todos/`) and keeps the plan accurate
-- `/review` produces structured findings without mixing in implementation
-- `/compound` turns solved problems into searchable solution docs
+- `/workflow:plan` selects fidelity + confidence (how much planning depth you need)
+- `/workflow:work` executes from a persistent queue (`todos/`) and keeps the plan accurate
+- `/workflow:review` produces structured findings without mixing in implementation
+- `/workflow:compound` turns solved problems into searchable solution docs
 - `/metrics` logs + assesses the session so the system improves
 
 ## How To Use This (Step-by-Step)
@@ -65,21 +65,21 @@ This workflow makes those failure modes explicit:
 
 1) Clarify what you are building
 
-- Run `/brainstorm <topic>` when requirements are unclear.
+- Run `/workflow:brainstorm <topic>` when requirements are unclear.
 - Output: `docs/brainstorms/YYYY-MM-DD-<topic>-brainstorm.md`
 
 2) Create an implementation plan
 
-- Run `/plan <description or brainstorm path>`.
-- `/plan` must declare:
+- Run `/workflow:plan <description or brainstorm path>`.
+- `/workflow:plan` must declare:
   - `fidelity`: low|medium|high
   - `confidence`: high|medium|low
 - Output: `docs/plans/YYYY-MM-DD-<type>-<slug>-plan.md`
 
 3) Execute the plan (no auto-ship)
 
-- Run `/work <plan-path>`.
-- `/work`:
+- Run `/workflow:work <plan-path>`.
+- `/workflow:work`:
   - generates persistent todos under `todos/`
   - executes `*-ready-*.md` items
   - updates the plan checkboxes/sections as work completes
@@ -89,18 +89,18 @@ This workflow makes those failure modes explicit:
 
 4) Triage new work (when it appears)
 
-- If `/work` creates `pending` todos, run `/triage`.
-- `/triage` approves work by promoting `pending -> ready`, setting priority/dependencies.
+- If `/workflow:work` creates `pending` todos, run `/workflow:triage`.
+- `/workflow:triage` approves work by promoting `pending -> ready`, setting priority/dependencies.
 
 5) Validate quality
 
-- Run `/review current` (or `/review <PR|branch|doc>`).
+- Run `/workflow:review current` (or `/workflow:review <PR|branch|doc>`).
 - Output: structured findings with evidence + recommendation:
   - pass | pass-with-notes | fail
 
 6) Capture learnings (when it mattered)
 
-- Run `/compound` for non-trivial fixes or repeatable patterns.
+- Run `/workflow:compound` for non-trivial fixes or repeatable patterns.
 - Output: `docs/solutions/<category>/YYYY-MM-DD-<module-slug>-<symptom-slug>.md`
 
 7) Log and improve the process
@@ -112,15 +112,15 @@ This workflow makes those failure modes explicit:
 
 ## Canonical Workflow
 
-1. `/brainstorm` -> clarify WHAT to build
-2. `/plan` -> define HOW to build it (includes fidelity + confidence)
-3. `/work <plan-path>` -> execute via file-based todos (no auto-ship)
-4. `/review <target>` -> structured findings (no fixes by default)
-5. `/compound` -> capture a durable solution doc
+1. `/workflow:brainstorm` -> clarify WHAT to build
+2. `/workflow:plan` -> define HOW to build it (includes fidelity + confidence)
+3. `/workflow:work <plan-path>` -> execute via file-based todos (no auto-ship)
+4. `/workflow:review <target>` -> structured findings (no fixes by default)
+5. `/workflow:compound` -> capture a durable solution doc
 
 Supporting commands:
 
-- `/triage` -> approve and prioritize pending todo files
+- `/workflow:triage` -> approve and prioritize pending todo files
 - `/test-browser` -> optional browser validation using `agent-browser` CLI
 
 Continuous improvement:
@@ -130,17 +130,14 @@ Continuous improvement:
 
 ## Commands
 
-Core:
+Workflow (core):
 
-- `/brainstorm [topic]`
-- `/plan [description|brainstorm-path]`
-- `/work <docs/plans/...-plan.md>`
-- `/review [PR|URL|branch|current|doc-path]`
-- `/compound [context]`
-
-Queue management:
-
-- `/triage [pending|todo-path|issue-id]`
+- `/workflow:brainstorm [topic]`
+- `/workflow:plan [description|brainstorm-path]`
+- `/workflow:work <docs/plans/...-plan.md>`
+- `/workflow:review [PR|URL|branch|current|doc-path]`
+- `/workflow:compound [context]`
+- `/workflow:triage [pending|todo-path|issue-id]`
 
 QA utilities:
 
@@ -155,7 +152,7 @@ Onboarding:
 
 - `/setup` (writes/updates the Repo Config Block in `AGENTS.md`)
 
-Use the canonical command names (`/plan`, `/work`, `/review`, etc.). This template does not ship aliases.
+Use the canonical command names (`/workflow:plan`, `/workflow:work`, `/workflow:review`, etc.). This template does not ship aliases.
 
 ## Artifacts
 
@@ -196,7 +193,7 @@ project_tracker: github
 
 ## Notes on Shipping
 
-`/work` and `/review` are intentionally "no auto-ship" by default:
+`/workflow:work` and `/workflow:review` are intentionally "no auto-ship" by default:
 
 - no commits
 - no pushes

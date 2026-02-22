@@ -1,5 +1,6 @@
 ---
 name: plan
+invocation: workflow:plan
 description: Transform feature descriptions into well-structured project plans using an explicit fidelity and confidence model
 argument-hint: "[feature description, bug report, improvement idea, or brainstorm doc path]"
 ---
@@ -586,14 +587,14 @@ After writing the plan file, use the **AskUserQuestion tool** to present these o
 
 1. **Open plan in editor** - Open the plan file for review
 2. **Review and refine** - Improve the document through structured self-review
-3. **Start `/work`** - Begin implementing this plan locally
+3. **Start `/workflow:work`** - Begin implementing this plan locally
 4. **Create Issue** - Create issue in project tracker (GitHub/Linear)
 5. **Other** - Adjust the plan
 
 Optional (only if those workflows exist in this repo):
 
 - `/deepen-plan` - Enhance each section with parallel research agents
-- `/review` - Get technical feedback on the plan
+- `/workflow:review` - Get technical feedback on the plan
 
 Based on selection:
 
@@ -602,9 +603,9 @@ Based on selection:
 - **Create Issue** → See "Issue Creation" section below
 - **Other** → Accept free text for rework or specific changes
 
-**Note:** If running `/plan` with ultrathink enabled and `/deepen-plan` exists, automatically run `/deepen-plan` after plan creation for maximum depth and grounding.
+**Note:** If running `/workflow:plan` with ultrathink enabled and `/deepen-plan` exists, automatically run `/deepen-plan` after plan creation for maximum depth and grounding.
 
-Loop back to options after changes until user selects `/work` or ends the session.
+Loop back to options after changes until user selects `/workflow:work` or ends the session.
 
 ## Issue Creation
 
@@ -644,6 +645,6 @@ When user selects "Create Issue", detect their project tracker from repo guidanc
 
 5. **After creation:**
    - Display the issue URL
-   - Ask if they want to proceed to `/work`
+   - Ask if they want to proceed to `/workflow:work`
 
 NEVER CODE! Just research and write the plan.

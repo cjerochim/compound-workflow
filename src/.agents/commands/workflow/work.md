@@ -1,10 +1,11 @@
 ---
 name: work
+invocation: workflow:work
 description: Execute a plan file systematically (implementation + verification) without auto-shipping
 argument-hint: "<required: plan file path>"
 ---
 
-# /work
+# /workflow:work
 
 Execute a work plan efficiently while maintaining quality and finishing features.
 
@@ -124,7 +125,7 @@ The input must be a plan file path.
 
    After creating todos:
 
-   - If any todos are `pending`, stop and offer `/triage` to approve and prioritize before execution.
+   - If any todos are `pending`, stop and offer `/workflow:triage` to approve and prioritize before execution.
    - If all todos are `ready`, proceed to Phase 2.
 
 ### Phase 2: Execute
@@ -144,7 +145,7 @@ The input must be a plan file path.
 
    - If no unblocked `ready` todos remain:
      - summarize remaining `pending` and blocked items
-     - recommend running `/triage`
+     - recommend running `/workflow:triage`
      - stop (do not invent work)
 
    For each task in priority order:
@@ -274,7 +275,7 @@ The input must be a plan file path.
 
    Risk-based recommendation:
 
-   - If the plan fidelity is `high` or confidence is `low`, recommend running `/review current` before considering the work complete.
+   - If the plan fidelity is `high` or confidence is `low`, recommend running `/workflow:review current` before considering the work complete.
 
 Stop here by default.
 

@@ -59,4 +59,4 @@ When analyzing, consider:
 
 Your insights should help developers understand not just what the code does, but why it evolved to its current state, informing better decisions for future changes.
 
-Note that files in `docs/plans/` and `docs/solutions/` are workflow artifacts created by `/plan`. They are intentional, permanent living documents — do not recommend their removal or characterize them as unnecessary.
+Note that files in `docs/plans/` and `docs/solutions/` are workflow artifacts created by `/workflow:plan`. They are intentional, permanent living documents — do not recommend their removal or characterize them as unnecessary.

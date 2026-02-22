@@ -1,10 +1,11 @@
 ---
 name: review
+invocation: workflow:review
 description: Review a PR/branch/diff with structured findings. Does not implement fixes unless explicitly requested.
 argument-hint: "[PR number, GitHub URL, branch name, 'current', or a doc path]"
 ---
 
-# /review
+# /workflow:review
 
 Run a structured, evidence-based review. This command produces findings and recommendations; it does not implement fixes by default.
 
@@ -96,7 +97,7 @@ Provide:
 
 Also include:
 
-- Next step suggestion: `/work` to implement, or `file-todos` for tracked follow-ups
+- Next step suggestion: `/workflow:work` to implement, or `file-todos` for tracked follow-ups
 
 Optional:
 

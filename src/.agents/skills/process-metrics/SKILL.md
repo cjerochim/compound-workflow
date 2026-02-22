@@ -1,6 +1,6 @@
 ---
 name: process-metrics
-description: Define a portable metrics schema and templates for evaluating workflow performance. Use after work/review/compound to log outcomes and refine the system.
+description: Define a portable metrics schema and templates for evaluating workflow performance. Use after /workflow:work, /workflow:review, or /workflow:compound to log outcomes and refine the system.
 ---
 
 # Process Metrics

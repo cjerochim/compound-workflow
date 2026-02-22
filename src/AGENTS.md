@@ -23,15 +23,15 @@ This `.agents` workspace is portable and command-first.
 
 ## Canonical Workflow
 
-1. `/brainstorm` -> clarify what to build
-2. `/plan` -> define how to build it
-3. `/work` -> implement
-4. `/review` -> validate quality
-5. `/compound` -> capture durable learnings
+1. `/workflow:brainstorm` -> clarify what to build
+2. `/workflow:plan` -> define how to build it
+3. `/workflow:work` -> implement
+4. `/workflow:review` -> validate quality
+5. `/workflow:compound` -> capture durable learnings
 
 Supporting command:
 
-- `/triage` -> approve and prioritize pending todos
+- `/workflow:triage` -> approve and prioritize pending todos
 
 Continuous improvement:
 
@@ -44,11 +44,11 @@ Onboarding:
 
 This workspace currently implements `brainstorm`, `plan`, `work`, `review`, `compound`, and optional QA utilities.
 
-Use the canonical command names (`/plan`, `/work`, `/review`, etc.). This template does not ship aliases.
+Use the canonical command names (`/workflow:plan`, `/workflow:work`, `/workflow:review`, etc.). This template does not ship aliases.
 
 ## Planning Fidelity Model
 
-`/plan` must always declare:
+`/workflow:plan` must always declare:
 
 - `Fidelity selected`: `Low | Medium | High`
 - `Confidence`: `High | Medium | Low`
@@ -108,15 +108,15 @@ project_tracker: github
 
 ## Directory Layout
 
-- Commands: `.agents/commands/*.md`
+- Commands: `.agents/commands/*.md` and `.agents/commands/workflow/*.md` (workflow namespace)
 - Skills: `.agents/skills/*/SKILL.md`
 - References: `.agents/references/**`
 - Agents: `.agents/agents/**/*.md`
 
 ## Implemented Components (Current Scope)
 
-- Commands: `brainstorm`, `plan`, `work`, `triage`, `review`, `compound`, `test-browser`, `metrics`, `assess`, `setup`
-- Skills: `brainstorming`, `document-review`, `compound-docs`, `file-todos`, `agent-browser`, `git-worktree`, `process-metrics`, `pii-protection-prisma`, `financial-workflow-integrity`, `audit-traceability`, `data-foundations`
+- Commands: `workflow:brainstorm`, `workflow:plan`, `workflow:work`, `workflow:triage`, `workflow:review`, `workflow:compound` (under `.agents/commands/workflow/`), plus `test-browser`, `metrics`, `assess`, `setup` (root commands)
+- Skills: `brainstorming`, `document-review`, `technical-review`, `compound-docs`, `file-todos`, `agent-browser`, `git-worktree`, `process-metrics`, `pii-protection-prisma`, `financial-workflow-integrity`, `audit-traceability`, `data-foundations`
 - Agents:
   - `repo-research-analyst`
   - `learnings-researcher`
@@ -131,10 +131,10 @@ project_tracker: github
 
 Skills fall into two buckets:
 
-1. Workflow skills: invoked by commands to do work (e.g. `/review`, `/compound`).
+1. Workflow skills: invoked by commands to do work (e.g. `/workflow:review`, `/workflow:compound`).
 2. Reference standards: enforce design/build guardrails when the work touches security, privacy, money, or multi-tenant data.
 
-Use reference standards proactively during `/plan`, `/work`, and PR review.
+Use reference standards proactively during `/workflow:plan`, `/workflow:work`, and PR review.
 
 ## Reference Standards Policy (Anti-Skill-Sprawl)
 
@@ -169,6 +169,7 @@ Maintenance:
 | --- | --- |
 | `brainstorming` | You need structured idea exploration and clarification without writing code. |
 | `document-review` | You need to review a document/spec and extract issues, gaps, and concrete next actions. |
+| `technical-review` | A plan or feature approach has passed document review and must be checked for technical correctness before build. |
 | `compound-docs` | A non-trivial problem is solved and should be captured as durable institutional knowledge. |
 | `file-todos` | You need a file-backed todo workflow for iterative multi-step changes. |
 | `agent-browser` | You need to inspect available agents/skills and route deterministically. |

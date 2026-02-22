@@ -8,7 +8,7 @@ argument-hint: "[optional: path to AGENTS.md (defaults to ./AGENTS.md)]"
 
 Configure this repo to use the portable `.agents` workflows deterministically.
 
-This command updates the "Repo Config Block" YAML in `AGENTS.md`.
+This command updates the "Repo Config Block" YAML in `AGENTS.md` and keeps the repo-root `opencode.json` in sync with `.agents/commands/*` and `.agents/agents/**` so running plain `opencode` always has the right commands and agents registered.
 
 ## Inputs
 
@@ -61,6 +61,71 @@ This command updates the "Repo Config Block" YAML in `AGENTS.md`.
 
 6. Write/update the YAML block with the provided values.
 
+7. Sync OpenCode configuration (repo-root `opencode.json`).
+
+   Why: When users run plain `opencode`, OpenCode loads `./opencode.json` at the repo root. A config at `.opencode/opencode.json` is not used unless the user explicitly sets `OPENCODE_CONFIG`.
+
+   7.1 Discover source command and agent definitions:
+
+   - Commands: glob `.agents/commands/*.md`
+     - command id: prefer frontmatter `name`, else file basename
+     - description: frontmatter `description` (fallback: `"<name>"`)
+   - Agents: glob `.agents/agents/**/*.md`
+
+     - agent id: frontmatter `name` (fallback: file basename)
+     - description: frontmatter `description` (fallback: `"<name>"`)
+
+     7.2 Ensure repo-root `opencode.json` exists.
+
+     7.2.1 Validate schema URL (online check).
+
+   - Fetch `https://opencode.ai/config.json` and confirm it returns JSON.
+   - Sanity check that it looks like the OpenCode config schema (e.g., it contains top-level fields like `properties` and includes `command` / `agent` keys).
+   - If the fetch fails (offline, network, etc.), proceed using the known schema URL anyway, but explicitly note that the schema check could not be verified.
+
+   - If missing: create it with:
+     - `$schema: https://opencode.ai/config.json` (from the validated schema URL)
+     - `skills.paths: [".agents/skills"]`
+     - `command: {}` and `agent: {}` populated from discovered sources
+   - If present: update it (merge + prune) without touching unrelated user config.
+
+     7.3 Write/update commands in `opencode.json`.
+
+   For each discovered command `<cmd>` (from `.agents/commands/<cmd>.md`), ensure:
+
+   - `command.<cmd>.description` is set from frontmatter
+   - `command.<cmd>.agent` is `"build"`
+   - `command.<cmd>.template` includes the source file contents using OpenCode's documented file reference syntax:
+
+     - `@AGENTS.md`
+     - `@.agents/commands/<cmd>.md`
+     - `Arguments: $ARGUMENTS`
+
+     7.4 Write/update agents in `opencode.json`.
+
+   For each discovered agent `<agent>` (from `.agents/agents/**/<file>.md`), ensure:
+
+   - `agent.<agent>.description` is set from frontmatter
+   - `agent.<agent>.mode` is `"subagent"`
+   - `agent.<agent>.prompt` loads the file using OpenCode's documented file substitution syntax:
+     - `{file:.agents/agents/<relative-path>.md}`
+   - Safety default: set `agent.<agent>.permission.edit` to `"deny"` unless the agent is intended to edit files.
+
+     7.5 Prune stale managed entries (enabled).
+
+   Remove entries from `opencode.json` only when they are clearly managed by this sync:
+
+   - Managed commands: any `command.*.template` that contains `@.agents/commands/`
+     - If its corresponding source file no longer exists, delete that `command.*` entry.
+   - Managed agents: any `agent.*.prompt` that contains `{file:.agents/agents/`
+     - If its corresponding source file no longer exists, delete that `agent.*` entry.
+
+   Never delete non-managed commands/agents.
+
+8. Verify configuration is being picked up:
+
+   - Run `opencode debug config` and confirm `command` and `agent` are populated.
+
 Rules:
 
 - Prefer "suggest + confirm" over guessing.
@@ -70,5 +135,5 @@ Rules:
 
 ## Guardrails
 
-- Only modify `AGENTS.md`.
+- Only modify `AGENTS.md` and repo-root `opencode.json`.
 - Do not run tests, lint, or any destructive git commands.

@@ -281,7 +281,7 @@ Structure your findings as:
 
 This agent is designed to be invoked by:
 
-- `/plan` - To inform planning with institutional knowledge
+- `/workflow:plan` - To inform planning with institutional knowledge
 - `/deepen-plan` - To add depth with relevant learnings
 - Manual invocation before starting work on a feature
 

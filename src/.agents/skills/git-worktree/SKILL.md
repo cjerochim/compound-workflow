@@ -29,8 +29,8 @@ This skill is intentionally portable.
 
 Use this skill in these scenarios:
 
-1. **Code Review (`/review`)**: If NOT already on the target branch, offer worktree for isolated review
-2. **Feature Work (`/work`)**: Offer worktree for isolated parallel development
+1. **Code Review (`/workflow:review`)**: If NOT already on the target branch, offer worktree for isolated review
+2. **Feature Work (`/workflow:work`)**: Offer worktree for isolated parallel development
 3. **Parallel Development**: When working on multiple features simultaneously
 4. **Cleanup**: After completing work in a worktree
 
@@ -38,7 +38,7 @@ Use this skill in these scenarios:
 
 ### Usage
 
-This skill can be invoked from `/work` or manually from bash.
+This skill can be invoked from `/workflow:work` or manually from bash.
 
 ```bash
 # Create a new worktree
@@ -150,8 +150,8 @@ git worktree list
 
 ## Integration with Workflows
 
-- `/work` should ask whether to use a worktree and request a branch name.
-- `/review` may offer a worktree when not on the target branch.
+- `/workflow:work` should ask whether to use a worktree and request a branch name.
+- `/workflow:review` may offer a worktree when not on the target branch.
 
 ## Troubleshooting
 

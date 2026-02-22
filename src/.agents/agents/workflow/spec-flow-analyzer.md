@@ -146,4 +146,4 @@ Key principles:
 
 Your goal is to ensure that when implementation begins, developers have a crystal-clear understanding of every user journey, every edge case is accounted for, and no critical questions remain unanswered. Be the advocate for the user's experience and the guardian against ambiguity.
 
-If invoked from `/plan`, ensure recommendations align with the selected plan fidelity (Low/Medium/High).
+If invoked from `/workflow:plan`, ensure recommendations align with the selected plan fidelity (Low/Medium/High).

@@ -1,10 +1,11 @@
 ---
 name: compound
+invocation: workflow:compound
 description: Document a recently solved problem into docs/solutions/ to compound institutional knowledge
 argument-hint: "[optional: brief context about the fix]"
 ---
 
-# /compound
+# /workflow:compound
 
 Capture a solved problem while context is fresh.
 
@@ -17,8 +18,8 @@ Create a single structured solution document in `docs/solutions/` with YAML fron
 ## Usage
 
 ```bash
-/compound                    # Document the most recent fix
-/compound [brief context]    # Provide additional context hint
+/workflow:compound                    # Document the most recent fix
+/workflow:compound [brief context]    # Provide additional context hint
 ```
 
 ## Execution Strategy
@@ -181,7 +182,7 @@ Build → Test → Find Issue → Research → Improve → Document → Validate
 
 <auto_invoke> <trigger_phrases> - "that worked" - "it's fixed" - "working now" - "problem solved" </trigger_phrases>
 
-<manual_override> Use /compound [context] to document immediately without waiting for auto-detection. </manual_override> </auto_invoke>
+<manual_override> Use /workflow:compound [context] to document immediately without waiting for auto-detection. </manual_override> </auto_invoke>
 
 ## Routes To
 
@@ -195,9 +196,9 @@ Only invoke agents that exist locally.
 
 ### When to Invoke
 - **Auto-triggered** (optional): Agents can run post-documentation for enhancement
-- **Manual trigger**: User can invoke agents after /compound completes for deeper review
+- **Manual trigger**: User can invoke agents after /workflow:compound completes for deeper review
 - **Customize agents**: Extend `.agents/agents/` with additional reviewers and update this command to reference them
 
 ## Related Commands
 
-- `/plan` - Planning workflow (references documented solutions)
+- `/workflow:plan` - Planning workflow (references documented solutions)

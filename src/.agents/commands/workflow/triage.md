@@ -1,14 +1,15 @@
 ---
 name: triage
+invocation: workflow:triage
 description: Triage pending todo files into an executable ready queue (priority, dependencies, recommended action)
 argument-hint: "[optional: todo path, issue id, or 'pending' (default)]"
 ---
 
-# /triage
+# /workflow:triage
 
 Turn `todos/*-pending-*.md` items into an executable queue.
 
-This command does not implement fixes. It approves and organizes work so `/work` can execute without ambiguity.
+This command does not implement fixes. It approves and organizes work so `/workflow:work` can execute without ambiguity.
 
 ## Inputs
 
@@ -40,7 +41,7 @@ This command does not implement fixes. It approves and organizes work so `/work`
    - list remaining pending todos
    - list blocked todos with missing dependencies
 5. Next step suggestion:
-   - run `/work <plan-path>` to execute ready items
+   - run `/workflow:work <plan-path>` to execute ready items
 
 ## Guardrails
 

@@ -41,7 +41,7 @@ Post-capture actions (by explicit user choice) may update other references (e.g.
 - "problem solved"
 - "that did it"
 
-**OR manual:** `/compound` command
+**OR manual:** `/workflow:compound` command
 
 **Non-trivial problems only:**
 
@@ -367,7 +367,7 @@ Action:
 ## Integration Points
 
 **Invoked by:**
-- /compound command (primary interface)
+- /workflow:compound command (primary interface)
 - Manual invocation in conversation after solution confirmed
 - Can be triggered by detecting confirmation phrases like "that worked", "it's fixed", etc.
 

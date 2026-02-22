@@ -36,7 +36,7 @@ Score the document against these criteria:
 | **Specificity**  | Concrete enough for next step (brainstorm → can plan, plan → can implement)      |
 | **YAGNI**        | No hypothetical features, simplest approach chosen                               |
 
-If invoked within a workflow (after `/brainstorm` or `/plan`), also check:
+If invoked within a workflow (after `/workflow:brainstorm` or `/workflow:plan`), also check:
 
 - **User intent fidelity** — Document reflects what was discussed, assumptions validated
 

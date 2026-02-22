@@ -93,7 +93,7 @@ dependencies: ["001"]     # issue_ids this is blocked by
 
 Create a todo when it is non-trivial (>15-20 min), needs research, has dependencies, or should persist across sessions.
 
-### Create Todos From a Plan (Recommended for /work)
+### Create Todos From a Plan (Recommended for /workflow:work)
 
 When executing a plan, create persistent todos so progress is trackable across sessions.
 
@@ -141,7 +141,7 @@ Plan sync expectations:
    - renaming file `*-pending-*` -> `*-ready-*`
    - updating frontmatter `status: pending` -> `status: ready`
 
-If this repo has a `/triage` command, it may be used. Otherwise, perform triage directly in the todo files.
+If this repo has a `/workflow:triage` command, it may be used. Otherwise, perform triage directly in the todo files.
 
 ### Execute a Ready Todo
 
