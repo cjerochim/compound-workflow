@@ -255,7 +255,27 @@ The input must be a plan file path.
 
    After decision:
    - Convert the decision into explicit todos (implementation/investigation/deferral).
+   - If the chosen option is to run a timeboxed investigation or prototype, follow the **Spike Protocol** below.
    - Record the decision + rationale in the todo Work Log.
+
+   **Spike Protocol (allocate a spike)**
+
+   Trigger: the plan includes spike/discussion todos (e.g. `tags: [spike]`), or the Blocker Protocol decision is to run a timeboxed investigation/prototype to de-risk.
+
+   Steps:
+
+   1. **Spike todo:** Create a new `todos/*-pending-*.md` todo tagged `tags: [spike]` (or convert the current blocked todo to a spike todo). Fill Problem Statement, Proposed Solutions (options), and Acceptance Criteria (deliverable). If triage has not been run, recommend `/workflow:triage` to approve the spike and set timebox + deliverable; then treat the spike as `ready` once approved.
+   2. **Isolated execution:** Recommend a dedicated spike worktree. Use `skill: git-worktree` with branch name `spike/<todo_id>-<slug>` (e.g. `spike/003-auth-approach`). Run worktree bootstrap per the git-worktree skill. Execute the spike in that worktree so build work is not mixed with exploration.
+   3. **Research subagents (per spike):** Run in parallel when useful:
+      - Always (when agents exist): Task repo-research-analyst(context), Task learnings-researcher(context)
+      - Conditional: Task framework-docs-researcher(topic), Task best-practices-researcher(topic), Task git-history-analyzer(context) when touching existing behavior or framework choices
+   4. **Spike deliverable (required in spike todo Work Log):**
+      - Options (>=3) with pros/cons, risks, effort
+      - Recommendation (one option + why)
+      - Concrete next steps: create or update build todos (or plan checkbox to flip) so the main plan can proceed
+      - **Should we compound this?** yes/no + one-line why (if yes, recommend `/workflow:compound` with spike context after the spike is complete)
+   5. **Multiple spikes:** If there are N approved spike todos and they are independent, create N worktrees (one per spike, under configured `worktree_dir`). Run one spike per worktree; when the environment supports multiple agents, spikes may run in parallel.
+   6. **After spike completion:** Mark the spike todo complete (`*-complete-*.md`). If the deliverable said "compound: yes", recommend running `/workflow:compound` with the spike context so the learning is captured in `docs/solutions/` with `tags: [..., spike]`.
 
  2. **Follow Existing Patterns**
 

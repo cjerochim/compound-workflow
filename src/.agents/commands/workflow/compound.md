@@ -34,6 +34,8 @@ After the primary solution doc is written, optional post-capture actions (by exp
 /workflow:compound [brief context]    # Provide additional context hint
 ```
 
+**Spike outcomes:** When a spike (timeboxed investigation) resolved a blocker and produced reusable learning, run `/workflow:compound` with the spike context to capture the outcome in `docs/solutions/`. For solution docs that originated from a spike, include `spike` in the doc's `tags` frontmatter (e.g. `tags: [spike, ...]`) so spike-origin learnings are searchable.
+
 ## Guardrails
 
 - Do not modify code. Do not create commits or push.

@@ -77,6 +77,7 @@ Extract from conversation history:
 - Environment/stage (dev/staging/prod)
 - OS version
 - File/line references
+- **Spike-origin:** If this solution came from a spike (timeboxed investigation from `/workflow:work` Spike Protocol), include `spike` in the doc's `tags` frontmatter when creating the documentation.
 
 **BLOCKING REQUIREMENT:** If critical context is missing (module name, exact error, environment/stage, or resolution steps), ask user and WAIT for response before proceeding to Step 3:
 

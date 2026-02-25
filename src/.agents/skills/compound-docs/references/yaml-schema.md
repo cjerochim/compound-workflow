@@ -21,7 +21,7 @@ If present, `.agents/skills/compound-docs/schema.project.yaml` acts as an option
 - **framework_version** (string): Framework version in X.Y.Z if known
 - **runtime_version** (string): Runtime version (e.g., ruby 3.3.1, node 20.11.0)
 - **environment** (string): dev|staging|prod|other
-- **tags** (array): Searchable keywords (lowercase, hyphen-separated)
+- **tags** (array): Searchable keywords (lowercase, hyphen-separated). Include `spike` when the solution originated from a spike (timeboxed investigation).
 
 ## Validation Rules
 
@@ -48,6 +48,23 @@ framework_version: 7.1.2
 resolution_type: code_fix
 severity: high
 tags: [n-plus-one, eager-loading, performance]
+---
+```
+
+Example with spike-origin doc:
+
+```yaml
+---
+module: Auth Service
+date: 2026-02-20
+problem_type: integration_issue
+component: backend
+symptoms:
+  - "Unclear whether OAuth or API keys fit our scale"
+root_cause: spike-recommendation
+resolution_type: documentation_update
+severity: medium
+tags: [spike, oauth, api-keys]
 ---
 ```
 

@@ -2,7 +2,7 @@
 status: pending
 priority: p2
 issue_id: "XXX"
-tags: []
+tags: []  # e.g. spike, discussion, backend, testing
 dependencies: []
 ---
 

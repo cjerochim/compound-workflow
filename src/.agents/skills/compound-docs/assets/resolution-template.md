@@ -13,7 +13,7 @@ runtime_version: [optional, e.g., ruby 3.3.1|node 20.11.0]
 environment: [optional, dev|staging|prod|other]
 resolution_type: [code_fix|migration|config_change|test_fix|dependency_update|environment_setup]
 severity: [critical|high|medium|low]
-tags: [keyword1, keyword2, keyword3]
+tags: [keyword1, keyword2, keyword3]  # include "spike" when this doc originated from a spike
 ---
 
 # Troubleshooting: [Clear Problem Title]

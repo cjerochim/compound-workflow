@@ -118,10 +118,14 @@ Default mapping rules:
    - include a "Plan checkbox" pointer when derived from a checkbox (exact text)
    - otherwise include a short "Plan section" pointer (heading name or anchor)
    - write Acceptance Criteria that is testable
+6. **Discussion Points and Spike Candidates:** If the plan has sections `## Discussion Points (resolve/decide)` or `## Spike Candidates (timeboxed)`:
+   - Checkboxes under **Discussion Points** → create `todos/*-pending-*.md` with `tags: [discussion]` and `status: pending`.
+   - Checkboxes under **Spike Candidates** (including items like `- [ ] Spike: ...`) → create `todos/*-pending-*.md` with `tags: [spike]` and `status: pending`.
+   - These items require triage before execution; do not default them to `ready` unless the plan is explicitly approved and triage has been run.
 
 Status and priority defaults:
 
-- `status`: `ready` when the plan is approved; otherwise `pending`
+- `status`: `ready` when the plan is approved and the todo is not from Discussion Points or Spike Candidates; otherwise `pending`. Todos with `tags: [discussion]` or `tags: [spike]` default to `pending`.
 - `priority`: `p2` unless clearly urgent/high-risk
 
 Dependencies:

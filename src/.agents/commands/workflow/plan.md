@@ -162,6 +162,8 @@ Research mode: local only | local + external
 Open questions: none | <list>
 ```
 
+**When Open questions is not "none":** You MUST materialize them in the plan body as actionable items (see Step 2.5). If an unknown blocks implementation feasibility, prefer **Spike Candidates**. If confidence is `Low`, the plan MUST include at least one checkbox under Discussion Points or Spike Candidates so `/workflow:work` can create pending todos and triage can resolve them.
+
 ### 1.5b. External Research (Conditional)
 
 Run external research when Step 1.5 selected `local + external`.
@@ -239,6 +241,19 @@ If SpecFlow was run in Step 1.7:
 
 - [ ] Review SpecFlow analysis results
 - [ ] Ensure any identified gaps or edge cases are reflected in the issue structure and acceptance criteria
+
+### 3.5. Discussion Points & Spike Candidates (REQUIRED when Open questions ≠ none)
+
+When you declared Open questions in Step 1.5 (other than "none"), the plan file MUST include one or both of these sections with checkboxes so `/workflow:work` and `file-todos` can create pending todos for triage:
+
+- **## Discussion Points (resolve/decide)** — Decisions to make (no code). Use `- [ ]` items (e.g. "Decide: X or Y?", "Confirm constraint Z").
+- **## Spike Candidates (timeboxed)** — Timeboxed investigations to de-risk. Use `- [ ] Spike: <short description>` items.
+
+Rules:
+
+- If an unknown blocks implementation feasibility, prefer listing it under **Spike Candidates**.
+- If confidence is `Low`, include at least one checkbox in one of these sections.
+- These sections may appear after the main implementation content (e.g. after Acceptance Criteria or References) or in a dedicated "Unknowns & decisions" area; ensure they are in the written plan file when Open questions exist.
 
 ### 4. Choose Implementation Detail Level
 
@@ -614,6 +629,8 @@ mkdir -p docs/plans/
 ```
 
 Write the complete plan file to `docs/plans/YYYY-MM-DD-<type>-<slug>-plan.md`. This step is mandatory and cannot be skipped — even when running as part of LFG/SLFG or other automated pipelines.
+
+**When Open questions were declared (Step 1.5):** The written plan MUST include at least one of: `## Discussion Points (resolve/decide)` with `- [ ]` items, or `## Spike Candidates (timeboxed)` with `- [ ] Spike: ...` items. If confidence is `Low`, at least one checkbox is required in one of these sections. This ensures `file-todos` can create pending discussion/spike todos for `/workflow:triage`.
 
 Confirm: "Plan written to docs/plans/[filename]"
 
