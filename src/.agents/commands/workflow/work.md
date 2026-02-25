@@ -78,29 +78,50 @@ The input must be a plan file path.
 
    Determine how to isolate the work for this plan.
 
-   1) Check your current branch:
+   Default: use a worktree (recommended). The user may opt out.
+
+   1) Resolve your current branch (this is the default worktree base):
 
    - If you are already on a branch that clearly matches this plan, continue.
-   - Otherwise, offer a worktree for parallel isolation.
+   - Otherwise, continue anyway — the current active branch remains the reference/base for a new worktree unless the user explicitly requests a different base.
 
-   2) Ask the user:
+   2) Ask the user (opt-out prompt):
 
-   - "Do you want to use a worktree for this work? (recommended for isolation)"
-   - If yes: "What branch name should I use?" (e.g., `feat/<slug>`, `fix/<slug>`)
+   - "Use a worktree for this work? (default: Yes; recommended for isolation)"
+   - Options:
+     - Yes (worktree)
+     - No (stay in current checkout; create/switch to a feature branch)
+
+   If Yes: ask for the new branch name (e.g., `feat/<slug>`, `fix/<slug>`).
 
    3) If worktree is chosen, run:
 
    ```bash
    skill: git-worktree
-   # Provide the branch name and optional base branch if needed
+   # Provide:
+   # - branch-name: <new branch name>
+   # - from-branch: <current active branch>   (ALWAYS, unless the user overrides)
    ```
 
-   4) If worktree is not chosen:
+   3.5) Worktree bootstrap (REQUIRED when worktree created)
+
+   Immediately after entering the new worktree, run bootstrap per the `git-worktree` skill (AGENTS keys + autodetect). See `.agents/skills/git-worktree/SKILL.md` for the canonical algorithm (copy env/config, install deps, and `worktree_bootstrap_notes`).
+
+   4) If worktree is not chosen (opt-out):
 
    - Create or switch to a feature branch (never work directly on the default branch).
 
 3. **Create Todo List**
-   - Use the `file-todos` skill to break the plan into actionable, persistent todo files under `todos/`
+
+   Run:
+
+   ```bash
+   skill: file-todos
+   # Input: plan file path (the input document)
+   # Output: todos/*-ready-*.md and/or todos/*-pending-*.md per skill rules
+   ```
+
+   - Break the plan into actionable, persistent todo files under `todos/`
    - Include dependencies between tasks
    - Prioritize based on what needs to be done first
    - Include testing and quality check tasks
@@ -134,7 +155,7 @@ The input must be a plan file path.
 
    Todo selection rules (default):
 
-   - Consider only `todos/*-ready-*.md` items.
+   - Consider only `todos/*-ready-*.md` items. Do not execute `pending` or `deferred` todos.
    - Skip blocked todos:
      - blocked if `dependencies` is non-empty and any dependency does not have a corresponding `*-complete-*.md` file.
    - Prioritize by priority then id:
@@ -144,8 +165,8 @@ The input must be a plan file path.
    Stop condition:
 
    - If no unblocked `ready` todos remain:
-     - summarize remaining `pending` and blocked items
-     - recommend running `/workflow:triage`
+     - summarize remaining `pending`, `deferred` (parked for reference), and blocked items
+     - recommend running `/workflow:triage` for pending items
      - stop (do not invent work)
 
    For each task in priority order:
@@ -158,7 +179,8 @@ The input must be a plan file path.
       - Implement following existing conventions
       - Write tests for new functionality
       - Run tests after changes according to the selected testing mode
-      - Update the todo file Work Log and Acceptance Criteria
+      - REQUIRED: Validation Gate (prove acceptance criteria + record evidence)
+      - Update the todo file Work Log and Acceptance Criteria (include evidence)
       - Mark off the corresponding checkbox in the plan file ([ ] → [x])
       - When a todo is complete, rename it to `*-complete-*.md` and update frontmatter
     ```
@@ -189,11 +211,51 @@ The input must be a plan file path.
       - results
       - next steps
 
-    Scope changes:
+    Discovery + scope changes (ask each time):
 
-    - If new work is discovered:
-      - create a new `pending` todo (default priority `p2`), capture context, and link it to the plan.
-      - do not silently expand scope inside an existing todo unless it remains small and tightly coupled.
+    - If new, non-critical work is discovered, do NOT silently expand scope.
+    - Ask the user to choose one:
+      1) Do now (scope increase): only if small + tightly coupled
+      2) Create a triage item: create a new `pending` todo (default `p3` unless urgent) to be approved or deferred via `/workflow:triage`
+      3) Park for reference: create a todo with Problem Statement + Findings + rationale, then mark it **deferred** (`*-deferred-*.md`, `status: deferred`) so it is kept for future reference but not in the executable queue
+      4) Compound candidate only: capture as a `/workflow:compound` documentation candidate (no todo by default)
+    - Always record the decision in the todo Work Log.
+
+   **Validation Gate (per todo)**
+
+   Before marking a todo complete, you MUST prove the acceptance criteria are met.
+
+   For each todo:
+   - Re-state the acceptance criteria being validated (1–3 bullets)
+   - Run the smallest verification that proves it (tests, command output, UI check)
+   - Record evidence in the todo Work Log:
+     - commands run + results
+     - files changed (paths)
+     - if UI: route(s) validated + screenshots/logs when applicable
+
+   If validation fails:
+   - stop and fix immediately, or
+   - if blocked, follow the Blocker Protocol.
+
+   **Blocker Protocol (pause implementation)**
+
+   Trigger: you cannot proceed safely due to ambiguity, missing info, failing approach, or environment/tooling issue.
+
+   Rules:
+   - Pause implementation. Do not “push through” with guesses.
+   - Timebox investigation to reach options (not a full rewrite).
+   - Produce at least 3 viable options.
+
+   Output format (always):
+   - Blocker summary (1–2 sentences)
+   - Constraints discovered (bullets)
+   - Options (>=3): each with pros/cons, risks, effort
+   - Recommendation: one option + why (2–4 bullets)
+   - Decision prompt (single question): “Which option should we take?”
+
+   After decision:
+   - Convert the decision into explicit todos (implementation/investigation/deferral).
+   - Record the decision + rationale in the todo Work Log.
 
  2. **Follow Existing Patterns**
 

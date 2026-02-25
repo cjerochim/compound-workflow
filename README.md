@@ -30,6 +30,21 @@ Optional: configure repo defaults in `AGENTS.md` (see "Repo Config Block").
 
 If you prefer interactive onboarding, run `/setup` after copying to populate the Repo Config Block.
 
+### Sync from a clone
+
+If you clone compound-workflow **inside** your repo (e.g. `vendor/compound-workflow` or `compound-workflow/`):
+
+1. Open the clone in Cursor (or set `COMPOUND_SYNC_TARGET` to your repo root).
+2. Run **`/sync`** to copy `src/.agents` into the host repo and update the host's `opencode.json`. For `AGENTS.md`: if the host doesn't have one, it's copied; if the host already has `AGENTS.md`, the AI merges the template with the host file (preserving Repo Config Block and repo-specific content).
+3. In the host repo, run `/setup` once to configure repo defaults (default_branch, test_command, etc.) if you haven't already.
+
+From the terminal (copy only; does not update `opencode.json`):
+
+```bash
+./scripts/sync-into-repo.sh           # sync into parent directory
+./scripts/sync-into-repo.sh /path/to/repo
+```
+
 ## What Problem This Solves
 
 Most delivery failures come from:

@@ -15,7 +15,7 @@ This skill provides a unified interface for managing Git worktrees across your d
 - **Clean up completed worktrees** automatically
 - **Interactive confirmations** at each step
 - **Automatic .gitignore management** for worktree directory
-- **Optional env file copying** from repo root to new worktrees
+- **Bootstrap new worktrees** (optional): copy env/config files + install deps (non-overwriting, portable defaults)
 
 ## Portability Notes
 
@@ -42,8 +42,7 @@ This skill can be invoked from `/workflow:work` or manually from bash.
 
 ```bash
 # Create a new worktree
-git fetch origin
-git worktree add -b feature-login ".worktrees/feature-login" "origin/main"
+git worktree add -b feature-login ".worktrees/feature-login" "HEAD"
 
 # List all worktrees
 git worktree list
@@ -62,26 +61,60 @@ Inputs:
 - `branch-name` (required)
 - `from-branch` (optional)
 
-Default base branch selection:
+Default base selection (single source of truth):
 
 - If `from-branch` is provided, use it.
-- Otherwise, prefer the current branch.
-- If the current branch is the default branch, use the repo's configured `default_branch` (AGENTS.md) or fall back to `main` then `master`.
+- Otherwise, use the current active branch (or `HEAD` if detached).
 
 Steps:
 
-1. Ensure `.worktrees/` exists.
-2. Ensure `.worktrees/` is ignored by git (add to `.gitignore` if needed).
-3. Fetch the base branch from origin.
-4. Create the worktree at `.worktrees/<branch-name>`.
-5. Optionally copy env files from repo root to the new worktree.
+1. Resolve `worktree_dir`:
+   - Prefer `worktree_dir` from the Repo Config Block in `AGENTS.md` when present
+   - Otherwise default to `.worktrees/`
+2. Ensure the worktree dir exists.
+3. Ensure the worktree dir is ignored by git (add to `.gitignore` if needed).
+4. (Optional) `git fetch origin` if you intend to base off a remote ref.
+5. Create the worktree at `<worktree_dir>/<sanitized-branch-name>`.
+   - Sanitize branch names for paths: replace `/` with `-` (e.g. `feat/foo` → `feat-foo`)
+6. Bootstrap (optional but recommended for `/workflow:work`):
+   - Copy env/config files (non-overwriting)
+   - Install dependencies (command from config or best-effort autodetect)
 
 Example:
 
 ```bash
-git fetch origin
-git worktree add -b "feat/my-feature" ".worktrees/feat-my-feature" "origin/main"
+git worktree add -b "feat/my-feature" ".worktrees/feat-my-feature" "HEAD"
 ```
+
+## Bootstrap (Hybrid: config override + safe autodetect)
+
+This skill is portable, so bootstrap is best-effort by default and configurable per repo via `AGENTS.md`.
+
+Sources (precedence):
+
+1. Repo Config Block (`AGENTS.md`):
+   - `worktree_copy_files`
+   - `worktree_install_command`
+   - `worktree_bootstrap_notes` (read-first prerequisites; not executed)
+2. Safe defaults + autodetect when keys are missing.
+
+### Copy env/config files (non-overwriting)
+
+- Prefer `worktree_copy_files` from `AGENTS.md`.
+- Otherwise default to copying: `.env` and `.env.*`
+  - Exclude `.env.example`, `.env.template`, `.env.sample` (and similar).
+- Do not overwrite existing files in the target worktree.
+
+### Install dependencies
+
+- Prefer `worktree_install_command` from `AGENTS.md`.
+- Otherwise auto-detect (Node-first):
+  - `pnpm-lock.yaml` → `pnpm install`
+  - `yarn.lock` → `yarn install`
+  - `package-lock.json` → `npm ci`
+  - `bun.lockb` → `bun install`
+  - `package.json` only → `npm install`
+- If you cannot infer safely, ask once for the install command.
 
 ## List Worktrees
 
@@ -106,8 +139,7 @@ Remove worktree directories explicitly with `git worktree remove`.
 ### Code Review with Worktree
 
 ```bash
-git fetch origin
-git worktree add -b pr-123-feature-name ".worktrees/pr-123-feature-name" "origin/main"
+git worktree add -b pr-123-feature-name ".worktrees/pr-123-feature-name" "HEAD"
 cd .worktrees/pr-123-feature-name
 
 # After review, remove when done:
@@ -119,9 +151,8 @@ git worktree prune
 ### Parallel Feature Development
 
 ```bash
-git fetch origin
-git worktree add -b feature-login ".worktrees/feature-login" "origin/main"
-git worktree add -b feature-notifications ".worktrees/feature-notifications" "origin/main"
+git worktree add -b feature-login ".worktrees/feature-login" "HEAD"
+git worktree add -b feature-notifications ".worktrees/feature-notifications" "HEAD"
 git worktree list
 ```
 
@@ -136,9 +167,9 @@ git worktree list
 
 ### Opinionated Defaults
 
-- Worktrees default to base branch **main** (unless specified)
-- Worktrees stored in **.worktrees/** directory
-- Branch name becomes worktree name
+- Worktrees default to base branch **current active branch** (unless `from-branch` specified)
+- Worktrees stored in **.worktrees/** directory (unless overridden by `worktree_dir`)
+- Branch name becomes worktree directory name (sanitized for filesystem)
 - **.gitignore** automatically managed
 
 ### Safety First
@@ -150,7 +181,7 @@ git worktree list
 
 ## Integration with Workflows
 
-- `/workflow:work` should ask whether to use a worktree and request a branch name.
+- `/workflow:work` should default to a worktree (opt-out), pass `from-branch = current active branch`, and then bootstrap (copy env/config + install deps).
 - `/workflow:review` may offer a worktree when not on the target branch.
 
 ## Troubleshooting
@@ -182,9 +213,15 @@ git worktree list
 
 ### Optional: Copy env files
 
-If your repo uses env files and you want them in the worktree, copy from the repo root to the worktree directory.
+If your repo uses env/config files and you want them in the worktree, copy from the repo root to the worktree directory.
 
-Do not overwrite existing files.
+Rules:
+
+- Prefer `worktree_copy_files` from `AGENTS.md` when present.
+- Otherwise default to `.env` and `.env.*` (exclude example/template files).
+- Do not overwrite existing files.
+
+Also consider `worktree_bootstrap_notes` from `AGENTS.md` (system deps/services/tooling) before running installs/tests.
 
 Navigate back to main:
 

@@ -11,7 +11,7 @@ argument-hint: "[feature description, bug report, improvement idea, or brainstor
 
 **Note: The current year is 2026.** Use this when dating plans and searching for recent documentation.
 
-Transform feature descriptions, bug reports, or improvement ideas into well-structured markdown files issues that follow project conventions and best practices. This command provides flexible detail levels to match your needs.
+Transform feature descriptions, bug reports, or improvement ideas into well-structured markdown plan files that follow project conventions and best practices. This command provides flexible detail levels to match your needs.
 
 This workflow MUST choose a planning fidelity and confidence level before final plan construction:
 
@@ -25,6 +25,12 @@ This workflow MUST choose a planning fidelity and confidence level before final 
 **If the feature description above is empty, ask the user:** "What would you like to plan? Please describe the feature, bug fix, or improvement you have in mind."
 
 Do not proceed until you have a clear feature description from the user.
+
+## Guardrails
+
+- Do not write or modify application code.
+- Do not create commits, push branches, or create PRs.
+- Output is the plan file only; post-generation options are user-driven actions on that file.
 
 ## Resolve Repo Defaults (ALWAYS FIRST)
 
@@ -60,11 +66,11 @@ Use file discovery tools (Glob/Read) to locate and read recent brainstorm docume
 5. Use brainstorm decisions as input to the research phase
 
 **If multiple brainstorms could match:**
-Use **AskUserQuestion tool** to ask which brainstorm to use, or whether to proceed without one.
+Use **AskQuestion** to ask which brainstorm to use, or whether to proceed without one.
 
 **If no brainstorm found (or not relevant), run idea refinement:**
 
-Refine the idea through collaborative dialogue using the **AskUserQuestion tool**:
+Refine the idea through collaborative dialogue using **AskQuestion**:
 
 - Ask questions one at a time to understand the idea fully
 - Prefer multiple choice questions when natural options exist
@@ -136,6 +142,12 @@ Baseline policy (by fidelity):
 
 Override: high-risk topics always require external research, even if the user prefers speed.
 
+**Required sections by fidelity** (ensure the chosen template includes these; see Step 4):
+
+- **Low**: problem, constraints, acceptance criteria, implementation outline, verification checklist
+- **Medium**: all Low + alternatives/tradeoffs, dependency/risk table, rollout notes, observability/test notes
+- **High**: all Medium + failure modes, rollback plan, deployment gates, migration/data safety checks, expanded test matrix
+
 Required announcement format:
 
 ```
@@ -185,19 +197,29 @@ After all research steps complete, consolidate findings:
 
 **Optional validation:** Briefly summarize findings and ask if anything looks off or missing before proceeding to planning.
 
+### 1.7. SpecFlow Analysis (by fidelity)
+
+Run flow/gap analysis to surface missing requirements before locking structure:
+
+- **Low fidelity:** optional (skip if scope is trivial)
+- **Medium fidelity:** recommended
+- **High fidelity:** required
+
+When running: Task spec-flow-analyzer(feature_description, research_findings). Then incorporate identified gaps and edge cases into the upcoming issue structure and acceptance criteria.
+
 ### 2. Issue Planning & Structure
 
 <thinking>
 Think like a product manager - what would make this issue clear and actionable? Consider multiple perspectives
 </thinking>
 
-**Title & Categorization:**
+**Title & Categorization (single contract):**
 
-- [ ] Draft clear, searchable issue title using conventional format (e.g., `feat: Add user authentication`, `fix: Cart total calculation`)
-- [ ] Determine issue type: enhancement, bug, refactor
-- [ ] Convert title to filename: add today's date prefix, strip prefix colon, kebab-case, add `-plan` suffix
-  - Example: `feat: Add User Authentication` → `2026-01-21-feat-add-user-authentication-plan.md`
-  - Keep it descriptive (3-5 words after prefix) so plans are findable by context
+- [ ] **type**: one of `feat | fix | refactor` (used in filename and for issue prefix)
+- [ ] **title**: clear, searchable human title **without** a type prefix (e.g., "Add user authentication", "Cart total calculation")
+- [ ] **Filename**: `YYYY-MM-DD-<type>-<slug>-plan.md` where `<slug>` is kebab-case of the title (3–5 words, descriptive)
+  - Example: type `feat`, title "User authentication flow" → `2026-01-21-feat-user-authentication-flow-plan.md`
+  - Never embed a colon or space in the filename; keep plans findable by context
 
 **Stakeholder Analysis:**
 
@@ -211,17 +233,12 @@ Think like a product manager - what would make this issue clear and actionable? 
 - [ ] Gather supporting materials (error logs, screenshots, design mockups)
 - [ ] Prepare code examples or reproduction steps if applicable, name the mock filenames in the lists
 
-### 3. SpecFlow Analysis
+### 3. Incorporate SpecFlow (if Step 1.7 ran)
 
-After planning the issue structure, run SpecFlow Analyzer to validate and refine the feature specification:
-
-- Task spec-flow-analyzer(feature_description, research_findings)
-
-**SpecFlow Analyzer Output:**
+If SpecFlow was run in Step 1.7:
 
 - [ ] Review SpecFlow analysis results
-- [ ] Incorporate any identified gaps or edge cases into the issue
-- [ ] Update acceptance criteria based on SpecFlow findings
+- [ ] Ensure any identified gaps or edge cases are reflected in the issue structure and acceptance criteria
 
 ### 4. Choose Implementation Detail Level
 
@@ -239,10 +256,13 @@ If the user explicitly requests a different level, allow it, but keep required f
 
 **Best for:** Simple bugs, small improvements, clear features
 
-**Includes:**
+**Includes (required for Low fidelity):**
 
 - Problem statement or feature description
+- Constraints
 - Basic acceptance criteria
+- Implementation outline (e.g., MVP)
+- Verification checklist
 - Essential context only
 
 **Structure:**
@@ -258,6 +278,10 @@ date: YYYY-MM-DD
 # [Issue Title]
 
 [Brief problem/feature description]
+
+## Constraints
+
+[Key constraints (technical, scope, or policy)]
 
 ## Acceptance Criteria
 
@@ -276,6 +300,11 @@ date: YYYY-MM-DD
 [Minimal pseudo code illustrating the MVP]
 ```
 
+## Verification Checklist
+
+- [ ] How to verify requirement 1
+- [ ] How to verify requirement 2
+
 ## References
 
 - Related issue: #[issue_number]
@@ -286,12 +315,14 @@ date: YYYY-MM-DD
 
 **Best for:** Most features, complex bugs, team collaboration
 
-**Includes everything from MINIMAL plus:**
+**Includes everything from MINIMAL plus (required for Medium fidelity):**
 
 - Detailed background and motivation
-- Technical considerations
+- Alternatives/tradeoffs
+- Dependency/risk table
+- Rollout notes
+- Observability and test notes
 - Success metrics
-- Dependencies and risks
 - Basic implementation suggestions
 
 **Structure:**
@@ -318,6 +349,10 @@ date: YYYY-MM-DD
 
 [High-level approach]
 
+## Alternatives / Tradeoffs
+
+[Other options considered and why this approach]
+
 ## Technical Considerations
 
 - Architecture impacts
@@ -334,9 +369,19 @@ date: YYYY-MM-DD
 
 [How we measure success]
 
-## Dependencies & Risks
+## Dependencies & Risks (table)
 
-[What could block or complicate this]
+| Dependency / Risk | Impact | Mitigation |
+|-------------------|--------|------------|
+| ...               | ...    | ...        |
+
+## Rollout
+
+[Phased rollout or release notes]
+
+## Observability & Test Plan
+
+[What to monitor; how to test and validate]
 
 ## References & Research
 
@@ -349,14 +394,14 @@ date: YYYY-MM-DD
 
 **Best for:** Major features, architectural changes, complex integrations
 
-**Includes everything from MORE plus:**
+**Includes everything from MORE plus (required for High fidelity):**
 
 - Detailed implementation plan with phases
-- Alternative approaches considered
-- Extensive technical specifications
+- Failure modes and rollback plan
+- Deployment gates and migration/data safety
+- Expanded test matrix
 - Resource requirements and timeline
 - Future considerations and extensibility
-- Risk mitigation strategies
 - Documentation requirements
 
 **Structure:**
@@ -442,6 +487,26 @@ date: YYYY-MM-DD
 ## Risk Analysis & Mitigation
 
 [Comprehensive risk assessment]
+
+## Failure Modes
+
+[Key failure modes and how they manifest]
+
+## Rollback Plan
+
+[How to roll back safely; triggers and steps]
+
+## Deployment Gates
+
+[Pre-deploy checks and gates]
+
+## Migration / Data Safety
+
+[Data migrations, backfills, and safety checks]
+
+## Expanded Test Matrix
+
+[Test scenarios by dimension: env, role, data, edge cases]
 
 ## Resource Requirements
 
@@ -548,11 +613,11 @@ Apply best practices for clarity and actionability, making the issue easy to sca
 mkdir -p docs/plans/
 ```
 
-Use the Write tool to save the complete plan to `docs/plans/YYYY-MM-DD-<type>-<descriptive-name>-plan.md`. This step is mandatory and cannot be skipped — even when running as part of LFG/SLFG or other automated pipelines.
+Write the complete plan file to `docs/plans/YYYY-MM-DD-<type>-<slug>-plan.md`. This step is mandatory and cannot be skipped — even when running as part of LFG/SLFG or other automated pipelines.
 
 Confirm: "Plan written to docs/plans/[filename]"
 
-**Non-interactive mode:** If invoked from an automated workflow, skip AskUserQuestion calls. Make reasonable default decisions (including fidelity and confidence) and proceed to writing the plan.
+**Non-interactive mode:** When the invocation is non-interactive (e.g., `workflow:plan` run by automation, CI, or with an explicit non-interactive flag/convention), skip AskQuestion calls and do not present Post-Generation Options. For determinism, the repo should define the flag or convention (e.g., in `AGENTS.md` Repo Config Block or a documented env var). Still **declare** Fidelity, Confidence, Research mode, and Open questions in the required announcement format before writing the plan. Use these defaults when user input is unavailable: fidelity = Medium, confidence = Medium, research mode = local + external for Medium/High risk topics else local only. Proceed directly to writing the plan file and then exit or return the plan path as output.
 
 **Required in plan frontmatter:** Add these fields to the plan file:
 
@@ -561,10 +626,10 @@ Confirm: "Plan written to docs/plans/[filename]"
 
 ## Output Format
 
-**Filename:** Use the date and kebab-case filename from Step 2 Title & Categorization.
+**Filename:** Use the filename from Step 2 (Title & Categorization): `YYYY-MM-DD-<type>-<slug>-plan.md` with type and slug from the single contract.
 
 ```
-docs/plans/YYYY-MM-DD-<type>-<descriptive-name>-plan.md
+docs/plans/YYYY-MM-DD-<type>-<slug>-plan.md
 ```
 
 Examples:
@@ -579,9 +644,9 @@ Examples:
 
 ## Post-Generation Options
 
-After writing the plan file, use the **AskUserQuestion tool** to present these options:
+After writing the plan file, use **AskQuestion** to present these options:
 
-**Question:** "Plan ready at `docs/plans/YYYY-MM-DD-<type>-<name>-plan.md`. What would you like to do next?"
+**Question:** "Plan ready at `docs/plans/YYYY-MM-DD-<type>-<slug>-plan.md`. What would you like to do next?"
 
 **Options:**
 
@@ -594,16 +659,17 @@ After writing the plan file, use the **AskUserQuestion tool** to present these o
 Optional (only if those workflows exist in this repo):
 
 - `/deepen-plan` - Enhance each section with parallel research agents
-- `/workflow:review` - Get technical feedback on the plan
+- **Technical review** - Load `technical-review` skill for technical correctness (no edits). Pair with `document-review` to apply any agreed changes to the plan.
 
 Based on selection:
 
-- **Open plan in editor** → Run `open docs/plans/<plan_filename>.md` to open the file in the user's default editor
+- **Open plan in editor** → Open the plan file in the editor (navigate to `docs/plans/<plan_filename>.md`)
 - **Review and refine** → Load `document-review` skill.
+- **Technical review** → Load `technical-review` skill; then if user agrees to changes, load `document-review` to update the plan.
 - **Create Issue** → See "Issue Creation" section below
 - **Other** → Accept free text for rework or specific changes
 
-**Note:** If running `/workflow:plan` with ultrathink enabled and `/deepen-plan` exists, automatically run `/deepen-plan` after plan creation for maximum depth and grounding.
+**Note:** Only if `/deepen-plan` exists in this repo and the user has enabled it (e.g., ultrathink), you may run `/deepen-plan` after plan creation for extra depth; it is optional, not required.
 
 Loop back to options after changes until user selects `/workflow:work` or ends the session.
 
@@ -618,25 +684,27 @@ When user selects "Create Issue", detect their project tracker from repo guidanc
 
 2. **If GitHub:**
 
-   Use the title and type from Step 2 (already in context - no need to re-read the file):
+   Use **type** and **title** from Step 2 (title has no prefix). Compose issue title as `"<type>: <title>"` (e.g., `feat: User authentication flow`).
 
-   If the `gh` CLI is available, you can create the issue via:
+   If the `gh` CLI is available, create the issue via:
 
    ```bash
    gh issue create --title "<type>: <title>" --body-file <plan_path>
    ```
 
-   Otherwise, provide the title + body for manual issue creation.
+   Otherwise, provide the composed title + body for manual issue creation.
 
 3. **If Linear:**
 
-   If the `linear` CLI is available, you can create the issue via:
+   Use **type** and **title** from Step 2. For Linear, use either the full title or `"<type>: <title>"` per team convention.
+
+   If the `linear` CLI is available, create the issue via:
 
    ```bash
-   linear issue create --title "<title>" --description "$(cat <plan_path>)"
+   linear issue create --title "<type>: <title>" --description "$(cat <plan_path>)"
    ```
 
-   Otherwise, provide the title + body for manual issue creation.
+   Otherwise, provide the composed title + body for manual issue creation.
 
 4. **If no tracker configured:**
    Ask user: "Which project tracker do you use? (GitHub/Linear/Other)"

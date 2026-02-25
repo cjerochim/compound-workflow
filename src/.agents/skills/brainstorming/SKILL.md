@@ -47,40 +47,72 @@ If requirements are clear, suggest: "Your requirements seem clear. Consider proc
 
 ### Phase 1: Understand the Idea
 
-Ask questions **one at a time** to understand the user's intent. Avoid overwhelming with multiple questions.
+Default to **discussion-first**. Questions are a tool of last resort to unblock discussion, not the main loop.
 
-**Question Techniques:**
+**Default cadence (per iteration):**
+
+1. **Synthesize current understanding** (2--4 bullets)
+2. **Ask at most ONE high-leverage clarifying question** (only if needed)
+3. **Surface tensions & unknowns** via 3--5 **discussion prompts** (not interrogation)
+4. **Capture assumptions + tentative decisions** (bullets)
+
+**Hard rules:**
+
+- Ask **no more than one** clarifying question per iteration.
+- Do **not** ask follow-up questions in the same turn.
+- If ambiguity is blocking progress, ask **one** additional clarifying question max, then return to discussion prompts.
+
+**First response template (copy/paste shape):**
+
+```markdown
+**What I think you're aiming for (so far):**
+- ...
+- ...
+
+**One question to anchor us:**
+<single sentence>
+
+**Prompts to react to (pick any):**
+- Tradeoff: ...
+- Edge area: ...
+- UX vs architecture: ...
+- Scale implication: ...
+- Short-term vs long-term: ...
+
+**Working assumptions (tell me what’s wrong):**
+- ...
+- ...
+```
+
+**Choosing the ONE question (when needed):**
 
 1. **Prefer multiple choice when natural options exist**
 
    - Good: "Should the notification be: (a) email only, (b) in-app only, or (c) both?"
    - Avoid: "How should users be notified?"
 
-2. **Start broad, then narrow**
+2. **Make it high-leverage**
 
-   - First: What is the core purpose?
-   - Then: Who are the users?
-   - Finally: What constraints exist?
+   - Anchor on **purpose**, **users**, **success**, or a **hard constraint**
+   - Avoid implementation sequencing ("how will we build it?")
 
 3. **Validate assumptions explicitly**
 
    - "I'm assuming users will be logged in. Is that correct?"
 
-4. **Ask about success criteria early**
-   - "How will you know this feature is working well?"
+4. **Prefer success criteria early**
+   - "What would make you say 'this worked'?"
 
-**Key Topics to Explore:**
+**Prompt menu (examples):**
 
-| Topic             | Example Questions                                     |
-| ----------------- | ----------------------------------------------------- |
-| Purpose           | What problem does this solve? What's the motivation?  |
-| Users             | Who uses this? What's their context?                  |
-| Constraints       | Any technical limitations? Timeline? Dependencies?    |
-| Success           | How will you measure success? What's the happy path?  |
-| Edge Cases        | What shouldn't happen? Any error states to consider?  |
-| Existing Patterns | Are there similar features in the codebase to follow? |
+- Purpose: "What problem is painful enough to fix now?"
+- Users/context: "Who is the primary user and what’s their moment-of-need?"
+- Constraints: "What constraint should we treat as immovable?"
+- Success: "What does success look like (observable behavior)?"
+- Edges: "What must not happen? What failure would be unacceptable?"
+- Patterns: "What existing behavior/pattern do we want to preserve?"
 
-**Exit Condition:** Continue until the idea is clear OR user says "proceed" or "let's move on"
+**Exit condition:** Continue until direction is clear OR the user says "proceed" / "move on".
 
 ### Phase 2: Explore Approaches
 
@@ -153,9 +185,10 @@ topic: <kebab-case-topic>
 
 Before handoff, review the `Open Questions` section.
 
-- Ask the user about each open question (one at a time) when possible.
+- Classify open questions as **blocking** vs **non-blocking**.
+- Ask the user about each **blocking** question (one at a time) when possible.
 - Move resolved items into a `Resolved Questions` section.
-- If an item must remain open, keep it in `Open Questions` with clear ownership or a decision deadline.
+- Keep non-blocking items in `Open Questions` to carry into planning, with clear ownership or a decision deadline.
 
 ### Phase 4: Handoff
 
@@ -179,9 +212,9 @@ During brainstorming, actively resist complexity:
 
 Keep sections short—200-300 words maximum. After each section of output, pause to validate understanding:
 
-- "Does this match what you had in mind?"
-- "Any adjustments before we continue?"
-- "Is this the direction you want to go?"
+- "What part feels most important / most wrong?"
+- "Which prompt should we dig into next?"
+- "Any assumption I should flip before we continue?"
 
 This prevents wasted effort on misaligned designs.
 
@@ -189,7 +222,7 @@ This prevents wasted effort on misaligned designs.
 
 | Anti-Pattern                          | Better Approach                             |
 | ------------------------------------- | ------------------------------------------- |
-| Asking 5 questions at once            | Ask one at a time                           |
+| Asking many questions in a row        | Ask 1 high-leverage question, then prompts  |
 | Jumping to implementation details     | Stay focused on WHAT, not HOW               |
 | Proposing overly complex solutions    | Start simple, add complexity only if needed |
 | Ignoring existing codebase patterns   | Research what exists first                  |

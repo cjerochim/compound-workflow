@@ -76,7 +76,6 @@ tags: [keyword1, keyword2, keyword3]
 [Technical explanation of:]
 1. What was the ROOT CAUSE of the problem?
 2. Why does the solution address this root cause?
-3. What was the underlying issue (API misuse, configuration error, Rails version issue, etc.)?
 3. What was the underlying issue (API misuse, configuration error, version constraint, etc.)?
 
 [Be detailed enough that future developers understand the "why", not just the "what"]

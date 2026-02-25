@@ -15,8 +15,14 @@ dialogue. It precedes `/workflow:plan`, which answers **HOW** to build
 it.
 
 **Process knowledge:** Load the `brainstorming` skill for detailed
-question techniques, approach exploration patterns, and YAGNI
-principles.
+discussion-first facilitation (one-question-then-prompts), approach
+exploration patterns, and YAGNI principles.
+
+## Guardrails
+
+- Do not write or modify application code.
+- Do not create commits or PRs.
+- Output is the brainstorm document only.
 
 ---
 
@@ -49,7 +55,7 @@ description.
 - Constrained, well-defined scope
 
 **If requirements are already clear:**\
-Use **AskUserQuestion tool** to suggest:
+Use **AskQuestion** to suggest:
 
 > "Your requirements seem detailed enough to proceed directly to
 > planning. Should I run `/workflow:plan` instead, or would you like to
@@ -76,34 +82,67 @@ Also consider any repo-level guidance files such as `AGENTS.md`.
 
 Engage in collaborative dialogue rather than a rapid question loop.
 
+**Default cadence (per iteration):**
+
+1. **Synthesize Current Understanding** (2--4 bullets)
+2. **Ask at most ONE high-leverage question** (only if needed)
+3. **Surface Tensions & Unknowns** using 3--5 **discussion prompts** (not interrogation)
+4. **Capture Emerging Assumptions** (bullets)
+
+**Hard rules:**
+
+- Do not ask follow-up questions in the same turn.
+- Ask **no more than one** clarifying question per iteration.
+- If blocked, ask **one** additional clarifying question max, then return to prompts.
+
+**First assistant message template (copy/paste shape):**
+
+```markdown
+**What I think you're aiming for (so far):**
+- ...
+- ...
+
+**One question to anchor us:**
+<single sentence>
+
+**Prompts to react to (pick any):**
+- Tradeoff: ...
+- Edge area: ...
+- UX vs architecture: ...
+- Scale implication: ...
+- Short-term vs long-term: ...
+
+**Working assumptions (tell me what’s wrong):**
+- ...
+- ...
+```
+
 For each iteration:
 
 1.  **Synthesize Current Understanding**
 
     - What the feature appears to be
     - Who it impacts
-    - What class of change this is (incremental, foundational, risky,
-      trivial)
+    - What class of change this is (incremental, foundational, risky, trivial)
     - Implied constraints
 
-2.  **Surface Tensions & Unknowns** Provide 3--5 bullet discussion
-    angles such as:
+2.  **Ask at most ONE high-leverage question** (only if needed to unblock discussion)
 
-    - Tradeoffs
-    - Edge areas
-    - Scale implications
+3.  **Surface Tensions & Unknowns** via 3--5 prompts to react to (not interrogation), such as:
+
+    - Tradeoff
+    - Edge area
+    - Scale implication
     - UX vs architecture tension
-    - Short-term vs long-term implications
+    - Short-term vs long-term implication
 
-    These should be framed as prompts to react to --- not interrogation.
-
-3.  **Capture Emerging Assumptions** Explicitly note:
+4.  **Capture Emerging Assumptions** Explicitly note:
 
     - Working assumptions
     - Tentative decisions
     - Areas still unresolved
 
-4.  Continue iteratively until:
+5.  Continue iteratively until:
 
     - Direction is clear
     - Or user says "proceed"
@@ -114,9 +153,8 @@ For each iteration:
 
 If ambiguity blocks meaningful progress:
 
-- Ask 1--2 focused, high-leverage clarification questions.
-- Only use direct questioning when necessary to prevent incorrect
-  planning.
+- Ask **one** focused, high-leverage clarification question.
+- Only use direct questioning when it is truly blocking meaningful discussion.
 - Avoid serial low-value questioning.
 
 ---
@@ -134,7 +172,7 @@ For each approach, provide:
 Lead with your recommendation and explain why. Apply YAGNI --- prefer
 simpler solutions.
 
-Use **AskUserQuestion tool** to confirm preferred direction if needed.
+Use **AskQuestion** to confirm preferred direction if needed.
 
 ---
 
@@ -142,7 +180,7 @@ Use **AskUserQuestion tool** to confirm preferred direction if needed.
 
 Write a brainstorm document to:
 
-docs/brainstorms/YYYY-MM-DD-`<topic>`{=html}-brainstorm.md
+docs/brainstorms/YYYY-MM-DD-`<topic>`-brainstorm.md
 
 **Document structure must include:**
 
@@ -156,15 +194,18 @@ Ensure `docs/brainstorms/` exists before writing.
 **Critical Rule:**\
 Before proceeding to Phase 4, check if Open Questions remain.
 
-If Open Questions exist, you MUST: - Ask the user about each one. - Move
-resolved questions into a "Resolved Questions" section. - Do not proceed
-until ambiguity is reduced.
+If Open Questions exist:
+
+- Classify each as **blocking** vs **non-blocking**.
+- You MUST ask the user about each **blocking** question.
+- Move resolved questions into a "Resolved Questions" section.
+- Non-blocking questions may remain for planning, but must be clearly stated.
 
 ---
 
 ### Phase 4: Handoff
 
-Use **AskUserQuestion tool** to present next steps:
+Use **AskQuestion** to present next steps:
 
 **Question:**
 "Brainstorm captured. What would you like to do next?"
@@ -190,7 +231,7 @@ When complete, display:
 
 Brainstorm complete!
 
-Document: docs/brainstorms/YYYY-MM-DD-`<topic>`{=html}-brainstorm.md
+Document: docs/brainstorms/YYYY-MM-DD-`<topic>`-brainstorm.md
 
 Key decisions: - \[Decision 1\] - \[Decision 2\]
 

@@ -16,6 +16,11 @@ This command uses the `agent-browser` CLI exclusively. The agent-browser CLI is 
 
 If you find yourself reaching for browser automation tools outside of `agent-browser`, STOP. Use `agent-browser` Bash commands instead.
 
+## Guardrails
+
+- Use the agent-browser CLI only; do not use other browser automation (e.g. MCP).
+- Do not modify application code; validate only (run tests, capture snapshots, report).
+
 ## Introduction
 
 <role>QA Engineer specializing in browser-based end-to-end testing</role>
@@ -92,7 +97,7 @@ If installation fails, inform the user and stop.
 
 Before starting tests, ask user if they want to watch the browser:
 
-Use AskUserQuestion with:
+Use AskQuestion with:
 - Question: "Do you want to watch the browser tests run?"
 - Options:
   1. **Headed (watch)** - Opens visible browser window so you can see tests run
@@ -248,7 +253,7 @@ Pause for human input when testing touches:
 | SMS | "Verify you received the SMS code" |
 | External APIs | "Confirm the [service] integration is working" |
 
-Use AskUserQuestion:
+Use AskQuestion:
 ```markdown
 **Human Verification Needed**
 

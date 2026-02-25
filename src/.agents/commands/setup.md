@@ -10,6 +10,8 @@ Configure this repo to use the portable `.agents` workflows deterministically.
 
 This command updates the "Repo Config Block" YAML in `AGENTS.md` and keeps the repo-root `opencode.json` in sync with `.agents/commands/*` and `.agents/agents/**` so running plain `opencode` always has the right commands and agents registered.
 
+When compound-workflow is used as an in-repo clone, run **`/sync`** from the clone first to copy the latest `.agents` and `AGENTS.md` into the host repo (and refresh `opencode.json`); then run `/setup` in the host to configure or update repo defaults.
+
 ## Inputs
 
 - Optional: a path to an `AGENTS.md` file
@@ -47,9 +49,34 @@ This command updates the "Repo Config Block" YAML in `AGENTS.md` and keeps the r
    - suggest `project_tracker`:
      - default `github` when `.git` is present; otherwise ask
 
+   - suggest worktree bootstrap defaults (used by `/workflow:work` + `git-worktree`):
+     - `worktree_dir`:
+       - default `.worktrees`
+     - `worktree_install_command` (best-effort autodetect):
+       - Node:
+         - `pnpm-lock.yaml` -> `pnpm install`
+         - `yarn.lock` -> `yarn install`
+         - `package-lock.json` -> `npm ci`
+         - `bun.lockb` -> `bun install`
+         - `package.json` only -> `npm install`
+       - Ruby:
+         - `Gemfile` -> `bundle install`
+       - Python:
+         - `poetry.lock` -> `poetry install`
+         - `requirements.txt` -> `pip install -r requirements.txt`
+       - Go:
+         - `go.mod` -> `go mod download`
+       - If unclear, leave blank and ask.
+     - `worktree_copy_files`:
+       - if `.env` exists: suggest copying `.env`
+       - if `.env.local` / `.env.development` / `.env.development.local` exist: suggest including them
+       - otherwise leave blank and ask (do not invent secrets)
+     - `worktree_bootstrap_notes`:
+       - default empty; prompt user for any required per-worktree prerequisites (system deps, services, toolchain, `direnv allow`, migrations/seeds)
+
    Present the detected suggestions to the user.
 
-5. Use AskUserQuestion to confirm or edit:
+5. Use AskQuestion to confirm or edit:
 
    - `default_branch` (recommended)
    - `dev_server_url` (only if this repo has a local dev server)
@@ -58,6 +85,10 @@ This command updates the "Repo Config Block" YAML in `AGENTS.md` and keeps the r
    - `lint_command` (optional)
    - `format_command` (optional)
    - `project_tracker` (github|linear|none)
+   - `worktree_dir` (optional)
+   - `worktree_copy_files` (optional)
+   - `worktree_install_command` (optional)
+   - `worktree_bootstrap_notes` (optional)
 
 6. Write/update the YAML block with the provided values.
 

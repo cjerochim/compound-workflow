@@ -34,11 +34,12 @@ This command does not implement fixes. It approves and organizes work so `/workf
    - ensure Acceptance Criteria is testable
    - add/update tags for searchability
 3. Decision:
-   - approve now -> rename `*-pending-*` -> `*-ready-*` and set frontmatter `status: ready`
-   - defer -> keep `pending`, optionally adjust priority
+   - **approve now** -> rename `*-pending-*` -> `*-ready-*` and set frontmatter `status: ready`
+   - **defer** -> rename `*-pending-*` -> `*-deferred-*` and set frontmatter `status: deferred` (keep priority, typically `p3`). Ensure Recommended Action, Findings, and Work Log have enough context for future reference. Deferred items are not executed until re-triaged to `ready`.
 4. Output:
    - list approved `ready` todos (unblocked first)
    - list remaining pending todos
+   - list deferred todos (parked for reference; not in executable queue)
    - list blocked todos with missing dependencies
 5. Next step suggestion:
    - run `/workflow:work <plan-path>` to execute ready items

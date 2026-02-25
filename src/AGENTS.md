@@ -5,6 +5,7 @@ This `.agents` workspace is portable and command-first.
 ## Contents
 
 - Canonical Workflow
+- Non-negotiables (Structure Integrity)
 - Planning Fidelity Model
 - Routing Rules
 - Repo Configuration (Optional)
@@ -41,10 +42,23 @@ Continuous improvement:
 Onboarding:
 
 - `/setup` -> configure repo defaults in `AGENTS.md` (Repo Config Block)
+- `/sync` -> copy `.agents` and `AGENTS.md` from compound-workflow clone into host repo and sync `opencode.json`
 
 This workspace currently implements `brainstorm`, `plan`, `work`, `review`, `compound`, and optional QA utilities.
 
 Use the canonical command names (`/workflow:plan`, `/workflow:work`, `/workflow:review`, etc.). This template does not ship aliases.
+
+## Non-negotiables (Structure Integrity)
+
+- **Commands are the public API.** Keep `/workflow:*` command docs stable; add capability via skills/agents, not new command variants.
+- **Brainstorm = WHAT, Plan = HOW.** `/workflow:plan` must not re-litigate decisions already captured in `docs/brainstorms/`.
+- **Local grounding is mandatory.** Every plan must cite at least 1–3 internal file path/line refs (existing patterns) and any relevant `docs/solutions/**` learnings.
+- **Fidelity + confidence are required declarations** in every plan file: always output the Fidelity/Confidence/Research-mode block; the chosen template must include the required sections for that fidelity (Low/Medium/High).
+- **SpecFlow is a validation gate, not a rewrite engine.** High fidelity required; Medium recommended; Low optional. Output must translate into acceptance criteria/edge cases, not new scope.
+- **Skills are invoked only by trigger.** `document-review` only when user selects "Review and refine" (or explicit request); guardrail skills (PII/financial/audit/data) only when the feature touches that domain.
+- **No new files/directories by default** beyond `docs/plans/...` for planning output.
+- **Plan file is the artifact.** Post-generation options are actions on the artifact; they do not change the workflow shape.
+- **Tighten over expand.** Resolve ambiguity, standardize naming, enforce sections—avoid adding new process steps unless they reduce rework.
 
 ## Planning Fidelity Model
 
@@ -91,6 +105,10 @@ Suggested keys (examples):
 - `lint_command: npm run lint`
 - `format_command: npm run format`
 - `project_tracker: github` (or `linear`)
+- `worktree_dir: .worktrees` (optional; where worktrees are created)
+- `worktree_copy_files: [...]` (optional; env/config files to copy into new worktrees; non-overwriting)
+- `worktree_install_command: <cmd>` (optional; deps install command to run in new worktrees)
+- `worktree_bootstrap_notes: [...]` (optional; prerequisites per worktree: system deps/services/tooling; documented only)
 
 ### Repo Config Block (Optional)
 
@@ -104,6 +122,15 @@ test_fast_command: npm test -- --watch=false
 lint_command: npm run lint
 format_command: npm run format
 project_tracker: github
+worktree_dir: .worktrees
+worktree_copy_files:
+  - .env
+  - .env.local
+worktree_install_command: npm ci
+worktree_bootstrap_notes:
+  - Ensure required system deps are installed (e.g. via brew/apt)
+  - Ensure local services are running (e.g. postgres/redis)
+  - If using direnv: run `direnv allow`
 ```
 
 ## Directory Layout
@@ -115,7 +142,7 @@ project_tracker: github
 
 ## Implemented Components (Current Scope)
 
-- Commands: `workflow:brainstorm`, `workflow:plan`, `workflow:work`, `workflow:triage`, `workflow:review`, `workflow:compound` (under `.agents/commands/workflow/`), plus `test-browser`, `metrics`, `assess`, `setup` (root commands)
+- Commands: `workflow:brainstorm`, `workflow:plan`, `workflow:work`, `workflow:triage`, `workflow:review`, `workflow:compound` (under `.agents/commands/workflow/`), plus `test-browser`, `metrics`, `assess`, `setup`, `sync` (root commands)
 - Skills: `brainstorming`, `document-review`, `technical-review`, `compound-docs`, `file-todos`, `agent-browser`, `git-worktree`, `process-metrics`, `pii-protection-prisma`, `financial-workflow-integrity`, `audit-traceability`, `data-foundations`
 - Agents:
   - `repo-research-analyst`

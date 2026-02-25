@@ -2,12 +2,14 @@
 name: review
 invocation: workflow:review
 description: Review a PR/branch/diff with structured findings. Does not implement fixes unless explicitly requested.
-argument-hint: "[PR number, GitHub URL, branch name, 'current', or a doc path]"
+argument-hint: "[PR number, GitHub URL, branch name, or 'current']"
 ---
 
 # /workflow:review
 
-Run a structured, evidence-based review. This command produces findings and recommendations; it does not implement fixes by default.
+Run a structured, evidence-based **code** review. This command produces findings and recommendations; it does not implement fixes by default.
+
+**If the user provides a document path** (e.g. a plan or spec): redirect to the `technical-review` skill for technical correctness (no edits), and/or the `document-review` skill to refine the document. This command does not review documents.
 
 Guardrails (unless explicitly requested):
 
@@ -22,46 +24,61 @@ Guardrails (unless explicitly requested):
   - PR number / GitHub URL (if `gh` is available)
   - branch name
   - `current` (current branch)
-  - a document path (review a plan/spec)
 
-## Setup
+If empty, default to `current`.
 
-1. Determine target type.
+## Execution Workflow
+
+### Phase 0: Resolve Repo Defaults (ALWAYS FIRST)
+
+1. Read `AGENTS.md` and look for the "Repo Config Block" YAML.
+2. Resolve:
+   - `default_branch` (fallback: `main`, then `master`)
+   - `lint_command` (used in Phase 3)
+
+State what you resolved or assumed.
+
+### Phase 1: Determine Target + Checkout Strategy
+
+1. Determine target type from `$ARGUMENTS`: PR/URL, branch name, or `current`.
 2. If reviewing a PR and `gh` is available:
-   - fetch title/body/files via `gh pr view --json`
-   - checkout the branch (direct checkout or via worktree)
-3. If target is a branch/diff:
-   - ensure you are on the correct branch
-4. If you are not on the target branch, offer a worktree via `skill: git-worktree`.
+   - Fetch title/body/files via `gh pr view --json`
+   - Checkout the branch (direct checkout or via worktree)
+3. If target is a branch (not current):
+   - Ensure you are on the correct branch, or offer a worktree via `skill: git-worktree`
+4. If you are not on the target branch and user requested that target, offer a worktree via `skill: git-worktree`.
 
-Defaults:
-
-- Read `AGENTS.md` and look for the "Repo Config Block" YAML.
-- Resolve `default_branch` from that block (fallback: `main`, then `master`).
-- Determine changed files using (in order):
-  1) `@{upstream}...HEAD` when upstream exists
-  2) `origin/${default_branch}...HEAD`
-  3) `HEAD~1..HEAD`
-
-Prefer reviewing the currently checked-out branch. Only switch branches or create worktrees when the user explicitly requests reviewing a different target.
+Prefer reviewing the currently checked-out branch. Only switch branches or create worktrees when the user explicitly requests a different target.
 
 Protected artifacts:
 
 - Never suggest deleting or ignoring `docs/plans/` or `docs/solutions/`.
 
-If a plan/spec document is provided as context:
+### Phase 2: Compute Review Surface Area
 
-- If it includes `fidelity` and `confidence`, use them to decide review depth.
-- High fidelity or low confidence should increase scrutiny and increase use of conditional passes.
+1. Determine changed files using (in order):
+   - `@{upstream}...HEAD` when upstream exists
+   - `origin/${default_branch}...HEAD`
+   - `HEAD~1..HEAD`
+2. Summarize surface area (which files, high-risk areas).
+3. Infer risk tier for conditional passes:
+   - If the branch/PR references a plan file (e.g. in description or linked in changes), and that plan has `fidelity`/`confidence`, use them to decide review depth (high fidelity or low confidence => more scrutiny, more conditional passes).
+   - Otherwise infer from scope and domain (security/auth/payments/data migration/infra => higher).
 
-## Core Review Passes
+### Phase 3: Parallel Passes
 
-Always run these (in parallel when possible):
+**Always run (in parallel when possible):**
 
 - `Task learnings-researcher(<target context>)` (related prior solutions)
-- `Task lint(<changed files context>)` (only if `lint_command` is configured in the Repo Config Block in `AGENTS.md`)
+- `Task lint(<changed files context>)` only if `lint_command` is configured in the Repo Config Block
 
-Then perform the main review synthesis:
+**Conditional passes** (run when they apply):
+
+- If this is a bug report/fix and reproduction steps are available: `Task bug-reproduction-validator(<report>)`
+- If changes touch existing behavior and risk is medium/high: `Task git-history-analyzer(<target context>)`
+- If changes depend on framework/library behavior and version constraints: `Task framework-docs-researcher(<topic>)`
+
+Then perform the main review synthesis across:
 
 - change summary (surface area, high-risk files)
 - correctness
@@ -70,35 +87,24 @@ Then perform the main review synthesis:
 - operational considerations (monitoring, rollback)
 - readability/maintainability
 
-## Conditional Passes
-
-Run only when they apply:
-
-- If this is a bug report/fix and reproduction steps are available: `Task bug-reproduction-validator(<report>)`
-- If a PR touches existing behavior and risk is medium/high: `Task git-history-analyzer(<target context>)`
-- If changes depend on framework/library behavior and version constraints: `Task framework-docs-researcher(<topic>)`
-
-Risk tier inference:
-
-- Prefer plan `fidelity`/`confidence` when a plan doc is provided.
-- Otherwise infer from scope and domain (security/auth/payments/data migration/infra => higher).
-
-## Output Format
+### Phase 4: Synthesis + Verdict
 
 Provide:
 
 - Review recommendation: `pass | pass-with-notes | fail`
-- Top risks (1-5 bullets)
+- Top risks (1–5 bullets)
 - Findings list:
-  - severity (`critical|high|medium|low`)
+  - severity (`critical | high | medium | low`)
   - evidence (file references or commands/output)
   - recommended action (concise)
 - What ran vs skipped (selected agents/passes)
 
-Also include:
+### Phase 5: Handoff Options
 
-- Next step suggestion: `/workflow:work` to implement, or `file-todos` for tracked follow-ups
+Recommend next action:
 
-Optional:
+- **Implement fixes:** `/workflow:work` with the relevant plan (or branch) to address findings
+- **Track follow-ups:** use the `file-todos` skill to convert findings into `todos/` items (only if user requests tracked follow-ups)
+- **Capture learning:** if a systemic learning emerged, suggest `/workflow:compound`
 
-- If user requests tracked follow-ups: convert findings into `todos/` items using the `file-todos` skill.
+Optional: If user requests tracked follow-ups, convert findings into `todos/` items using the `file-todos` skill.

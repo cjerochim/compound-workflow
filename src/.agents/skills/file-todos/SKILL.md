@@ -40,7 +40,7 @@ Todo files follow this pattern:
 Components:
 
 - `issue_id`: sequential (001, 002, 003...) - never reused
-- `status`: `pending` (needs triage), `ready` (approved), `complete` (done)
+- `status`: `pending` (needs triage), `ready` (approved), `complete` (done), `deferred` (not this cycle; keep as reference)
 - `priority`: `p1` (critical), `p2` (important), `p3` (nice-to-have)
 - `description`: kebab-case, brief
 
@@ -49,6 +49,7 @@ Examples:
 ```
 001-pending-p1-fix-auth-redirect.md
 002-ready-p2-add-pagination.md
+003-deferred-p3-follow-up-refactor.md
 005-complete-p3-update-docs.md
 ```
 
@@ -69,13 +70,15 @@ Frontmatter fields:
 
 ```yaml
 ---
-status: ready              # pending | ready | complete
+status: ready              # pending | ready | complete | deferred
 priority: p1               # p1 | p2 | p3
 issue_id: "002"
 tags: [backend, testing]
 dependencies: ["001"]     # issue_ids this is blocked by
 ---
 ```
+
+**Deferred:** Items with `status: deferred` are not planned for the current development cycle. Keep Problem Statement, Findings, and Work Log so the item can be re-triaged or picked up later. Only `*-ready-*.md` todos are executed; `pending` and `deferred` are non-executable.
 
 ## Common Workflows
 
@@ -137,13 +140,16 @@ Plan sync expectations:
    - read Problem Statement + Findings
    - choose a recommended action
    - set priority and dependencies
-3. Approve by:
-   - renaming file `*-pending-*` -> `*-ready-*`
-   - updating frontmatter `status: pending` -> `status: ready`
+3. Decision:
+   - **Approve:** rename `*-pending-*` -> `*-ready-*`, set frontmatter `status: ready`
+   - **Defer:** rename `*-pending-*` -> `*-deferred-*`, set frontmatter `status: deferred` (typically `p3`). Keep Work Log/Findings so the item is referenceable later; it will not appear in the executable queue until re-triaged to `ready`.
+4. Only `*-ready-*.md` items are executable; `pending` and `deferred` are excluded from the work loop.
 
 If this repo has a `/workflow:triage` command, it may be used. Otherwise, perform triage directly in the todo files.
 
 ### Execute a Ready Todo
+
+Consider only `*-ready-*.md` todos. Ignore `pending` and `deferred`.
 
 1. Verify dependencies are complete.
 2. Work in small milestones.
