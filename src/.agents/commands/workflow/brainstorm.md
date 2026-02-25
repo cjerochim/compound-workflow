@@ -7,25 +7,39 @@ argument-hint: "[feature idea or problem to explore]"
 
 # Brainstorm a Feature or Improvement
 
-**Note: The current year is 2026.** Use this when dating brainstorm documents.
+**Note: The current year is 2026.** Use this when dating brainstorm
+documents.
 
-Brainstorming helps answer **WHAT** to build through collaborative dialogue. It precedes `/workflow:plan`, which answers **HOW** to build it.
+Brainstorming helps answer **WHAT** to build through collaborative
+dialogue. It precedes `/workflow:plan`, which answers **HOW** to build
+it.
 
-**Process knowledge:** Load the `brainstorming` skill for detailed question techniques, approach exploration patterns, and YAGNI principles.
+**Process knowledge:** Load the `brainstorming` skill for detailed
+question techniques, approach exploration patterns, and YAGNI
+principles.
+
+---
 
 ## Feature Description
 
-<feature_description> #$ARGUMENTS </feature_description>
+<feature_description>#$ARGUMENTS</feature_description>
 
-**If the feature description above is empty, ask the user:** "What would you like to explore? Please describe the feature, problem, or improvement you're thinking about."
+**If the feature description above is empty, ask the user:**\
+"What would you like to explore? Please describe the feature, problem,
+or improvement you're thinking about."
 
 Do not proceed until you have a feature description from the user.
 
+---
+
 ## Execution Flow
+
+---
 
 ### Phase 0: Assess Requirements Clarity
 
-Evaluate whether brainstorming is needed based on the feature description.
+Evaluate whether brainstorming is needed based on the feature
+description.
 
 **Clear requirements indicators:**
 
@@ -34,8 +48,14 @@ Evaluate whether brainstorming is needed based on the feature description.
 - Described exact expected behavior
 - Constrained, well-defined scope
 
-**If requirements are already clear:**
-Use **AskUserQuestion tool** to suggest: "Your requirements seem detailed enough to proceed directly to planning. Should I run `/workflow:plan` instead, or would you like to explore the idea further?"
+**If requirements are already clear:**\
+Use **AskUserQuestion tool** to suggest:
+
+> "Your requirements seem detailed enough to proceed directly to
+> planning. Should I run `/workflow:plan` instead, or would you like to
+> explore the idea further?"
+
+---
 
 ### Phase 1: Understand the Idea
 
@@ -43,94 +63,145 @@ Use **AskUserQuestion tool** to suggest: "Your requirements seem detailed enough
 
 Run a quick repo scan to understand existing patterns:
 
-- Task repo-research-analyst("Understand existing patterns related to: <feature_description>")
+- Task repo-research-analyst("Understand existing patterns related to:
+  <feature_description>")
 
-Focus on: similar features, established patterns, AGENTS.md guidance.
+Focus on: - Similar features - Established patterns - AGENTS.md guidance
 
 Also consider any repo-level guidance files such as `AGENTS.md`.
 
-#### 1.2 Collaborative Dialogue
+---
 
-Use the **AskUserQuestion tool** to ask questions **one at a time**.
+#### 1.2 Structured Dialogue Exploration (Default)
 
-**Guidelines (see `brainstorming` skill for detailed techniques):**
+Engage in collaborative dialogue rather than a rapid question loop.
 
-- Prefer multiple choice when natural options exist
-- Start broad (purpose, users) then narrow (constraints, edge cases)
-- Validate assumptions explicitly
-- Ask about success criteria
+For each iteration:
 
-**Exit condition:** Continue until the idea is clear OR user says "proceed"
+1.  **Synthesize Current Understanding**
+
+    - What the feature appears to be
+    - Who it impacts
+    - What class of change this is (incremental, foundational, risky,
+      trivial)
+    - Implied constraints
+
+2.  **Surface Tensions & Unknowns** Provide 3--5 bullet discussion
+    angles such as:
+
+    - Tradeoffs
+    - Edge areas
+    - Scale implications
+    - UX vs architecture tension
+    - Short-term vs long-term implications
+
+    These should be framed as prompts to react to --- not interrogation.
+
+3.  **Capture Emerging Assumptions** Explicitly note:
+
+    - Working assumptions
+    - Tentative decisions
+    - Areas still unresolved
+
+4.  Continue iteratively until:
+
+    - Direction is clear
+    - Or user says "proceed"
+
+---
+
+#### Targeted Clarification Fallback
+
+If ambiguity blocks meaningful progress:
+
+- Ask 1--2 focused, high-leverage clarification questions.
+- Only use direct questioning when necessary to prevent incorrect
+  planning.
+- Avoid serial low-value questioning.
+
+---
 
 ### Phase 2: Explore Approaches
 
-Propose **2-3 concrete approaches** based on research and conversation.
+Propose **2--3 concrete approaches** based on research and dialogue.
 
 For each approach, provide:
 
-- Brief description (2-3 sentences)
+- Brief description (2--3 sentences)
 - Pros and cons
-- When it's best suited
+- When it is best suited
 
-Lead with your recommendation and explain why. Apply YAGNI—prefer simpler solutions.
+Lead with your recommendation and explain why. Apply YAGNI --- prefer
+simpler solutions.
 
-Use **AskUserQuestion tool** to ask which approach the user prefers.
+Use **AskUserQuestion tool** to confirm preferred direction if needed.
+
+---
 
 ### Phase 3: Capture the Design
 
-Write a brainstorm document to `docs/brainstorms/YYYY-MM-DD-<topic>-brainstorm.md`.
+Write a brainstorm document to:
 
-**Document structure:** See the `brainstorming` skill for the template format. Key sections: What We're Building, Why This Approach, Key Decisions, Open Questions.
+docs/brainstorms/YYYY-MM-DD-`<topic>`{=html}-brainstorm.md
 
-Ensure `docs/brainstorms/` directory exists before writing.
+**Document structure must include:**
 
-**IMPORTANT:** Before proceeding to Phase 4, check if there are any Open Questions listed in the brainstorm document. If there are open questions, YOU MUST ask the user about each one using AskUserQuestion before offering to proceed to planning. Move resolved questions to a "Resolved Questions" section.
+- What We're Building
+- Why This Approach
+- Key Decisions
+- Open Questions
+
+Ensure `docs/brainstorms/` exists before writing.
+
+**Critical Rule:**\
+Before proceeding to Phase 4, check if Open Questions remain.
+
+If Open Questions exist, you MUST: - Ask the user about each one. - Move
+resolved questions into a "Resolved Questions" section. - Do not proceed
+until ambiguity is reduced.
+
+---
 
 ### Phase 4: Handoff
 
 Use **AskUserQuestion tool** to present next steps:
 
-**Question:** "Brainstorm captured. What would you like to do next?"
+**Question:**
+"Brainstorm captured. What would you like to do next?"
 
 **Options:**
 
-1. **Review and refine** - Improve the document through structured self-review
-2. **Proceed to planning** - Run `/workflow:plan` (will auto-detect this brainstorm)
-3. **Ask more questions** - I have more questions to clarify before moving on
-4. **Done for now** - Return later
+1.  Review and refine
+2.  Proceed to planning
+3.  Ask more questions
+4.  Done for now
 
-**If user selects "Ask more questions":** YOU (Claude) return to Phase 1.2 (Collaborative Dialogue) and continue asking the USER questions one at a time to further refine the design. The user wants YOU to probe deeper - ask about edge cases, constraints, preferences, or areas not yet explored. Continue until the user is satisfied, then return to Phase 4.
+If "Ask more questions" is selected: Return to Phase 1.2 and continue
+structured dialogue.
 
-**If user selects "Review and refine":**
+If "Review and refine" is selected: Load the `document-review` skill and
+apply it.
 
-Load the `document-review` skill and apply it to the brainstorm document.
-
-When document-review returns "Review complete", present next steps:
-
-1. **Move to planning** - Continue to `/workflow:plan` with this document
-2. **Done for now** - Brainstorming complete. To start planning later: `/workflow:plan [document-path]`
+---
 
 ## Output Summary
 
 When complete, display:
 
-```
 Brainstorm complete!
 
-Document: docs/brainstorms/YYYY-MM-DD-<topic>-brainstorm.md
+Document: docs/brainstorms/YYYY-MM-DD-`<topic>`{=html}-brainstorm.md
 
-Key decisions:
-- [Decision 1]
-- [Decision 2]
+Key decisions: - \[Decision 1\] - \[Decision 2\]
 
 Next: Run `/workflow:plan` when ready to implement.
-```
+
+---
 
 ## Important Guidelines
 
-- **Stay focused on WHAT, not HOW** - Implementation details belong in the plan
-- **Ask one question at a time** - Don't overwhelm
-- **Apply YAGNI** - Prefer simpler approaches
-- **Keep outputs concise** - 200-300 words per section max
-
-NEVER CODE! Just explore and document decisions.
+- Stay focused on WHAT, not HOW
+- Dialogue first; interrogation only when necessary
+- Apply YAGNI
+- Keep outputs concise (200--300 words per section max)
+- NEVER CODE during brainstorming
