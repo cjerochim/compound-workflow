@@ -153,6 +153,7 @@ worktree_bootstrap_notes:
   - `spec-flow-analyzer`
   - `lint`
   - `bug-reproduction-validator`
+  - `agent-native-reviewer`
 
 ## Skill Index (When to Use What)
 

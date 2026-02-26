@@ -16,10 +16,13 @@ When compound-workflow is used as an in-repo clone, run **`/sync`** from the clo
 
 - Optional: a path to an `AGENTS.md` file
 - Default: `./AGENTS.md`
+- Flags (by convention in `$ARGUMENTS`):
+  - `--dry-run`: preview detected defaults + planned YAML + planned `opencode.json` changes; **no writes**
 
 ## Workflow
 
 1. Resolve the target `AGENTS.md` path.
+   - Always print the resolved `AGENTS.md` as an **absolute path** before any writes.
 2. Read the file and locate the "Repo Config Block" section.
 3. If the section does not exist, add it under "Repo Configuration (Optional)".
 
@@ -98,9 +101,9 @@ When compound-workflow is used as an in-repo clone, run **`/sync`** from the clo
 
    7.1 Discover source command and agent definitions:
 
-   - Commands: glob `.agents/commands/*.md`
-     - command id: prefer frontmatter `name`, else file basename
-     - description: frontmatter `description` (fallback: `"<name>"`)
+   - Commands: glob `.agents/commands/**/*.md`
+     - command id: **frontmatter `invocation` (preferred)** else `name` else file basename
+     - description: frontmatter `description` (fallback: id)
    - Agents: glob `.agents/agents/**/*.md`
 
      - agent id: frontmatter `name` (fallback: file basename)
@@ -153,9 +156,37 @@ When compound-workflow is used as an in-repo clone, run **`/sync`** from the clo
 
    Never delete non-managed commands/agents.
 
+   7.6 Deterministic sync (recommended; supports `--dry-run` + idempotency summary):
+
+   - Run:
+     - `node .agents/scripts/sync-opencode.mjs [--dry-run]`
+   - It prints:
+     - resolved repo root (absolute)
+     - absolute modified paths
+     - idempotency summary (“0 changes needed” vs “updated N managed entries.”)
+
+   7.7 Post-sync self-check (required):
+
+   - Run:
+     - `node .agents/scripts/self-check.mjs`
+   - Fail (and report) if:
+     - a discovered command/agent is missing from `opencode.json`
+     - a managed entry points to a missing source file
+     - required frontmatter fields are missing (especially `invocation` for `commands/workflow/**`)
+
 8. Verify configuration is being picked up:
 
    - Run `opencode debug config` and confirm `command` and `agent` are populated.
+
+## Non-interactive / timeout recovery (opencode run)
+
+If `opencode run` aborts repeatedly (cold starts / tool timeouts):
+
+- Prefer a persistent backend:
+  - `opencode serve`
+  - then: `opencode run --attach http://localhost:4096 --command setup -- <args>`
+- If shell steps time out, increase bash default timeout:
+  - `OPENCODE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS=600000 opencode run ...`
 
 Rules:
 
