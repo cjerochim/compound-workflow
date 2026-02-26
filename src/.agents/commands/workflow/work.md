@@ -107,6 +107,10 @@ The input must be a plan file path.
 
    Immediately after entering the new worktree, run bootstrap per the `git-worktree` skill (AGENTS keys + autodetect). See `.agents/skills/git-worktree/SKILL.md` for the canonical algorithm (copy env/config, install deps, and `worktree_bootstrap_notes`).
 
+   3.6) Record worktree path (REQUIRED when worktree created)
+
+   When a worktree was created, record the worktree path (e.g. `<worktree_dir>/<sanitized-branch-name>`) in a single visible place (e.g. at the top of the plan frontmatter as `worktree_path: .worktrees/feat-xyz` or in the first Phase 2 step). All subsequent steps assume this path as the implementation root.
+
    4) If worktree is not chosen (opt-out):
 
    - Create or switch to a feature branch (never work directly on the default branch).
@@ -152,6 +156,8 @@ The input must be a plan file path.
 ### Phase 2: Execute
 
 1. **Task Execution Loop**
+
+   **When a worktree was created for this run:** All implementation edits (file reads/writes) and all terminal commands (run tests, install, lint, etc.) MUST be performed with the worktree directory as the working context: use the worktree path for file paths and set terminal cwd to the worktree root. Do not make code changes in the main repo checkout.
 
    Todo selection rules (default):
 

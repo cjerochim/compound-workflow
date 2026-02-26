@@ -86,6 +86,10 @@ Example:
 git worktree add -b "feat/my-feature" ".worktrees/feat-my-feature" "HEAD"
 ```
 
+## After creating a worktree
+
+All subsequent code changes and terminal commands for this workflow MUST be executed in this worktree: use the worktree directory for all file paths and as the cwd for every command. The main repo checkout is not the implementation target.
+
 ## Bootstrap (Hybrid: config override + safe autodetect)
 
 This skill is portable, so bootstrap is best-effort by default and configurable per repo via `AGENTS.md`.

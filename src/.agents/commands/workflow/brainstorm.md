@@ -82,6 +82,10 @@ Also consider any repo-level guidance files such as `AGENTS.md`.
 
 Engage in collaborative dialogue rather than a rapid question loop.
 
+**Critical (non-negotiable):** Default response shape is **synthesize + discussion prompts + assumptions**. Multiple-choice / AskQuestion only for handoffs (Phase 0, Phase 4) or a single blocking question when the user is stuck.
+
+**Enforcement rule:** Do **not** use AskQuestion during exploration until **after** at least one full dialogue iteration (Synthesize + discussion prompts + Capture). AskQuestion is only for handoffs or when one focused multiple-choice truly unblocks.
+
 **Default cadence (per iteration):**
 
 1. **Synthesize Current Understanding** (2--4 bullets)

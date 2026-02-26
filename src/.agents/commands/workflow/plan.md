@@ -255,6 +255,8 @@ Rules:
 - If confidence is `Low`, include at least one checkbox in one of these sections.
 - These sections may appear after the main implementation content (e.g. after Acceptance Criteria or References) or in a dedicated "Unknowns & decisions" area; ensure they are in the written plan file when Open questions exist.
 
+**When presenting Discussion Points (to the user or during triage):** (1) List a **concise numbered summary** of the points. (2) Walk through **each point one by one**; for each, discuss and align with the user; only then move on. Do not resolve all points in one turn.
+
 ### 4. Choose Implementation Detail Level
 
 Select how comprehensive you want the issue to be. Fidelity should drive this choice.

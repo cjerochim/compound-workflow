@@ -1,28 +1,30 @@
 # Compound Workflow (.agents)
 
-Compound Workflow is a portable, command-first workflow for clarifying intent, planning, executing via a persistent todo queue, validating quality, and capturing durable learnings. It reduces delivery failures from **unclear intent**, **weak verification**, and **lost context**. Commands are the public API; skills and agents are composable internals. Use it when you want structured clarify → plan → execute → verify → capture cycles without ad-hoc tooling.
+A portable, command-first workflow: **clarify → plan → execute → verify → capture**. Commands are the public API; skills and agents are composable internals.
 
-This repository is a template. Runtime assets live under `src/.agents/` and `src/AGENTS.md` so you can copy or sync them into any codebase.
+It reduces delivery failures from **unclear intent**, **weak verification**, and **lost context**. Use it when you want structured cycles without ad-hoc tooling.
 
-## Quick Start (recommended: clone inside host repo)
+*This template and README are continually refined during development.*
 
-If you clone compound-workflow **inside** your repo (e.g. `vendor/compound-workflow` or `compound-workflow/`):
+Runtime assets live in `src/.agents/` and `src/AGENTS.md`. Copy or sync them into any codebase.
 
-1. Open the clone in Cursor (or set `COMPOUND_SYNC_TARGET` to your host repo root).
-2. Run **`/sync`** — copies `src/.agents` into the host (no `.agents/.agents` nesting), merges or copies `AGENTS.md` (preserves host Repo Config Block), syncs the host’s `opencode.json`, then runs a post-sync self-check.
-   - Preview: **`/sync --dry-run`** (prints resolved target + planned writes)
-3. In the host repo, run **`/setup`** once — configures Repo Config Block (default_branch, test/lint/format commands, dev_server_url, project_tracker, worktree options) and syncs OpenCode config.
-   - Preview: **`/setup --dry-run`**
+---
 
-**Terminal-only (copy only; does not update `opencode.json`):**
+## Get started
+
+**Recommended:** Clone this repo *inside* your host repo (e.g. `vendor/compound-workflow`). Open the clone in Cursor—or set `COMPOUND_SYNC_TARGET` to your host repo root—then run **`/sync`**. In the host repo, run **`/setup`** once. Preview first: **`/sync --dry-run`**, **`/setup --dry-run`**.
+
+Sync copies `src/.agents` into the host (no nesting), merges or copies `AGENTS.md` (preserves host Repo Config Block), and updates the host’s `opencode.json`.
+
+**Terminal-only (no OpenCode update)**
 
 ```bash
 ./scripts/sync-into-repo.sh --dry-run        # preview
 ./scripts/sync-into-repo.sh                  # sync into parent directory
-./scripts/sync-into-repo.sh /path/to/repo    # sync into an explicit target
+./scripts/sync-into-repo.sh /path/to/repo    # sync into explicit target
 ```
 
-### Copy into any repo (no clone)
+**Copy only (no clone)**
 
 From this repo root:
 
@@ -33,49 +35,78 @@ cp src/AGENTS.md /path/to/your/repo/AGENTS.md
 
 In the target repo, create `docs/brainstorms/`, `docs/plans/`, `docs/solutions/`, `docs/metrics/daily/`, `docs/metrics/weekly/`, `docs/metrics/monthly/`, `todos/` as needed. Run `/setup` in the host to configure the Repo Config Block.
 
-## Canonical workflow (suggested order)
+---
 
-1. **`/workflow:brainstorm [topic]`** — Clarify WHAT to build (dialogue only; no code).
-2. **`/workflow:plan [description or brainstorm path]`** — Define HOW with fidelity + confidence; output a plan file.
-3. **`/workflow:work <plan-path>`** — Execute via file-based todos; tests by risk tier; no auto-ship (no commit/push/PR by default).
-4. **`/workflow:triage`** — Convert pending todos into a ready queue (priority, dependencies).
-5. **`/workflow:review [PR|branch|current]`** — Structured findings with evidence; no fixes by default.
-6. **`/workflow:compound [context]`** — Capture one solution doc in `docs/solutions/` for future reference.
-7. **`/metrics`** + **`/assess weekly 7`** (or monthly) — Log session and review aggregate performance.
+## Workflow at a glance
 
-**Optional QA:** **`/test-browser [PR|branch|current]`** — Browser validation on affected pages using the **agent-browser CLI only** (not MCP browser tooling). Requires `npm install -g agent-browser` and `agent-browser install`.
+Clarify what to build → plan how (fidelity + confidence) → execute via todos → triage and review → capture learnings → log and assess.
 
-## Command index (high-level)
+```mermaid
+flowchart LR
+  A[brainstorm] --> B[plan] --> C[work] --> D[triage] --> E[review] --> F[compound] --> G[metrics]
+```
 
-**Onboarding**
+---
 
-- **`/sync`** — Copy `.agents` and `AGENTS.md` from this clone into host repo; merge host AGENTS.md; update host `opencode.json`.
-- **`/setup`** — Configure Repo Config Block in `AGENTS.md` and sync OpenCode config (commands/agents). Run once after copy or sync.
+## Step-by-step: intent and commands
 
-**Core workflow**
+| Step | Intent | Command | Output / note |
+|------|--------|---------|---------------|
+| Clarify what to build | Dialogue only; no code | `/workflow:brainstorm [topic]` | `docs/brainstorms/` |
+| Define how (fidelity + confidence) | Plan only; no code | `/workflow:plan [description or brainstorm path]` | `docs/plans/` |
+| Execute | File-based todos; risk-tier testing; no auto-ship | `/workflow:work <plan-path>` | `todos/` |
+| Ready the queue | Priority and dependencies for pending todos | `/workflow:triage` | — |
+| Validate quality | Evidence-based review; no fixes by default | `/workflow:review [PR, branch, or current]` | pass / pass-with-notes / fail |
+| Capture learnings | One solution doc for future use | `/workflow:compound [context]` | `docs/solutions/` |
+| Log and improve | Session log + optional aggregate review | `/metrics` + `/assess weekly 7` (or monthly) | `docs/metrics/daily/`, weekly/monthly |
 
-- **`/workflow:brainstorm [topic]`** — Explore requirements and approaches; output `docs/brainstorms/...`. No code.
-- **`/workflow:plan [description or brainstorm path]`** — Produce execution-ready plan with fidelity/confidence; output `docs/plans/...`. No code.
-- **`/workflow:work <plan-path>`** — Execute plan via `todos/` (ready → complete); risk-based testing; no auto-ship.
-- **`/workflow:triage [pending|todo-path]`** — Approve/defer pending todos; set priority and dependencies so work can continue.
-- **`/workflow:review [PR|branch|current]`** — Evidence-based code review; pass | pass-with-notes | fail; no code changes by default.
-- **`/workflow:compound [context]`** — Document one solved problem into `docs/solutions/<category>/...` (one file; optional post-capture menu).
+#### 1. Clarify (brainstorm)
 
-**QA**
+**Intent:** Dialogue only; no code. **Command:** `/workflow:brainstorm [topic]`. **Output:** `docs/brainstorms/`.
 
-- **`/test-browser [PR|branch|current]`** — Run browser checks on affected routes using **agent-browser CLI only** (see [src/.agents/commands/test-browser.md](src/.agents/commands/test-browser.md)).
+#### 2. Define how (plan)
 
-**Improvement loop**
+**Intent:** Plan only; no code; fidelity + confidence. **Command:** `/workflow:plan [description or brainstorm path]`. **Output:** `docs/plans/`.
 
-- **`/metrics [plan|todo|pr|solution|label]`** — Log one session to `docs/metrics/daily/` and assess (what failed, what to change).
-- **`/assess [daily|weekly|monthly] [count]`** — Review aggregate metrics; propose improvements; optional weekly/monthly summary files.
+#### 3. Execute (work)
 
-**Experimental**
+**Intent:** File-based todos; risk-tier testing; no auto-ship. **Command:** `/workflow:work <plan-path>`. **Output:** `todos/`.
 
-- **`/workflow:review-v2 [PR|branch|current]`** — Interactive snippet-by-snippet review with consolidated comments; **output-only** (no publishing to GitHub).
+#### 4. Ready the queue (triage)
 
-Use canonical names (`/workflow:plan`, `/workflow:work`, etc.). This template does not ship aliases.
-OpenCode registration preserves namespaces by using command frontmatter `invocation` (e.g. `workflow:brainstorm`).
+**Intent:** Priority and dependencies for pending todos. **Command:** `/workflow:triage`. **Output:** —.
+
+#### 5. Validate quality (review)
+
+**Intent:** Evidence-based review; no fixes by default. **Command:** `/workflow:review [PR|branch|current]`. **Output:** pass / pass-with-notes / fail.
+
+#### 6. Capture learnings (compound)
+
+**Intent:** One solution doc for future use. **Command:** `/workflow:compound [context]`. **Output:** `docs/solutions/`.
+
+#### 7. Log and improve
+
+**Intent:** Session log + optional aggregate review. **Command:** `/metrics` + `/assess weekly 7` (or monthly). **Output:** `docs/metrics/daily/`, weekly/monthly.
+
+**Optional QA:** **`/test-browser [PR|branch|current]`** — Browser validation on affected pages via **agent-browser CLI only** (not MCP). Install: `npm install -g agent-browser` then `agent-browser install`. See [src/.agents/commands/test-browser.md](src/.agents/commands/test-browser.md).
+
+---
+
+## Command reference
+
+**Onboarding:** `/sync` — copy `.agents` and `AGENTS.md` into host, merge AGENTS.md, update `opencode.json`. `/setup` — configure Repo Config Block and sync OpenCode; run once after copy or sync.
+
+**Core workflow:** See [Step-by-step](#step-by-step-intent-and-commands) above.
+
+**QA:** `/test-browser [PR|branch|current]` — browser checks on affected routes (agent-browser CLI only).
+
+**Improvement:** `/metrics [plan|todo|pr|solution|label]` — log session to `docs/metrics/daily/` and assess. `/assess [daily|weekly|monthly] [count]` — aggregate metrics and optional summary files.
+
+**Experimental:** `/workflow:review-v2 [PR|branch|current]` — interactive snippet review; output-only (no GitHub publish).
+
+Full detail: [src/AGENTS.md](src/AGENTS.md), [src/.agents/commands/](src/.agents/commands/).
+
+---
 
 ## Artifacts
 
@@ -85,33 +116,37 @@ OpenCode registration preserves namespaces by using command frontmatter `invocat
 - **Solutions:** `docs/solutions/<category>/YYYY-MM-DD-<module-slug>-<symptom-slug>.md`
 - **Metrics:** `docs/metrics/daily/YYYY-MM-DD.md`, `docs/metrics/weekly/YYYY-WW.md`, `docs/metrics/monthly/YYYY-MM.md`
 
-## How it works (skills and agents)
+---
 
-Commands are the public API. **Skills** and **agents** are invoked by commands; you don’t call them directly.
+## How it works (internals)
 
-**Workflow skills (this template):** `brainstorming`, `file-todos`, `compound-docs`, `document-review`, `technical-review`, `git-worktree`, `agent-browser`, `process-metrics`.
+Commands are the public API. Skills and agents are invoked by commands; you don’t call them directly.
 
-**Guardrail standards (reference):** `data-foundations`, `pii-protection-prisma`, `financial-workflow-integrity`, `audit-traceability` — applied when the work touches multi-tenant data, PII, money, or audit.
+- **Workflow skills:** `brainstorming`, `file-todos`, `compound-docs`, `document-review`, `technical-review`, `git-worktree`, `agent-browser`, `process-metrics`.
+- **Guardrail standards:** `data-foundations`, `pii-protection-prisma`, `financial-workflow-integrity`, `audit-traceability` — applied when work touches multi-tenant data, PII, money, or audit.
+- **Agents:** Used by plan, review, and work for research, lint, and validation (e.g. `repo-research-analyst`, `learnings-researcher`, `git-history-analyzer`, `agent-native-reviewer`).
 
-**Agents (this template):** `repo-research-analyst`, `learnings-researcher`, `git-history-analyzer`, `best-practices-researcher`, `framework-docs-researcher`, `spec-flow-analyzer`, `lint`, `bug-reproduction-validator`, `agent-native-reviewer`. Used by plan, review, and work for research, lint, and validation.
+Full “when to use what” and reference standards: [src/AGENTS.md](src/AGENTS.md).
 
-Full “when to use what” and reference-standards policy: [src/AGENTS.md](src/AGENTS.md).
+---
 
 ## Guardrails
 
 - **No auto-ship:** `/workflow:work` and `/workflow:review` do not commit, push, or create PRs by default.
+
 - **Brainstorm and plan do not write code.** Output is documents only.
+
 - Add a separate shipping command if you want automated commit/PR and quality gates.
 
-## Repo configuration (AGENTS.md)
+---
 
-Commands read a **Repo Config Block** YAML in `AGENTS.md` for: `default_branch`, `dev_server_url`, `test_command`, `test_fast_command`, `lint_command`, `format_command`, `project_tracker`, and optional `worktree_dir`, `worktree_copy_files`, `worktree_install_command`, `worktree_bootstrap_notes`. Run `/setup` to populate it.
+## Configuration and optional bits
 
-## agent-browser CLI
+**Repo configuration:** Commands read a **Repo Config Block** (YAML) in `AGENTS.md` for `default_branch`, `dev_server_url`, `test_command`, `test_fast_command`, `lint_command`, `format_command`, `project_tracker`, and optional worktree settings. Run `/setup` to populate it.
 
-`/test-browser` uses the **agent-browser** CLI only (no MCP browser tools). Install: `npm install -g agent-browser` then `agent-browser install`.
+**agent-browser:** `/test-browser` uses the agent-browser CLI only. Install: `npm install -g agent-browser` then `agent-browser install`. See [src/.agents/commands/test-browser.md](src/.agents/commands/test-browser.md).
 
-## Source of truth
+**Source of truth**
 
-- **Workflows and commands:** [src/.agents/](src/.agents/)
-- **Principles and skill index:** [src/AGENTS.md](src/AGENTS.md)
+- Workflows and commands: [src/.agents/](src/.agents/)
+- Principles and skill index: [src/AGENTS.md](src/AGENTS.md)

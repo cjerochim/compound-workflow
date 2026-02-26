@@ -86,7 +86,9 @@ Default to **discussion-first**. Questions are a tool of last resort to unblock 
 
 **Choosing the ONE question (when needed):**
 
-1. **Prefer multiple choice when natural options exist**
+- **Do not open with multiple-choice.** Open with synthesis and discussion prompts. Multiple-choice applies only when you have already done a dialogue iteration and are asking that one allowed question.
+
+1. **Prefer multiple choice when natural options exist** (only after a dialogue iteration)
 
    - Good: "Should the notification be: (a) email only, (b) in-app only, or (c) both?"
    - Avoid: "How should users be notified?"
