@@ -6,6 +6,8 @@ It reduces delivery failures from **unclear intent**, **weak verification**, and
 
 *This template and README are continually refined during development.*
 
+Inspired by [Compound Engineering](https://every.to/guides/compound-engineering) (Every) — the AI-native philosophy that each unit of work should compound into the next.
+
 Runtime assets live in `src/.agents/` and `src/AGENTS.md`. Copy or sync them into any codebase.
 
 ---
