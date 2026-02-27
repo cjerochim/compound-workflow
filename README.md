@@ -143,6 +143,12 @@ Full “when to use what” and reference standards: [src/AGENTS.md](src/AGENTS.
 
 ---
 
+## Troubleshooting
+
+**Skills not showing?** Cursor discovers skills from the default `skills/` directory at the plugin root. OpenCode discovers them via the `.agents/compound-workflow-skills` symlink that Install creates (and `opencode.json` `skills.paths`). Run Install from the project root (`npx compound-workflow install`). If skills still don’t appear, check your Cursor/OpenCode version and any `permission.skill` settings that might hide or deny them.
+
+---
+
 ## Configuration and optional bits
 
 **Repo configuration:** Commands read a **Repo Config Block** (YAML) in `AGENTS.md` for `default_branch`, `dev_server_url`, `test_command`, etc. Run **`/install`** once; then edit `AGENTS.md` to set the Repo Config Block.

@@ -175,6 +175,39 @@ function readJsonMaybe(fileAbs) {
   return JSON.parse(stripJsonc(raw));
 }
 
+const SKILLS_SYMLINK_PATH = ".agents/compound-workflow-skills";
+
+function ensureSkillsSymlink(targetRoot, dryRun) {
+  const agentsDir = path.join(targetRoot, ".agents");
+  const linkPath = path.join(agentsDir, "compound-workflow-skills");
+  const targetRel = path.join("..", "node_modules", "compound-workflow", "src", ".agents", "skills");
+
+  if (dryRun) {
+    console.log("[dry-run] Would create", SKILLS_SYMLINK_PATH, "symlink");
+    return;
+  }
+
+  if (!fs.existsSync(agentsDir)) fs.mkdirSync(agentsDir, { recursive: true });
+
+  let needCreate = true;
+  try {
+    const stat = fs.lstatSync(linkPath);
+    if (stat.isSymbolicLink()) {
+      fs.realpathSync(linkPath);
+      needCreate = false;
+    }
+  } catch (_) {}
+
+  if (needCreate) {
+    try {
+      fs.unlinkSync(linkPath);
+    } catch (_) {}
+    const type = process.platform === "win32" ? "dir" : "dir";
+    fs.symlinkSync(targetRel, linkPath, type);
+    console.log("Created", SKILLS_SYMLINK_PATH, "-> package skills");
+  }
+}
+
 function writeOpenCodeJson(targetRoot, dryRun) {
   const opencodeAbs = path.join(targetRoot, "opencode.json");
   const existing = readJsonMaybe(opencodeAbs) ?? {};
@@ -182,9 +215,8 @@ function writeOpenCodeJson(targetRoot, dryRun) {
 
   next.$schema = next.$schema || "https://opencode.ai/config.json";
   next.skills = ensureObject(next.skills);
-  const skillsPath = `${PKG_PREFIX}/src/.agents/skills`;
   if (!Array.isArray(next.skills.paths)) next.skills.paths = [];
-  if (!next.skills.paths.includes(skillsPath)) next.skills.paths.unshift(skillsPath);
+  if (!next.skills.paths.includes(SKILLS_SYMLINK_PATH)) next.skills.paths.unshift(SKILLS_SYMLINK_PATH);
   next.command = ensureObject(next.command);
   next.agent = ensureObject(next.agent);
 
@@ -300,6 +332,7 @@ function main() {
   console.log("Package root:", packageRoot);
 
   writeOpenCodeJson(targetRoot, args.dryRun);
+  ensureSkillsSymlink(targetRoot, args.dryRun);
   writeAgentsMd(targetRoot, args.dryRun);
   ensureDirs(targetRoot, args.dryRun);
 
