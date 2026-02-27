@@ -1,9 +1,12 @@
 {
   "name": "compound-workflow",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Clarify → plan → execute → verify → capture. One Install action for Cursor, Claude, and OpenCode.",
   "license": "MIT",
-  "repository": { "type": "git", "url": "https://github.com/your-org/compound-workflow" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/compound-workflow"
+  },
   "bin": {
     "compound-workflow": "./scripts/install-cli.mjs"
   },
