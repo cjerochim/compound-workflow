@@ -29,6 +29,14 @@ Install writes `opencode.json` (OpenCode loads from the package), merges `AGENTS
 
 **Legacy (clone inside repo):** If you cloned this repo inside a host repo and need to copy files without npm, use `./scripts/sync-into-repo.sh` (copy only; does not update opencode.json). Prefer the npm + Install flow above.
 
+To update to a new release, see [Updating compound-workflow](#updating-compound-workflow).
+
+---
+
+## Updating compound-workflow
+
+- **Cursor / Claude (plugin):** Update via the editor’s plugin/marketplace (check for updates or reinstall). If installed from repo, pull latest and reload the plugin. No per-project step; the plugin loads commands/skills from its installed source.
+- **OpenCode / npm:** Run `npm update compound-workflow` (or bump the version in `package.json` and `npm install`), then run **Install** again: `/install` or `npx compound-workflow install`. This refreshes `opencode.json`, merges the latest `AGENTS.md` template, and ensures dirs exist; Repo Config Block is preserved.
 
 ---
 
@@ -89,7 +97,7 @@ flowchart LR
 
 ## Command reference
 
-**Onboarding:** `/install` — one action: writes opencode.json, merges AGENTS.md, creates dirs, preserves Repo Config Block. Run `npx compound-workflow install` in the project (requires `npm install compound-workflow`).
+**Onboarding:** `/install` — one action: writes opencode.json, merges AGENTS.md, creates dirs, preserves Repo Config Block. Run `npx compound-workflow install` in the project (requires `npm install compound-workflow`). Re-run after `npm update compound-workflow` to refresh config; see [Updating compound-workflow](#updating-compound-workflow).
 
 **Core workflow:** See [Step-by-step](#step-by-step-intent-and-commands) above.
 
