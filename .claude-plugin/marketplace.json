@@ -1,0 +1,11 @@
+{
+  "name": "compound-workflow",
+  "owner": { "name": "Compound Workflow" },
+  "plugins": [
+    {
+      "name": "compound-workflow",
+      "source": ".",
+      "description": "Clarify → plan → execute → verify → capture workflow. Commands, skills, and agents for structured development."
+    }
+  ]
+}

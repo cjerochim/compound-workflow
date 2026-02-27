@@ -1,0 +1,12 @@
+{
+  "name": "compound-workflow",
+  "version": "0.1.0",
+  "description": "Clarify → plan → execute → verify → capture workflow: commands, skills, and agents for Cursor, Claude, and OpenCode",
+  "author": { "name": "Compound Workflow" },
+  "keywords": ["workflow", "cursor", "claude", "opencode", "agents", "planning"],
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/your-org/compound-workflow" },
+  "skills": "src/.agents/skills",
+  "agents": "src/.agents/agents",
+  "commands": "src/.agents/commands"
+}

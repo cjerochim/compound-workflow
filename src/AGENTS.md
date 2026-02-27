@@ -41,8 +41,7 @@ Continuous improvement:
 
 Onboarding:
 
-- `/setup` -> configure repo defaults in `AGENTS.md` (Repo Config Block)
-- `/sync` -> copy `.agents` and `AGENTS.md` from compound-workflow clone into host repo and sync `opencode.json`
+- `/install` -> one action: writes opencode.json, merges AGENTS.md, creates dirs, preserves Repo Config Block (run `npx compound-workflow install` in the project)
 
 This workspace currently implements `brainstorm`, `plan`, `work`, `review`, `compound`, and optional QA utilities.
 

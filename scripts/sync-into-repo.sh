@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
+# LEGACY: Prefer "npm install compound-workflow" + "npx compound-workflow install" in the project.
 # Copy src/.agents and src/AGENTS.md from this compound-workflow repo into a host repo.
-# Does not update opencode.json; run /sync in Cursor or /setup in the host for that.
+# Does not update opencode.json; run Install (npx compound-workflow install) in the project for that.
 set -e
 CLONE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DRY_RUN=0
@@ -97,6 +98,6 @@ cp -R "$CLONE_ROOT/src/.agents" "$TARGET_ABS/.agents"
 if [[ ! -f "$TARGET_ABS/AGENTS.md" ]]; then
   cp "$CLONE_ROOT/src/AGENTS.md" "$TARGET_ABS/AGENTS.md"
 else
-  echo "AGENTS.md already exists; skipped copy. Run /sync in Cursor to merge template with host AGENTS.md."
+  echo "AGENTS.md already exists; skipped copy. Run Install (npx compound-workflow install) in the project to merge template with host AGENTS.md."
 fi
-echo "Done. Run /setup in the host repo to configure repo defaults and sync opencode.json if needed."
+  echo "Done. Run Install in the project (npx compound-workflow install) to configure opencode.json and AGENTS.md, or run /install in Cursor."

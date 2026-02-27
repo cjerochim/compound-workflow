@@ -8,34 +8,27 @@ It reduces delivery failures from **unclear intent**, **weak verification**, and
 
 Inspired by [Compound Engineering](https://every.to/guides/compound-engineering) (Every) — the AI-native philosophy that each unit of work should compound into the next.
 
-Runtime assets live in `src/.agents/` and `src/AGENTS.md`. Copy or sync them into any codebase.
+Runtime assets live in `src/.agents/` and `src/AGENTS.md`. **Cursor/Claude:** load via plugin. **OpenCode:** install the npm package and run Install once.
 
 ---
 
 ## Get started
 
-**Recommended:** Clone this repo *inside* your host repo (e.g. `vendor/compound-workflow`). Open the clone in Cursor—or set `COMPOUND_SYNC_TARGET` to your host repo root—then run **`/sync`**. In the host repo, run **`/setup`** once. Preview first: **`/sync --dry-run`**, **`/setup --dry-run`**.
-
-Sync copies `src/.agents` into the host (no nesting), merges or copies `AGENTS.md` (preserves host Repo Config Block), and updates the host’s `opencode.json`.
-
-**Terminal-only (no OpenCode update)**
+**One action:** In your project (with compound-workflow as a dependency), run **Install**—either the `/install` command in Cursor/Claude or:
 
 ```bash
-./scripts/sync-into-repo.sh --dry-run        # preview
-./scripts/sync-into-repo.sh                  # sync into parent directory
-./scripts/sync-into-repo.sh /path/to/repo    # sync into explicit target
+npm install compound-workflow
+npx compound-workflow install
 ```
 
-**Copy only (no clone)**
+Optional: `--dry-run` (preview), `--root /path/to/project`, `--no-config` (skip Repo Config Block reminder).
 
-From this repo root:
+Install writes `opencode.json` (OpenCode loads from the package), merges `AGENTS.md` (preserves your Repo Config Block), creates standard dirs, and reminds you to set the Repo Config Block in `AGENTS.md` if needed. No copy; Cursor/Claude use the plugin; OpenCode reads from `node_modules/compound-workflow`.
 
-```bash
-cp -R src/.agents /path/to/your/repo/.agents
-cp src/AGENTS.md /path/to/your/repo/AGENTS.md
-```
+**Cursor / Claude:** Add the compound-workflow plugin (from this repo or marketplace). Then in any repo you can run `/install` or use the CLI above.
 
-In the target repo, create `docs/brainstorms/`, `docs/plans/`, `docs/solutions/`, `docs/metrics/daily/`, `docs/metrics/weekly/`, `docs/metrics/monthly/`, `todos/` as needed. Run `/setup` in the host to configure the Repo Config Block.
+**Legacy (clone inside repo):** If you cloned this repo inside a host repo and need to copy files without npm, use `./scripts/sync-into-repo.sh` (copy only; does not update opencode.json). Prefer the npm + Install flow above.
+
 
 ---
 
@@ -96,7 +89,7 @@ flowchart LR
 
 ## Command reference
 
-**Onboarding:** `/sync` — copy `.agents` and `AGENTS.md` into host, merge AGENTS.md, update `opencode.json`. `/setup` — configure Repo Config Block and sync OpenCode; run once after copy or sync.
+**Onboarding:** `/install` — one action: writes opencode.json, merges AGENTS.md, creates dirs, preserves Repo Config Block. Run `npx compound-workflow install` in the project (requires `npm install compound-workflow`).
 
 **Core workflow:** See [Step-by-step](#step-by-step-intent-and-commands) above.
 
@@ -144,7 +137,7 @@ Full “when to use what” and reference standards: [src/AGENTS.md](src/AGENTS.
 
 ## Configuration and optional bits
 
-**Repo configuration:** Commands read a **Repo Config Block** (YAML) in `AGENTS.md` for `default_branch`, `dev_server_url`, `test_command`, `test_fast_command`, `lint_command`, `format_command`, `project_tracker`, and optional worktree settings. Run `/setup` to populate it.
+**Repo configuration:** Commands read a **Repo Config Block** (YAML) in `AGENTS.md` for `default_branch`, `dev_server_url`, `test_command`, etc. Run **`/install`** once; then edit `AGENTS.md` to set the Repo Config Block.
 
 **agent-browser:** `/test-browser` uses the agent-browser CLI only. Install: `npm install -g agent-browser` then `agent-browser install`. See [src/.agents/commands/test-browser.md](src/.agents/commands/test-browser.md).
 
