@@ -153,7 +153,7 @@ Full “when to use what” and reference standards: [src/AGENTS.md](src/AGENTS.
 
 **Skills not showing in Cursor?** Cursor discovers skills from (1) the plugin’s `skills/` directory when you load the plugin from this repo, or (2) the project’s `.cursor/skills/` when you use npm: ensure the project has a `.cursor` directory and run `npx compound-workflow install`—Install creates the full structure (`.cursor/skills/<skill>`, `.cursor/agents`, `.cursor/commands`, `.cursor/references`). If skills still don’t appear, check Cursor Settings → Rules and any `permission.skill` settings.
 
-**Skills not showing in OpenCode?** OpenCode uses the `.agents/compound-workflow-skills` symlink and `opencode.json` `skills.paths`. Run Install from the project root (`npx compound-workflow install`).
+**Skills not showing in OpenCode?** OpenCode uses the `.agents/compound-workflow-skills` symlink and `opencode.json` `skills.paths`. Run Install from the project root (`npx compound-workflow install`). The learnings-capture skill is named **compound-docs** (hyphen, plural); **compound_doc** (underscore) is an alias that resolves to the same skill.
 
 ---
 

@@ -142,7 +142,7 @@ worktree_bootstrap_notes:
 ## Implemented Components (Current Scope)
 
 - Commands: `workflow:brainstorm`, `workflow:plan`, `workflow:work`, `workflow:triage`, `workflow:review`, `workflow:compound` (under `.agents/commands/workflow/`), plus `test-browser`, `metrics`, `assess`, `setup`, `sync` (root commands)
-- Skills: `brainstorming`, `document-review`, `technical-review`, `compound-docs`, `file-todos`, `agent-browser`, `git-worktree`, `process-metrics`, `pii-protection-prisma`, `financial-workflow-integrity`, `audit-traceability`, `data-foundations`
+- Skills: `brainstorming`, `document-review`, `technical-review`, `compound-docs` (alias: `compound_doc`), `file-todos`, `agent-browser`, `git-worktree`, `process-metrics`, `pii-protection-prisma`, `financial-workflow-integrity`, `audit-traceability`, `data-foundations`
 - Agents:
   - `repo-research-analyst`
   - `learnings-researcher`
@@ -197,7 +197,7 @@ Maintenance:
 | `brainstorming` | You need structured idea exploration and clarification without writing code. |
 | `document-review` | You need to review a document/spec and extract issues, gaps, and concrete next actions. |
 | `technical-review` | A plan or feature approach has passed document review and must be checked for technical correctness before build. |
-| `compound-docs` | A durable learning (solved problem or implementation insight) should be captured as institutional knowledge. |
+| `compound-docs` (alias: `compound_doc`) | A durable learning (solved problem or implementation insight) should be captured as institutional knowledge. |
 | `file-todos` | You need a file-backed todo workflow for iterative multi-step changes. |
 | `agent-browser` | You need to inspect available agents/skills and route deterministically. |
 | `git-worktree` | You need isolated parallel work (review/feature) using git worktrees. |

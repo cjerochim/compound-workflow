@@ -250,9 +250,16 @@ function main() {
   const existing = readJsonMaybeJsonc(opencodeAbs) ?? {};
   const next = structuredClone(existing);
 
+  const SKILLS_COMPOUND_PATH = ".agents/compound-workflow-skills";
   next.$schema = next.$schema || "https://opencode.ai/config.json";
   next.skills = ensureObject(next.skills);
   next.skills.paths = Array.isArray(next.skills.paths) ? next.skills.paths : [".agents/skills"];
+  const hasCompoundWorkflow =
+    fs.existsSync(path.join(rootAbs, "node_modules", "compound-workflow")) ||
+    fs.existsSync(path.join(rootAbs, SKILLS_COMPOUND_PATH));
+  if (hasCompoundWorkflow && !next.skills.paths.includes(SKILLS_COMPOUND_PATH)) {
+    next.skills.paths.unshift(SKILLS_COMPOUND_PATH);
+  }
   next.command = ensureObject(next.command);
   next.agent = ensureObject(next.agent);
 
