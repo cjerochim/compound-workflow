@@ -52,7 +52,7 @@ Clarify what to build → plan how (fidelity + confidence) → execute via todos
 
 ```mermaid
 flowchart LR
-  A[brainstorm] --> B[plan] --> C[work] --> D[triage] --> E[review] --> F[compound] --> G[metrics]
+  A["brainstorm"] --> B["plan"] --> C["work"] --> D["triage"] --> E["review"] --> F["capture"] --> G["metrics"]
 ```
 
 ---
