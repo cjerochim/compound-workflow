@@ -197,7 +197,7 @@ Maintenance:
 | `brainstorming` | You need structured idea exploration and clarification without writing code. |
 | `document-review` | You need to review a document/spec and extract issues, gaps, and concrete next actions. |
 | `technical-review` | A plan or feature approach has passed document review and must be checked for technical correctness before build. |
-| `compound-docs` | A non-trivial problem is solved and should be captured as durable institutional knowledge. |
+| `compound-docs` | A durable learning (solved problem or implementation insight) should be captured as institutional knowledge. |
 | `file-todos` | You need a file-backed todo workflow for iterative multi-step changes. |
 | `agent-browser` | You need to inspect available agents/skills and route deterministically. |
 | `git-worktree` | You need isolated parallel work (review/feature) using git worktrees. |

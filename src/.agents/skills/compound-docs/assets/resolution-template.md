@@ -16,6 +16,8 @@ severity: [critical|high|medium|low]
 tags: [keyword1, keyword2, keyword3]  # include "spike" when this doc originated from a spike
 ---
 
+<!-- For implementation insights (feature learnings): treat "Symptoms" as "What we needed / context", "What Didn't Work" as optional (use "Direct solution" or omit), and "Solution" as the pattern/approach and when to reuse. -->
+
 # Troubleshooting: [Clear Problem Title]
 
 ## Problem
@@ -33,7 +35,7 @@ tags: [keyword1, keyword2, keyword3]  # include "spike" when this doc originated
 - [Observable symptom 2 - error messages, visual issues, unexpected behavior]
 - [Continue as needed - be specific]
 
-## What Didn't Work
+## What Didn't Work (optional for implementation insights)
 
 **Attempted Solution 1:** [Description of what was tried]
 - **Why it failed:** [Technical reason this didn't solve the problem]

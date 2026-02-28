@@ -1,6 +1,6 @@
 ---
 name: compound-docs
-description: Capture solved problems as categorized documentation with YAML frontmatter for fast lookup
+description: Capture solved problems and implementation insights as categorized documentation with YAML frontmatter for fast lookup
 disable-model-invocation: true
 allowed-tools:
   - Read # Parse conversation context
@@ -8,17 +8,17 @@ allowed-tools:
   - Bash # Create directories
   - Grep # Search existing docs
 preconditions:
-  - Problem has been solved (not in-progress)
-  - Solution has been verified working
+  - For solved problems: problem has been solved (not in-progress). For implementation insights: implementation complete and there is a reusable learning to capture.
+  - Solution or approach has been verified working (or for insights: pattern is clear and reusable)
 ---
 
 # compound-docs Skill
 
-**Purpose:** Automatically document solved problems to build searchable institutional knowledge with category-based organization (enum-validated problem types).
+**Purpose:** Document solved problems and implementation insights (learnings from feature work) to build searchable institutional knowledge with category-based organization (enum-validated problem types).
 
 ## Overview
 
-This skill captures problem solutions immediately after confirmation, creating structured documentation that serves as a searchable knowledge base for future sessions.
+This skill captures durable learnings in two equally valid forms: (1) problem solutions (bugs, investigations, spike outcomes) and (2) implementation insights (patterns, gotchas, or reusable approaches from feature work). Both produce one structured solution doc per capture.
 
 **Organization:** Primary capture writes one solution doc per problem in its symptom category directory (e.g., `docs/solutions/performance-issues/2026-02-19-email-processing-n-plus-one-in-brief-generation.md`). Files use YAML frontmatter for metadata and searchability.
 
@@ -41,20 +41,19 @@ Post-capture actions (by explicit user choice) may update other references (e.g.
 - "problem solved"
 - "that did it"
 
-**OR manual:** `/workflow:compound` command
+**OR manual:** `/workflow:compound` command (valid after feature work when there is a reusable pattern or learning to document)
 
-**Non-trivial problems only:**
+**Non-trivial only:**
 
-- Multiple investigation attempts needed
-- Tricky debugging that took time
-- Non-obvious solution
-- Future sessions would benefit
+- **Solved problems:** Multiple investigation attempts needed; tricky debugging; non-obvious solution; future sessions would benefit
+- **Implementation insights:** Pattern or learning from feature work worth reusing (e.g. framework usage, redirect guards)
 
 **Skip documentation for:**
 
 - Simple typos
 - Obvious syntax errors
 - Trivial fixes immediately corrected
+- Only when there is nothing non-trivial to document (do not skip solely because the work was a "planned feature" rather than a bug fix)
 </step>
 
 <step number="2" required="true" depends_on="1">
@@ -64,12 +63,12 @@ Extract from conversation history:
 
 **Required information:**
 
-- **Module name**: Which module or component had the problem
-- **Symptom**: Observable error/behavior (exact error messages)
-- **Investigation attempts**: What didn't work and why
-- **Root cause**: Technical explanation of actual problem
-- **Solution**: What fixed it (code/config changes)
-- **Prevention**: How to avoid in future
+- **Module name**: Which module or component (or feature area for insights)
+- **Symptom** (solved problems): Observable error/behavior (exact error messages). **For implementation insights:** treat as "what we needed to achieve" or "what we learned" (context).
+- **Investigation attempts**: What didn't work and why (optional for implementation insights)
+- **Root cause**: Technical explanation (or for insights: why this approach/pattern applies)
+- **Solution**: What fixed it (code/config changes); **for insights:** approach/pattern and when to reuse
+- **Prevention**: How to avoid in future (or for insights: when to apply this pattern)
 
 **Environment details (as applicable):**
 

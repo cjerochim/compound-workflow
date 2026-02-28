@@ -1,13 +1,13 @@
 ---
 name: compound
 invocation: workflow:compound
-description: Document a recently solved problem into docs/solutions/ to compound institutional knowledge
-argument-hint: "[optional: brief context about the fix]"
+description: Document a durable learning (solved problem or implementation insight) into docs/solutions/ to compound institutional knowledge
+argument-hint: "[optional: brief context about the fix or insight]"
 ---
 
 # /workflow:compound
 
-Capture a solved problem while context is fresh.
+Capture a durable learning (solved problem or implementation insight) while context is fresh.
 
 ## Purpose
 
@@ -45,7 +45,8 @@ After the primary solution doc is written, optional post-capture actions (by exp
 
 ### 1. Preconditions (required)
 
-- Confirm the problem is solved, verified working, and non-trivial.
+- **Solved problem:** Confirm the problem is solved, verified working, and non-trivial.
+- **Implementation insight:** For feature work, confirm implementation is complete and there is a reusable learning or pattern to capture (no "problem solved" requirement for this path).
 - If critical context is missing, ask targeted questions and wait. Then **invoke the `compound-docs` skill** (it defines required fields, validation gates, and template).
 
 ### 2. Optional enrichment (before write)
@@ -68,23 +69,24 @@ User may optionally run `document-review` on the created doc. If the repo has do
 ## Preconditions
 
 <preconditions enforcement="advisory">
-  <check condition="problem_solved">
-    Problem has been solved (not in-progress)
+  <check condition="problem_solved_or_insight">
+    For solved problems: problem has been solved (not in-progress). For implementation insights: implementation complete and there is a reusable learning to capture.
   </check>
   <check condition="solution_verified">
-    Solution has been verified working
+    Solution or approach has been verified working (or for insights: pattern is clear and reusable)
   </check>
   <check condition="non_trivial">
-    Non-trivial problem (not simple typo or obvious error)
+    Non-trivial (not simple typo or obvious error; for insights: worth documenting for future reuse)
   </check>
 </preconditions>
 
 ## What It Captures
 
-- **Problem symptom**: Exact error messages, observable behavior
+- **Problem symptom** (solved problems): Exact error messages, observable behavior
 - **Investigation steps tried**: What didn't work and why
 - **Root cause analysis**: Technical explanation
 - **Working solution**: Step-by-step fix with code examples
+- **Implementation insights**: Patterns, gotchas, or reusable approaches from feature work (e.g. framework usage, redirect patterns)
 - **Prevention strategies**: How to avoid in future
 - **Cross-references**: Links to related issues and docs
 
