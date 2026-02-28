@@ -208,6 +208,42 @@ function ensureSkillsSymlink(targetRoot, dryRun) {
   }
 }
 
+const CURSOR_SKILLS_LINK = ".cursor/skills/compound-workflow";
+
+function ensureCursorSkills(targetRoot, dryRun) {
+  const cursorDir = path.join(targetRoot, ".cursor");
+  if (!fs.existsSync(cursorDir)) return;
+
+  const skillsDir = path.join(cursorDir, "skills");
+  const linkPath = path.join(skillsDir, "compound-workflow");
+  const targetRel = path.join("..", "..", "node_modules", "compound-workflow", "src", ".agents", "skills");
+
+  if (dryRun) {
+    console.log("[dry-run] Would create", CURSOR_SKILLS_LINK, "symlink (Cursor detected)");
+    return;
+  }
+
+  if (!fs.existsSync(skillsDir)) fs.mkdirSync(skillsDir, { recursive: true });
+
+  let needCreate = true;
+  try {
+    const stat = fs.lstatSync(linkPath);
+    if (stat.isSymbolicLink()) {
+      fs.realpathSync(linkPath);
+      needCreate = false;
+    }
+  } catch (_) {}
+
+  if (needCreate) {
+    try {
+      fs.unlinkSync(linkPath);
+    } catch (_) {}
+    const type = process.platform === "win32" ? "dir" : "dir";
+    fs.symlinkSync(targetRel, linkPath, type);
+    console.log("Created", CURSOR_SKILLS_LINK, "-> package skills (Cursor)");
+  }
+}
+
 function writeOpenCodeJson(targetRoot, dryRun) {
   const opencodeAbs = path.join(targetRoot, "opencode.json");
   const existing = readJsonMaybe(opencodeAbs) ?? {};
@@ -333,6 +369,7 @@ function main() {
 
   writeOpenCodeJson(targetRoot, args.dryRun);
   ensureSkillsSymlink(targetRoot, args.dryRun);
+  ensureCursorSkills(targetRoot, args.dryRun);
   writeAgentsMd(targetRoot, args.dryRun);
   ensureDirs(targetRoot, args.dryRun);
 
