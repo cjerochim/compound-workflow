@@ -23,11 +23,11 @@ npx compound-workflow install
 
 **2. Choose how you use it:**
 
-- **Cursor:** If your project already has a `.cursor` directory, Install will create a symlink at `.cursor/skills/compound-workflow` so Cursor discovers the workflow skills. No plugin needed for skills. For full commands and agents, use the plugin from this repo (see repo docs for loading a local plugin).
+- **Cursor:** If your project already has a `.cursor` directory, Install will create the correct structure: one symlink per skill under `.cursor/skills/`, plus `.cursor/agents`, `.cursor/commands`, and `.cursor/references` (each symlinked to the package). No plugin needed. Use the plugin from this repo if you need a different loading method.
 - **OpenCode:** Install writes `opencode.json` and a symlink at `.agents/compound-workflow-skills`; OpenCode loads from the package. Run `/install` or `npx compound-workflow install` in the project.
 - **Claude:** Add the compound-workflow plugin from this repo. In any repo, run `/install` or the CLI above.
 
-**What Install does:** Merges `AGENTS.md` (preserves your Repo Config Block), creates standard dirs (`docs/`, `todos/`), writes `opencode.json` (for OpenCode), and—if the project has a `.cursor` directory—creates a symlink at `.cursor/skills/compound-workflow` so Cursor picks up skills. All paths reference `node_modules/compound-workflow`; no file copying.
+**What Install does:** Merges `AGENTS.md` (preserves your Repo Config Block), creates standard dirs (`docs/`, `todos/`), writes `opencode.json` (for OpenCode), and—if the project has a `.cursor` directory—creates `.cursor/skills/<skill>`, `.cursor/agents`, `.cursor/commands`, and `.cursor/references` (symlinks into the package). All paths reference `node_modules/compound-workflow`; no file copying.
 
 **CLI options:** `--dry-run` (preview), `--root /path/to/project`, `--no-config` (skip Repo Config Block reminder).
 
@@ -40,7 +40,7 @@ To update to a new release, see [Updating compound-workflow](#updating-compound-
 ## Updating compound-workflow
 
 - **Cursor (plugin):** If you load the plugin from this repo, pull latest and reload the plugin in Cursor.
-- **Cursor (npm + .cursor):** Run `npm update compound-workflow`, then run **Install** again (`npx compound-workflow install`) to refresh the `.cursor/skills/compound-workflow` symlink and AGENTS.md.
+- **Cursor (npm + .cursor):** Run `npm update compound-workflow`, then run **Install** again (`npx compound-workflow install`) to refresh the `.cursor/skills`, `.cursor/agents`, `.cursor/commands`, and `.cursor/references` symlinks and AGENTS.md.
 - **OpenCode / npm:** Run `npm update compound-workflow` (or bump the version in `package.json` and `npm install`), then run **Install** again. This refreshes `opencode.json`, merges the latest `AGENTS.md` template, and ensures dirs exist; Repo Config Block is preserved.
 - **Claude (plugin):** Update via the editor’s plugin; if from repo, pull latest and reload.
 
@@ -151,7 +151,7 @@ Full “when to use what” and reference standards: [src/AGENTS.md](src/AGENTS.
 
 ## Troubleshooting
 
-**Skills not showing in Cursor?** Cursor discovers skills from (1) the plugin’s `skills/` directory when you load the plugin from this repo, or (2) the project’s `.cursor/skills/` when you use npm: ensure the project has a `.cursor` directory and run `npx compound-workflow install`—Install creates a symlink at `.cursor/skills/compound-workflow`. If skills still don’t appear, check Cursor Settings → Rules and any `permission.skill` settings.
+**Skills not showing in Cursor?** Cursor discovers skills from (1) the plugin’s `skills/` directory when you load the plugin from this repo, or (2) the project’s `.cursor/skills/` when you use npm: ensure the project has a `.cursor` directory and run `npx compound-workflow install`—Install creates the full structure (`.cursor/skills/<skill>`, `.cursor/agents`, `.cursor/commands`, `.cursor/references`). If skills still don’t appear, check Cursor Settings → Rules and any `permission.skill` settings.
 
 **Skills not showing in OpenCode?** OpenCode uses the `.agents/compound-workflow-skills` symlink and `opencode.json` `skills.paths`. Run Install from the project root (`npx compound-workflow install`).
 

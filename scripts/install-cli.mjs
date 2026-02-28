@@ -208,22 +208,19 @@ function ensureSkillsSymlink(targetRoot, dryRun) {
   }
 }
 
-const CURSOR_SKILLS_LINK = ".cursor/skills/compound-workflow";
-
-function ensureCursorSkills(targetRoot, dryRun) {
+function ensureCursorDirSymlink(targetRoot, cursorSubdir, pkgSubdir, dryRun, label) {
   const cursorDir = path.join(targetRoot, ".cursor");
   if (!fs.existsSync(cursorDir)) return;
+  const pkgPath = path.join(packageRoot, "src", ".agents", pkgSubdir);
+  if (!fs.existsSync(pkgPath)) return;
 
-  const skillsDir = path.join(cursorDir, "skills");
-  const linkPath = path.join(skillsDir, "compound-workflow");
-  const targetRel = path.join("..", "..", "node_modules", "compound-workflow", "src", ".agents", "skills");
+  const linkPath = path.join(cursorDir, cursorSubdir);
+  const targetRel = path.join("..", "node_modules", "compound-workflow", "src", ".agents", pkgSubdir);
 
   if (dryRun) {
-    console.log("[dry-run] Would create", CURSOR_SKILLS_LINK, "symlink (Cursor detected)");
+    console.log("[dry-run] Would create .cursor/" + cursorSubdir, "symlink (Cursor)");
     return;
   }
-
-  if (!fs.existsSync(skillsDir)) fs.mkdirSync(skillsDir, { recursive: true });
 
   let needCreate = true;
   try {
@@ -240,8 +237,66 @@ function ensureCursorSkills(targetRoot, dryRun) {
     } catch (_) {}
     const type = process.platform === "win32" ? "dir" : "dir";
     fs.symlinkSync(targetRel, linkPath, type);
-    console.log("Created", CURSOR_SKILLS_LINK, "-> package skills (Cursor)");
+    console.log("Created", ".cursor/" + cursorSubdir, "->", label || pkgSubdir, "(Cursor)");
   }
+}
+
+function ensureCursorSkills(targetRoot, dryRun) {
+  const cursorDir = path.join(targetRoot, ".cursor");
+  if (!fs.existsSync(cursorDir)) return;
+
+  const packageSkillsDir = path.join(packageRoot, "src", ".agents", "skills");
+  if (!fs.existsSync(packageSkillsDir)) return;
+
+  const skillNames = [];
+  try {
+    for (const name of fs.readdirSync(packageSkillsDir)) {
+      const skillPath = path.join(packageSkillsDir, name);
+      if (fs.statSync(skillPath).isDirectory() && fs.existsSync(path.join(skillPath, "SKILL.md"))) {
+        skillNames.push(name);
+      }
+    }
+  } catch (_) {
+    return;
+  }
+
+  const skillsDir = path.join(cursorDir, "skills");
+  const type = process.platform === "win32" ? "dir" : "dir";
+
+  if (dryRun) {
+    console.log("[dry-run] Would create .cursor/skills/<skill> symlinks for:", skillNames.join(", "));
+    return;
+  }
+
+  if (!fs.existsSync(skillsDir)) fs.mkdirSync(skillsDir, { recursive: true });
+
+  for (const name of skillNames) {
+    const linkPath = path.join(skillsDir, name);
+    const targetRel = path.join("..", "..", "..", "node_modules", "compound-workflow", "src", ".agents", "skills", name);
+    let needCreate = true;
+    try {
+      const stat = fs.lstatSync(linkPath);
+      if (stat.isSymbolicLink()) {
+        fs.realpathSync(linkPath);
+        needCreate = false;
+      }
+    } catch (_) {}
+
+    if (needCreate) {
+      try {
+        fs.unlinkSync(linkPath);
+      } catch (_) {}
+      fs.symlinkSync(targetRel, linkPath, type);
+      console.log("Created", ".cursor/skills/" + name, "-> package skill (Cursor)");
+    }
+  }
+}
+
+function ensureCursorIntegration(targetRoot, dryRun) {
+  ensureCursorSkills(targetRoot, dryRun);
+  ensureCursorDirSymlink(targetRoot, "agents", "agents", dryRun, "package agents");
+  ensureCursorDirSymlink(targetRoot, "commands", "commands", dryRun, "package commands");
+  ensureCursorDirSymlink(targetRoot, "references", "references", dryRun, "package references");
 }
 
 function writeOpenCodeJson(targetRoot, dryRun) {
@@ -369,7 +424,7 @@ function main() {
 
   writeOpenCodeJson(targetRoot, args.dryRun);
   ensureSkillsSymlink(targetRoot, args.dryRun);
-  ensureCursorSkills(targetRoot, args.dryRun);
+  ensureCursorIntegration(targetRoot, args.dryRun);
   writeAgentsMd(targetRoot, args.dryRun);
   ensureDirs(targetRoot, args.dryRun);
 
