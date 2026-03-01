@@ -56,6 +56,7 @@ Use the canonical command names (`/workflow:plan`, `/workflow:work`, `/workflow:
 - **Solution scope contract is mandatory in every plan.** Plans must declare `solution_scope` (`partial_fix|full_remediation|migration`) plus explicit completion expectation and non-goals so `/workflow:work` can enforce intent.
 - **SpecFlow is a validation gate, not a rewrite engine.** High fidelity required; Medium recommended; Low optional. Output must translate into acceptance criteria/edge cases, not new scope.
 - **Isolation preflight is a hard gate.** `/workflow:work` must complete and record worktree/isolation preflight before any implementation commands. `/workflow:review` must do the same for non-current PR/branch targets before analysis.
+- **Spike governance is explicit and ordered.** Risky plans must evaluate spike need, spike candidates must declare initial priority/dependencies/unblocks/timebox/deliverable, triage confirms those assumptions, and `/workflow:work` executes blocking spikes before dependent build todos.
 - **Skills are invoked only by trigger.** `document-review` only when user selects "Review and refine" (or explicit request); guardrail skills (PII/financial/audit/data) only when the feature touches that domain.
 - **No new files/directories by default** beyond `docs/plans/...` for planning output.
 - **Plan file is the artifact.** Post-generation options are actions on the artifact; they do not change the workflow shape.

@@ -157,6 +157,24 @@ Select one: `partial_fix | full_remediation | migration`
 
 If unclear, ask one focused clarification before finalizing the plan.
 
+#### Spike Need Evaluation (REQUIRED for risky work)
+
+Determine whether spikes are needed before finalizing implementation structure.
+
+Risky work trigger set (extended):
+
+- Any high-risk domain trigger (security, payments, privacy, schema/data migrations or backfills, production infra/deployment risk, hard-to-reverse changes)
+- `confidence: low`
+- `solution_scope: migration`
+- Open questions that include implementation feasibility unknowns
+
+If risky work is detected:
+
+- Spike evaluation is mandatory.
+- Declare `spikes_needed: yes|no`.
+- If `spikes_needed: yes`, include explicit Spike Candidates with upfront dependency and priority modeling (see Step 3.5).
+- If `spikes_needed: no`, include a short rationale + risk mitigation note explaining why direct implementation is safe.
+
 #### Research Mode
 
 Decide whether to run external research.
@@ -181,6 +199,8 @@ Required announcement format:
 Fidelity selected: <Low|Medium|High>
 Confidence: <High|Medium|Low>
 Solution scope: <partial_fix|full_remediation|migration>
+Spike evaluation: required|not-required
+Spikes needed: yes|no|n/a
 
 Why this fidelity:
 1) ...
@@ -291,9 +311,9 @@ If SpecFlow was run in Step 1.7:
 - [ ] Review SpecFlow analysis results
 - [ ] Ensure any identified gaps or edge cases are reflected in the issue structure and acceptance criteria
 
-### 3.5. Discussion Points & Spike Candidates (REQUIRED when Open questions ≠ none)
+### 3.5. Discussion Points & Spike Candidates
 
-When you declared Open questions in Step 1.5 (other than "none"), the plan file MUST include one or both of these sections with checkboxes so `/workflow:work` and `file-todos` can create pending todos for triage:
+When you declared Open questions in Step 1.5 (other than "none"), and/or when risky-work spike evaluation requires spikes, the plan file MUST include one or both sections below with checkboxes so `/workflow:work` and `file-todos` can create pending todos for triage:
 
 - **## Discussion Points (resolve/decide)** — Decisions to make (no code). Use `- [ ]` items (e.g. "Decide: X or Y?", "Confirm constraint Z").
 - **## Spike Candidates (timeboxed)** — Timeboxed investigations to de-risk. Use `- [ ] Spike: <short description>` items.
@@ -302,9 +322,33 @@ Rules:
 
 - If an unknown blocks implementation feasibility, prefer listing it under **Spike Candidates**.
 - If confidence is `Low`, include at least one checkbox in one of these sections.
+- If risky-work spike evaluation declared `spikes_needed: yes`, include at least one Spike Candidate checkbox.
 - These sections may appear after the main implementation content (e.g. after Acceptance Criteria or References) or in a dedicated "Unknowns & decisions" area; ensure they are in the written plan file when Open questions exist.
 
+Required Spike Candidate metadata (per candidate, documented directly under each checkbox item):
+
+- `Initial priority: p1|p2|p3`
+- `Depends on: <issue ids or none>`
+- `Unblocks: <build todo(s) or plan section(s)>`
+- `Timebox: <duration>`
+- `Deliverable: <options/recommendation/next build todos>`
+- `Parallelizable: yes|no`
+
+If a spike unblocks implementation work, mark it as a blocking spike in the candidate text so triage/work can front-load it.
+
 **When presenting Discussion Points (to the user or during triage):** (1) List a **concise numbered summary** of the points. (2) Walk through **each point one by one**; for each, discuss and align with the user; only then move on. Do not resolve all points in one turn.
+
+Example Spike Candidate:
+
+```markdown
+- [ ] Spike: Validate tenant-safe migration sequence for billing events
+  - Initial priority: p1
+  - Depends on: none
+  - Unblocks: "Implement migration executor + backfill safety checks"
+  - Timebox: 4h
+  - Deliverable: 3 options + recommendation + follow-up build todos
+  - Parallelizable: yes
+```
 
 ### 4. Choose Implementation Detail Level
 
@@ -705,6 +749,8 @@ Apply best practices for clarity and actionability, making the issue easy to sca
 - [ ] `solution_scope`, completion expectation, and non-goals are explicitly documented
 - [ ] If `solution_scope = partial_fix`, Remaining Gaps checklist is present and actionable
 - [ ] If `solution_scope = migration`, migration safety checks + rollback triggers are specified
+- [ ] If risky-work triggers apply, Spike Evaluation is present with `spikes_needed: yes|no`
+- [ ] If `spikes_needed = yes`, each spike candidate has priority/dependency/timebox/deliverable/parallelizable metadata
 - [ ] Links and references are working
 - [ ] Acceptance criteria are measurable
 - [ ] Add names of files in pseudo code examples and todo lists
@@ -722,9 +768,11 @@ Write the complete plan file to `docs/plans/YYYY-MM-DD-<type>-<slug>-plan.md`. T
 
 **When Open questions were declared (Step 1.5):** The written plan MUST include at least one of: `## Discussion Points (resolve/decide)` with `- [ ]` items, or `## Spike Candidates (timeboxed)` with `- [ ] Spike: ...` items. If confidence is `Low`, at least one checkbox is required in one of these sections. This ensures `file-todos` can create pending discussion/spike todos for `/workflow:triage`.
 
+**When risky-work Spike Evaluation declared `spikes_needed: yes`:** The written plan MUST include `## Spike Candidates (timeboxed)` with at least one spike checkbox and required per-candidate metadata (`Initial priority`, `Depends on`, `Unblocks`, `Timebox`, `Deliverable`, `Parallelizable`) so ordering can be defined in plan, confirmed in triage, and enforced in work.
+
 Confirm: "Plan written to docs/plans/[filename]"
 
-**Non-interactive mode:** When the invocation is non-interactive (e.g., `workflow:plan` run by automation, CI, or with an explicit non-interactive flag/convention), skip AskQuestion calls and do not present Post-Generation Options. For determinism, the repo should define the flag or convention (e.g., in `AGENTS.md` Repo Config Block or a documented env var). Still **declare** Fidelity, Confidence, Solution scope, Research mode, and Open questions in the required announcement format before writing the plan. Use these defaults when user input is unavailable: fidelity = Medium, confidence = Medium, solution_scope = full_remediation, research mode = local + external for Medium/High risk topics else local only. Proceed directly to writing the plan file and then exit or return the plan path as output.
+**Non-interactive mode:** When the invocation is non-interactive (e.g., `workflow:plan` run by automation, CI, or with an explicit non-interactive flag/convention), skip AskQuestion calls and do not present Post-Generation Options. For determinism, the repo should define the flag or convention (e.g., in `AGENTS.md` Repo Config Block or a documented env var). Still **declare** Fidelity, Confidence, Solution scope, Spike evaluation, Spikes needed, Research mode, and Open questions in the required announcement format before writing the plan. Use these defaults when user input is unavailable: fidelity = Medium, confidence = Medium, solution_scope = full_remediation, spike evaluation = not-required unless risky-work triggers are present, spikes needed = n/a when spike evaluation is not required, research mode = local + external for Medium/High risk topics else local only. Proceed directly to writing the plan file and then exit or return the plan path as output.
 
 **Required in plan frontmatter:** Add these fields to the plan file:
 

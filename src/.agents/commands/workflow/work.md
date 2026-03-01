@@ -219,6 +219,9 @@ The input must be a plan file path.
    - Consider only `todos/*-ready-*.md` items. Do not execute `pending` or `deferred` todos.
    - Skip blocked todos:
      - blocked if `dependencies` is non-empty and any dependency does not have a corresponding `*-complete-*.md` file.
+   - Prioritize blocking spikes first:
+     - if a ready spike todo unblocks downstream implementation todos, execute that spike before dependent build todos.
+     - independent ready spikes may run in parallel when environment/worktree setup supports it.
    - Prioritize by priority then id:
      - `p1` before `p2` before `p3`
      - lower `issue_id` first
@@ -329,9 +332,9 @@ The input must be a plan file path.
 
    Steps:
 
-   1. **Spike todo:** Create a new `todos/*-pending-*.md` todo tagged `tags: [spike]` (or convert the current blocked todo to a spike todo). Fill Problem Statement, Proposed Solutions (options), and Acceptance Criteria (deliverable). If triage has not been run, recommend `/workflow:triage` to approve the spike and set timebox + deliverable; then treat the spike as `ready` once approved.
+   1. **Spike todo:** Create a new `todos/*-pending-*.md` todo tagged `tags: [spike]` (or convert the current blocked todo to a spike todo). Fill Problem Statement, Proposed Solutions (options), and Acceptance Criteria (deliverable). Carry forward any plan metadata (initial priority, depends_on, unblocks, parallelizable). If triage has not been run, recommend `/workflow:triage` to approve the spike and set timebox + deliverable; then treat the spike as `ready` once approved.
    2. **Isolated execution:** Recommend a dedicated spike worktree. Use `skill: git-worktree` with branch name `spike/<todo_id>-<slug>` (e.g. `spike/003-auth-approach`). Run worktree bootstrap per the git-worktree skill. Execute the spike in that worktree so build work is not mixed with exploration.
-   3. **Research subagents (per spike):** Run in parallel when useful:
+   3. **Research subagents (per spike):** Run mandatory baseline research in parallel:
       - Always (when agents exist): Task repo-research-analyst(context), Task learnings-researcher(context)
       - Conditional: Task framework-docs-researcher(topic), Task best-practices-researcher(topic), Task git-history-analyzer(context) when touching existing behavior or framework choices
    4. **Spike deliverable (required in spike todo Work Log):**
@@ -339,7 +342,7 @@ The input must be a plan file path.
       - Recommendation (one option + why)
       - Concrete next steps: create or update build todos (or plan checkbox to flip) so the main plan can proceed
       - **Should we compound this?** yes/no + one-line why (if yes, recommend `/workflow:compound` with spike context after the spike is complete)
-   5. **Multiple spikes:** If there are N approved spike todos and they are independent, create N worktrees (one per spike, under configured `worktree_dir`). Run one spike per worktree; when the environment supports multiple agents, spikes may run in parallel.
+   5. **Multiple spikes:** If there are N approved spike todos and they are independent, create N worktrees (one per spike, under configured `worktree_dir`). Run one spike per worktree; when the environment supports multiple agents, spikes may run in parallel. If spikes have dependency edges, execute them in dependency order.
    6. **After spike completion:** Mark the spike todo complete (`*-complete-*.md`). If the deliverable said "compound: yes", recommend running `/workflow:compound` with the spike context so the learning is captured in `docs/solutions/` with `tags: [..., spike]`.
 
  2. **Follow Existing Patterns**

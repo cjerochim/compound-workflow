@@ -121,12 +121,18 @@ Default mapping rules:
 6. **Discussion Points and Spike Candidates:** If the plan has sections `## Discussion Points (resolve/decide)` or `## Spike Candidates (timeboxed)`:
    - Checkboxes under **Discussion Points** → create `todos/*-pending-*.md` with `tags: [discussion]` and `status: pending`.
    - Checkboxes under **Spike Candidates** (including items like `- [ ] Spike: ...`) → create `todos/*-pending-*.md` with `tags: [spike]` and `status: pending`.
+   - For each spike candidate, carry plan metadata into the todo when present:
+     - `Initial priority` -> todo `priority` (initial value; triage may adjust)
+     - `Depends on` -> todo `dependencies` when issue ids are known; otherwise keep as a note in `Recommended Action`
+     - `Unblocks` -> include in `Recommended Action` so triage/work can front-load blocking spikes
+     - `Timebox`, `Deliverable`, `Parallelizable` -> copy into `Recommended Action` or `Findings`
    - These items require triage before execution; do not default them to `ready` unless the plan is explicitly approved and triage has been run.
 
 Status and priority defaults:
 
 - `status`: `ready` when the plan is approved and the todo is not from Discussion Points or Spike Candidates; otherwise `pending`. Todos with `tags: [discussion]` or `tags: [spike]` default to `pending`.
 - `priority`: `p2` unless clearly urgent/high-risk
+- If a spike is marked as unblocking implementation work, default initial priority to `p1` when no explicit priority is provided.
 
 Dependencies:
 
@@ -144,6 +150,7 @@ Plan sync expectations:
    - read Problem Statement + Findings
    - choose a recommended action
    - set priority and dependencies
+   - for `tags: [spike]`, confirm/adjust carried plan metadata (`Initial priority`, `Depends on`, `Unblocks`, `Timebox`, `Deliverable`, `Parallelizable`)
 3. Decision:
    - **Approve:** rename `*-pending-*` -> `*-ready-*`, set frontmatter `status: ready`
    - **Defer:** rename `*-pending-*` -> `*-deferred-*`, set frontmatter `status: deferred` (typically `p3`). Keep Work Log/Findings so the item is referenceable later; it will not appear in the executable queue until re-triaged to `ready`.
