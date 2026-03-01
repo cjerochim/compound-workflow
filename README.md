@@ -62,10 +62,10 @@ flowchart LR
 | Step | Intent | Command | Output / note |
 |------|--------|---------|---------------|
 | Clarify what to build | Dialogue only; no code | `/workflow:brainstorm [topic]` | `docs/brainstorms/` |
-| Define how (fidelity + confidence) | Plan only; no code | `/workflow:plan [description or brainstorm path]` | `docs/plans/` |
-| Execute | File-based todos; risk-tier testing; no auto-ship | `/workflow:work <plan-path>` | `todos/` |
-| Ready the queue | Priority and dependencies for pending todos | `/workflow:triage` | — |
-| Validate quality | Evidence-based review; no fixes by default | `/workflow:review [PR, branch, or current]` | pass / pass-with-notes / fail |
+| Define how (fidelity + confidence) | Plan only; no code; include agentic access + validation contract | `/workflow:plan [description or brainstorm path]` | `docs/plans/` |
+| Execute | File-based todos; risk-tier testing; evidence-backed completion; no auto-ship | `/workflow:work <plan-path>` | `todos/` |
+| Ready the queue | Priority/dependencies + executable agentic contract checks for pending todos | `/workflow:triage` | — |
+| Validate quality | Evidence-based review + agentic executability checks; no fixes by default | `/workflow:review [PR, branch, or current]` | pass / pass-with-notes / fail |
 | Capture learnings | One solution doc for future use | `/workflow:compound [context]` | `docs/solutions/` |
 | Log and improve | Session log + optional aggregate review | `/metrics` + `/assess weekly 7` (or monthly) | `docs/metrics/daily/`, weekly/monthly |
 
@@ -75,19 +75,19 @@ flowchart LR
 
 #### 2. Define how (plan)
 
-**Intent:** Plan only; no code; fidelity + confidence. **Command:** `/workflow:plan [description or brainstorm path]`. **Output:** `docs/plans/`.
+**Intent:** Plan only; no code; fidelity + confidence; include an agentic access + validation contract. **Command:** `/workflow:plan [description or brainstorm path]`. **Output:** `docs/plans/`.
 
 #### 3. Execute (work)
 
-**Intent:** File-based todos; risk-tier testing; no auto-ship. **Command:** `/workflow:work <plan-path>`. **Output:** `todos/`.
+**Intent:** File-based todos; risk-tier testing; success-criteria evidence + quality gates before completion; no auto-ship. **Command:** `/workflow:work <plan-path>`. **Output:** `todos/`.
 
 #### 4. Ready the queue (triage)
 
-**Intent:** Priority and dependencies for pending todos. **Command:** `/workflow:triage`. **Output:** —.
+**Intent:** Priority/dependencies for pending todos and readiness checks for agentic executability. **Command:** `/workflow:triage`. **Output:** —.
 
 #### 5. Validate quality (review)
 
-**Intent:** Evidence-based review; no fixes by default. **Command:** `/workflow:review [PR|branch|current]`. **Output:** pass / pass-with-notes / fail.
+**Intent:** Evidence-based review + agentic validation coverage checks; no fixes by default. **Command:** `/workflow:review [PR|branch|current]`. **Output:** pass / pass-with-notes / fail.
 
 #### 6. Capture learnings (compound)
 
@@ -147,6 +147,10 @@ Full “when to use what” and reference standards: [src/AGENTS.md](src/AGENTS.
 
 - **Brainstorm and plan do not write code.** Output is documents only.
 
+- **Todo completion requires evidence:** acceptance/success criteria plus quality gates must be recorded before `complete`.
+
+- **Quality gate fallback:** if `lint_command` or `typecheck_command` is missing from repo config, workflow asks once for run-provided commands and continues only if they pass.
+
 - Add a separate shipping command if you want automated commit/PR and quality gates.
 
 ---
@@ -161,7 +165,7 @@ Full “when to use what” and reference standards: [src/AGENTS.md](src/AGENTS.
 
 ## Configuration and optional bits
 
-**Repo configuration:** Commands read a **Repo Config Block** (YAML) in `AGENTS.md` for `default_branch`, `dev_server_url`, `test_command`, etc. Run **`/install`** once; then edit `AGENTS.md` to set the Repo Config Block.
+**Repo configuration:** Commands read a **Repo Config Block** (YAML) in `AGENTS.md` for `default_branch`, `dev_server_url`, `test_command`, `lint_command`, `typecheck_command`, etc. Run **`/install`** once; then edit `AGENTS.md` to set the Repo Config Block.
 
 **agent-browser:** `/test-browser` uses the agent-browser CLI only. Install: `npm install -g agent-browser` then `agent-browser install`. See [src/.agents/commands/test-browser.md](src/.agents/commands/test-browser.md).
 

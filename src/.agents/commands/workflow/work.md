@@ -64,6 +64,7 @@ The input must be a plan file path.
    - `test_command`
    - `test_fast_command` (optional)
    - `lint_command` (optional)
+   - `typecheck_command` (optional)
    - `format_command` (optional)
 
    If not present, ask once for the project's test command and suggest adding it to `AGENTS.md`.
@@ -87,6 +88,24 @@ The input must be a plan file path.
 
    - Prefer `test_command` and optional `test_fast_command` from `AGENTS.md`.
    - If missing, ask once for the repo's test command and suggest adding it to `AGENTS.md`.
+
+1.6. **Agentic Access + Validation Preflight (HARD GATE)**
+
+   Before any implementation commands:
+
+   - Verify each `ready` todo has an executable Agentic Execution Contract:
+     - access preconditions are explicit
+     - validation path is explicit (commands/routes/checks)
+     - evidence expectations are explicit
+     - quality gate commands are explicit or marked for ask-once fallback
+   - If a todo lacks this contract, move it to `pending` for triage before coding.
+
+   Ask-once fallback policy for missing lint/typecheck config:
+
+   - If `lint_command` and/or `typecheck_command` is missing from `AGENTS.md`, ask once in this run for run-provided commands.
+   - Record run-provided commands in the first active todo Work Log entry.
+   - Continue only when provided commands run successfully.
+   - If commands are not provided or fail, do not mark related todos complete.
 
 1.75. **Resolve Plan Scope Contract (REQUIRED)**
 
@@ -274,6 +293,7 @@ The input must be a plan file path.
       - tests run
       - results
       - next steps
+      - status context (`ready`, `pending`, `complete`)
 
     Discovery + scope changes (ask each time):
 
@@ -287,11 +307,14 @@ The input must be a plan file path.
 
    **Validation Gate (per todo)**
 
-   Before marking a todo complete, you MUST prove the acceptance criteria are met.
+   Before marking a todo complete, you MUST prove acceptance/success criteria are met.
 
    For each todo:
-   - Re-state the acceptance criteria being validated (1–3 bullets)
+   - Re-state the acceptance/success criteria being validated (1–3 bullets)
    - Run the smallest verification that proves it (tests, command output, UI check)
+   - Run lint/typecheck quality gates for changed scope:
+     - `lint_command` when configured, else run the ask-once run-provided lint command
+     - `typecheck_command` when configured, else run the ask-once run-provided typecheck command
    - Record evidence in the todo Work Log:
      - commands run + results
      - files changed (paths)
@@ -313,6 +336,7 @@ The input must be a plan file path.
    - Pause implementation. Do not “push through” with guesses.
    - Timebox investigation to reach options (not a full rewrite).
    - Produce at least 3 viable options.
+   - Immediately move the active todo back to `pending`, add/ensure `tags: [blocker]`, and record blocker status in Work Log.
 
    Output format (always):
    - Blocker summary (1–2 sentences)
@@ -325,6 +349,7 @@ The input must be a plan file path.
    - Convert the decision into explicit todos (implementation/investigation/deferral).
    - If the chosen option is to run a timeboxed investigation or prototype, follow the **Spike Protocol** below.
    - Record the decision + rationale in the todo Work Log.
+   - Re-approve the todo through `/workflow:triage` before returning it to `ready`.
 
    **Spike Protocol (allocate a spike)**
 
@@ -391,9 +416,13 @@ The input must be a plan file path.
    - `test_command` (required when available)
    - `test_fast_command` (optional)
    - `lint_command` (optional)
+   - `typecheck_command` (optional)
    - `format_command` (optional)
 
-   If `test_command` is not configured, ask once for the project's test command and suggest adding it to `AGENTS.md`.
+   Ask-once fallback:
+
+   - If `test_command` is not configured, ask once for the project's test command and suggest adding it to `AGENTS.md`.
+   - If `lint_command` or `typecheck_command` is not configured, ask once for run-provided commands and use them for this run.
 
 2. **Consider Reviewer Agents** (Optional)
 
@@ -406,7 +435,7 @@ The input must be a plan file path.
 3. **Final Validation**
    - All todo files created for this plan are marked complete
    - All tests pass
-   - Linting/formatting checks pass (if configured)
+   - Linting/typechecking/formatting checks pass (configured or run-provided via ask-once fallback)
    - Code follows existing patterns
    - UI validation completed (if applicable)
    - No console errors or warnings
@@ -461,7 +490,7 @@ If the user wants to ship (commits/PR/screenshots), handle that as a separate ex
 
 - Follow existing patterns
 - Write tests for new code
-- Run linting/formatting as configured in `AGENTS.md`
+- Run linting/typechecking/formatting as configured in `AGENTS.md` (or run-provided via ask-once fallback)
 - Use reviewer agents for complex/risky changes only
 
 ### Ship Complete Features
@@ -478,7 +507,7 @@ Before marking work complete, verify:
 - [ ] Hard gate completed before implementation (`worktree_decision`, execution context, `gate_status: passed`)
 - [ ] All todo files created for this plan are marked complete
 - [ ] Tests pass (run `test_command`)
-- [ ] Linting/formatting passes (run `lint_command` / `format_command` if configured)
+- [ ] Linting/typechecking/formatting passes (run `lint_command` / `typecheck_command` / `format_command`; ask once if lint/typecheck is not configured)
 - [ ] Code follows existing patterns
 - [ ] UI validation completed (if applicable; use `/test-browser` when useful)
 - [ ] Scope contract satisfied (`solution_scope`, `completion_expectation`, `non_goals`)

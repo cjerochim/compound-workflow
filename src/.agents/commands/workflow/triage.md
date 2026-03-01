@@ -32,6 +32,12 @@ This command does not implement fixes. It approves and organizes work so `/workf
    - set `priority` (`p1|p2|p3`)
    - set `dependencies` (issue_ids)
    - ensure Acceptance Criteria is testable
+   - ensure the todo includes an explicit `Agentic Execution Contract`:
+     - access preconditions
+     - validation commands/routes/checks
+     - evidence expectations
+     - quality gate commands (`test`, `lint`, `typecheck`)
+   - if lint/typecheck commands are missing in repo config, mark Recommended Action with "ask once for run-provided commands before completion"
    - add/update tags for searchability
    - **When multiple todos have `tags: [discussion]`:** (1) List a **concise numbered summary** of the discussion points. (2) Walk through **each point one by one**; for each, discuss and align with the user before approving or deferring; only then move on. Do not resolve all discussion points in one turn.
    - **If the todo has `tags: [discussion]`:** Recommended Action must state the concrete decision task (what info is needed, who decides, done-when). Approve only when the outcome is a clear, executable decision task; otherwise defer.
@@ -39,8 +45,9 @@ This command does not implement fixes. It approves and organizes work so `/workf
    - **Blocking spikes first:** If a spike unblocks downstream build todos, prioritize approving that spike before its dependents. Do not approve dependent build todos as executable ahead of unresolved blocking spikes.
    - **Parallel spike readiness:** If multiple spike todos are independent (no dependency edges between them), they may be approved together for parallel execution.
 3. Decision:
-   - **approve now** -> rename `*-pending-*` -> `*-ready-*` and set frontmatter `status: ready`
+   - **approve now** -> rename `*-pending-*` -> `*-ready-*` and set frontmatter `status: ready` (only when Acceptance Criteria and Agentic Execution Contract are executable)
    - **defer** -> rename `*-pending-*` -> `*-deferred-*` and set frontmatter `status: deferred` (keep priority, typically `p3`). Ensure Recommended Action, Findings, and Work Log have enough context for future reference. Deferred items are not executed until re-triaged to `ready`.
+   - **blocked follow-up** -> when work returns a blocked todo, keep it as `pending` (rename from `*-ready-*` when needed), add `tags: [blocker]`, and require blocker options + recommendation in Work Log before re-approval.
 4. Output:
    - list approved `ready` todos (blocking spikes first, then other unblocked items)
    - list remaining pending todos

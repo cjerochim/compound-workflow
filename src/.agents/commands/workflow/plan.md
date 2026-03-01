@@ -304,6 +304,29 @@ Placement:
 - Put `solution_scope` in frontmatter.
 - Put `completion_expectation` and `non_goals` in a dedicated section (recommended: `## Scope Contract`) in the plan body.
 
+### 2.6. Agentic Access & Validation Contract (REQUIRED for all plans)
+
+Every plan MUST include an explicit contract describing how an agent will execute and verify the work without hidden assumptions.
+
+Required fields (per implementation phase/checklist group):
+
+- `Access Preconditions`: required services, credentials, fixtures, feature flags, env vars
+- `Access Method`: how the agent obtains required access in this repo/runtime
+- `Validation Path`: concrete commands/routes/checks the agent can run
+- `Evidence Required`: exact outputs/artifacts/logs used to prove success criteria
+- `Quality Gates`: `test_command`, `lint_command`, `typecheck_command` (configured or run-provided)
+
+Rules:
+
+- If any required access dependency is unknown, add a Discussion Point or Spike Candidate so it is triaged before execution.
+- A plan is not execution-ready until this contract is present and actionable.
+- Avoid placeholders like "validate manually" without a concrete agent-runnable path.
+
+Placement:
+
+- Add a dedicated section in the plan body: `## Agentic Access & Validation Contract`.
+- Reference this section from implementation phases/todos so `/workflow:work` can enforce it directly.
+
 ### 3. Incorporate SpecFlow (if Step 1.7 ran)
 
 If SpecFlow was run in Step 1.7:
@@ -427,6 +450,17 @@ solution_scope: [partial_fix|full_remediation|migration]
 - [ ] How to verify requirement 1
 - [ ] How to verify requirement 2
 
+## Agentic Access & Validation Contract
+
+- Access Preconditions: [services/fixtures/env needed]
+- Access Method: [how agent gets access in this repo]
+- Validation Path: [commands/routes/checks]
+- Evidence Required: [logs/output/artifacts]
+- Quality Gates:
+  - test: [command]
+  - lint: [command or "ask once if not configured"]
+  - typecheck: [command or "ask once if not configured"]
+
 ## References
 
 - Related issue: #[issue_number]
@@ -516,6 +550,17 @@ solution_scope: [partial_fix|full_remediation|migration]
 ## Observability & Test Plan
 
 [What to monitor; how to test and validate]
+
+## Agentic Access & Validation Contract
+
+- Access Preconditions: [services/fixtures/env needed]
+- Access Method: [how agent gets access in this repo]
+- Validation Path: [commands/routes/checks]
+- Evidence Required: [logs/output/artifacts]
+- Quality Gates:
+  - test: [command]
+  - lint: [command or "ask once if not configured"]
+  - typecheck: [command or "ask once if not configured"]
 
 ## References & Research
 
@@ -654,6 +699,17 @@ solution_scope: [partial_fix|full_remediation|migration]
 
 [Test scenarios by dimension: env, role, data, edge cases]
 
+## Agentic Access & Validation Contract
+
+- Access Preconditions: [services/fixtures/env needed]
+- Access Method: [how agent gets access in this repo]
+- Validation Path: [commands/routes/checks]
+- Evidence Required: [logs/output/artifacts]
+- Quality Gates:
+  - test: [command]
+  - lint: [command or "ask once if not configured"]
+  - typecheck: [command or "ask once if not configured"]
+
 ## Resource Requirements
 
 [Team, time, infrastructure needs]
@@ -747,6 +803,7 @@ Apply best practices for clarity and actionability, making the issue easy to sca
 - [ ] Labels accurately categorize the issue
 - [ ] All template sections are complete
 - [ ] `solution_scope`, completion expectation, and non-goals are explicitly documented
+- [ ] `## Agentic Access & Validation Contract` is present and executable (no hidden/manual-only steps)
 - [ ] If `solution_scope = partial_fix`, Remaining Gaps checklist is present and actionable
 - [ ] If `solution_scope = migration`, migration safety checks + rollback triggers are specified
 - [ ] If risky-work triggers apply, Spike Evaluation is present with `spikes_needed: yes|no`
@@ -769,6 +826,8 @@ Write the complete plan file to `docs/plans/YYYY-MM-DD-<type>-<slug>-plan.md`. T
 **When Open questions were declared (Step 1.5):** The written plan MUST include at least one of: `## Discussion Points (resolve/decide)` with `- [ ]` items, or `## Spike Candidates (timeboxed)` with `- [ ] Spike: ...` items. If confidence is `Low`, at least one checkbox is required in one of these sections. This ensures `file-todos` can create pending discussion/spike todos for `/workflow:triage`.
 
 **When risky-work Spike Evaluation declared `spikes_needed: yes`:** The written plan MUST include `## Spike Candidates (timeboxed)` with at least one spike checkbox and required per-candidate metadata (`Initial priority`, `Depends on`, `Unblocks`, `Timebox`, `Deliverable`, `Parallelizable`) so ordering can be defined in plan, confirmed in triage, and enforced in work.
+
+**Execution-readiness gate:** If the written plan is missing the required `## Agentic Access & Validation Contract`, do not mark it as ready for `/workflow:work`; fix the plan first.
 
 Confirm: "Plan written to docs/plans/[filename]"
 

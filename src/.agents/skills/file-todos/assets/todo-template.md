@@ -61,6 +61,17 @@ Risk: Low / Medium / High
 
 To be filled during triage. Clear, actionable plan for resolving this todo.
 
+## Agentic Execution Contract
+
+- Access Preconditions: <services, credentials, fixtures, flags, env>
+- Access Method: <how the agent gets access in this repo/runtime>
+- Validation Commands: <commands/routes/checks>
+- Evidence Targets: <logs/output/artifacts that prove success>
+- Quality Gate Commands:
+  - Test: <command>
+  - Lint: <command or "ask once if not configured">
+  - Typecheck: <command or "ask once if not configured">
+
 ## Technical Details
 
 Affected files, related components, data changes, or architectural considerations.
@@ -79,6 +90,8 @@ Testable checklist items for verifying completion.
 
 - [ ] Acceptance criteria item 1
 - [ ] Acceptance criteria item 2
+- [ ] Success criteria evidence captured in Work Log
+- [ ] Lint and typecheck evidence captured (configured or run-provided)
 
 ## Work Log
 
@@ -92,10 +105,18 @@ Actions:
 - Changes made (include file references)
 - Commands executed
 - Tests run
+- Quality gates run (lint/typecheck)
+- Status transition (`ready` -> `pending` with `tags: [blocker]` when blocked, or `ready` -> `complete` when done)
 
 Learnings:
 - What worked / what didn't
 - Key insights
+
+Blocker Decision (only when blocked):
+- Blocker summary:
+- Constraints discovered:
+- Options considered (>=3):
+- Recommendation:
 
 ---
 

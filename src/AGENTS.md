@@ -57,6 +57,10 @@ Use the canonical command names (`/workflow:plan`, `/workflow:work`, `/workflow:
 - **SpecFlow is a validation gate, not a rewrite engine.** High fidelity required; Medium recommended; Low optional. Output must translate into acceptance criteria/edge cases, not new scope.
 - **Isolation preflight is a hard gate.** `/workflow:work` must complete and record worktree/isolation preflight before any implementation commands. `/workflow:review` must do the same for non-current PR/branch targets before analysis.
 - **Spike governance is explicit and ordered.** Risky plans must evaluate spike need, spike candidates must declare initial priority/dependencies/unblocks/timebox/deliverable, triage confirms those assumptions, and `/workflow:work` executes blocking spikes before dependent build todos.
+- **Agentic access/testability is mandatory in planning.** Every plan must include an executable access + validation contract so work/review can run deterministically.
+- **Todo completion requires evidence.** A todo may move to `complete` only after success criteria evidence and quality gate evidence are recorded in Work Log.
+- **Blockers change todo state immediately.** Blocked work must move from `ready` back to `pending` with `tags: [blocker]` and an options+recommendation decision record.
+- **Quality gates are enforced with ask-once fallback.** If `lint_command` or `typecheck_command` is missing, ask once per run and continue only when commands are provided and pass.
 - **Skills are invoked only by trigger.** `document-review` only when user selects "Review and refine" (or explicit request); guardrail skills (PII/financial/audit/data) only when the feature touches that domain.
 - **No new files/directories by default** beyond `docs/plans/...` for planning output.
 - **Plan file is the artifact.** Post-generation options are actions on the artifact; they do not change the workflow shape.
@@ -110,6 +114,7 @@ Suggested keys (examples):
 - `test_command: npm test`
 - `test_fast_command: npm test -- --watch=false --runInBand`
 - `lint_command: npm run lint`
+- `typecheck_command: npm run typecheck`
 - `format_command: npm run format`
 - `project_tracker: github` (or `linear`)
 - `worktree_dir: .worktrees` (optional; where worktrees are created)
@@ -127,6 +132,7 @@ dev_server_url: http://localhost:3000
 test_command: npm test
 test_fast_command: npm test -- --watch=false
 lint_command: npm run lint
+typecheck_command: npm run typecheck
 format_command: npm run format
 project_tracker: github
 worktree_dir: .worktrees

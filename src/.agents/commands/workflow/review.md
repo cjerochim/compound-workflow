@@ -35,6 +35,7 @@ If empty, default to `current`.
 2. Resolve:
    - `default_branch` (fallback: `main`, then `master`)
    - `lint_command` (used in Phase 3)
+   - `typecheck_command` (used in Phase 3)
 
 State what you resolved or assumed.
 
@@ -100,6 +101,13 @@ Protected artifacts:
 
 - `Task learnings-researcher(<target context>)` (related prior solutions)
 - `Task lint(<changed files context>)` only if `lint_command` is configured in the Repo Config Block
+- Verify agentic executability from plan/todo artifacts when available:
+  - access prerequisites are explicit
+  - validation commands are explicit and reproducible
+  - success-criteria evidence is traceable in todo Work Logs
+- For type-checking coverage:
+  - if `typecheck_command` is configured, run it (or verify recent evidence if command execution is not feasible in this context)
+  - if not configured, report "typecheck command not configured" as a note and recommend adding it to Repo Config Block
 
 **Conditional passes** (run when they apply):
 
@@ -112,6 +120,7 @@ Then perform the main review synthesis across:
 - change summary (surface area, high-risk files)
 - correctness
 - tests/verification adequacy
+- agentic validation adequacy (can another agent execute and verify deterministically?)
 - risk and failure modes
 - operational considerations (monitoring, rollback)
 - readability/maintainability
@@ -127,6 +136,10 @@ Provide:
   - evidence (file references or commands/output)
   - recommended action (concise)
 - What ran vs skipped (selected agents/passes)
+- Validation coverage summary:
+  - tests: pass|fail|not-run
+  - lint: pass|fail|not-configured|not-run
+  - typecheck: pass|fail|not-configured|not-run
 
 ### Phase 5: Handoff Options
 

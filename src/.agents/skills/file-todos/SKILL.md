@@ -63,6 +63,7 @@ Required sections:
 - Findings
 - Proposed Solutions
 - Recommended Action
+- Agentic Execution Contract
 - Acceptance Criteria
 - Work Log
 
@@ -79,6 +80,8 @@ dependencies: ["001"]     # issue_ids this is blocked by
 ```
 
 **Deferred:** Items with `status: deferred` are not planned for the current development cycle. Keep Problem Statement, Findings, and Work Log so the item can be re-triaged or picked up later. Only `*-ready-*.md` todos are executed; `pending` and `deferred` are non-executable.
+
+**Blocker handling:** Do not introduce a new `blocked` status. When execution is blocked, move the todo from `ready` back to `pending`, add `tags: [blocker]`, and record options + recommendation in Work Log before triage re-approval.
 
 ## Common Workflows
 
@@ -117,6 +120,7 @@ Default mapping rules:
    - include the plan path in `Resources`
    - include a "Plan checkbox" pointer when derived from a checkbox (exact text)
    - otherwise include a short "Plan section" pointer (heading name or anchor)
+   - include an `Agentic Execution Contract` with access preconditions, validation commands, evidence expectations, and quality gate commands
    - write Acceptance Criteria that is testable
 6. **Discussion Points and Spike Candidates:** If the plan has sections `## Discussion Points (resolve/decide)` or `## Spike Candidates (timeboxed)`:
    - Checkboxes under **Discussion Points** → create `todos/*-pending-*.md` with `tags: [discussion]` and `status: pending`.
@@ -150,6 +154,8 @@ Plan sync expectations:
    - read Problem Statement + Findings
    - choose a recommended action
    - set priority and dependencies
+   - verify `Agentic Execution Contract` is executable (no hidden/manual-only prerequisite)
+   - if lint/typecheck commands are not configured in AGENTS, set triage note: "ask once for run-provided lint/typecheck commands before completion"
    - for `tags: [spike]`, confirm/adjust carried plan metadata (`Initial priority`, `Depends on`, `Unblocks`, `Timebox`, `Deliverable`, `Parallelizable`)
 3. Decision:
    - **Approve:** rename `*-pending-*` -> `*-ready-*`, set frontmatter `status: ready`
@@ -167,16 +173,21 @@ Consider only `*-ready-*.md` todos. Ignore `pending` and `deferred`.
 3. Update the Work Log each session with:
    - actions (file references + commands)
    - tests run
+   - lint/typecheck commands run (configured or run-provided)
    - results
    - learnings
+   - status context (`ready`, `pending`, `complete`)
 4. Check off Acceptance Criteria as you complete items.
 
 ### Complete a Todo
 
 1. Verify all acceptance criteria are checked.
-2. Add a final Work Log entry.
-3. Rename `*-ready-*` -> `*-complete-*`.
-4. Update frontmatter `status: ready` -> `status: complete`.
+2. Verify success criteria evidence is recorded in Work Log (commands + outputs/artifacts).
+3. Verify lint/typecheck evidence is recorded (configured commands or run-provided commands for this run).
+4. If blocked, move todo back to `pending`, add/ensure `tags: [blocker]`, and record options + recommendation before triage.
+5. Add a final Work Log entry.
+6. Rename `*-ready-*` -> `*-complete-*`.
+7. Update frontmatter `status: ready` -> `status: complete`.
 
 ## Distinctions
 

@@ -184,10 +184,29 @@ function hasCommand(cmd) {
 
 const SKILLS_SYMLINK_PATH = ".agents/compound-workflow-skills";
 
+function symlinkPointsTo(linkPath, expectedTargetAbs) {
+  try {
+    const stat = fs.lstatSync(linkPath);
+    if (!stat.isSymbolicLink()) return false;
+    const rawTarget = fs.readlinkSync(linkPath);
+    const linkTargetAbs = path.resolve(path.dirname(linkPath), rawTarget);
+    return realpathSafe(linkTargetAbs) === realpathSafe(expectedTargetAbs);
+  } catch {
+    return false;
+  }
+}
+
+function removePathIfExists(linkPath) {
+  try {
+    fs.rmSync(linkPath, { recursive: true, force: true });
+  } catch {}
+}
+
 function ensureSkillsSymlink(targetRoot, dryRun) {
   const agentsDir = path.join(targetRoot, ".agents");
   const linkPath = path.join(agentsDir, "compound-workflow-skills");
   const targetRel = path.join("..", "node_modules", "compound-workflow", "src", ".agents", "skills");
+  const targetAbs = path.resolve(path.dirname(linkPath), targetRel);
 
   if (dryRun) {
     console.log("[dry-run] Would create", SKILLS_SYMLINK_PATH, "symlink");
@@ -199,16 +218,15 @@ function ensureSkillsSymlink(targetRoot, dryRun) {
   let needCreate = true;
   try {
     const stat = fs.lstatSync(linkPath);
-    if (stat.isSymbolicLink()) {
-      fs.realpathSync(linkPath);
-      needCreate = false;
+    if (stat.isSymbolicLink() && symlinkPointsTo(linkPath, targetAbs)) needCreate = false;
+    else if (!stat.isSymbolicLink()) {
+      console.warn("Skipped", SKILLS_SYMLINK_PATH, "because it exists and is not a symlink");
+      return;
     }
   } catch (_) {}
 
   if (needCreate) {
-    try {
-      fs.unlinkSync(linkPath);
-    } catch (_) {}
+    removePathIfExists(linkPath);
     const type = process.platform === "win32" ? "dir" : "dir";
     fs.symlinkSync(targetRel, linkPath, type);
     console.log("Created", SKILLS_SYMLINK_PATH, "-> package skills");
@@ -223,6 +241,7 @@ function ensureCursorDirSymlink(targetRoot, cursorSubdir, pkgSubdir, dryRun, lab
 
   const linkPath = path.join(cursorDir, cursorSubdir);
   const targetRel = path.join("..", "node_modules", "compound-workflow", "src", ".agents", pkgSubdir);
+  const targetAbs = path.resolve(path.dirname(linkPath), targetRel);
 
   if (dryRun) {
     console.log("[dry-run] Would create .cursor/" + cursorSubdir, "symlink (Cursor)");
@@ -232,16 +251,15 @@ function ensureCursorDirSymlink(targetRoot, cursorSubdir, pkgSubdir, dryRun, lab
   let needCreate = true;
   try {
     const stat = fs.lstatSync(linkPath);
-    if (stat.isSymbolicLink()) {
-      fs.realpathSync(linkPath);
-      needCreate = false;
+    if (stat.isSymbolicLink() && symlinkPointsTo(linkPath, targetAbs)) needCreate = false;
+    else if (!stat.isSymbolicLink()) {
+      console.warn("Skipped", ".cursor/" + cursorSubdir, "because it exists and is not a symlink");
+      return;
     }
   } catch (_) {}
 
   if (needCreate) {
-    try {
-      fs.unlinkSync(linkPath);
-    } catch (_) {}
+    removePathIfExists(linkPath);
     const type = process.platform === "win32" ? "dir" : "dir";
     fs.symlinkSync(targetRel, linkPath, type);
     console.log("Created", ".cursor/" + cursorSubdir, "->", label || pkgSubdir, "(Cursor)");
@@ -280,19 +298,19 @@ function ensureCursorSkills(targetRoot, dryRun) {
   for (const name of skillNames) {
     const linkPath = path.join(skillsDir, name);
     const targetRel = path.join("..", "..", "..", "node_modules", "compound-workflow", "src", ".agents", "skills", name);
+    const targetAbs = path.resolve(path.dirname(linkPath), targetRel);
     let needCreate = true;
     try {
       const stat = fs.lstatSync(linkPath);
-      if (stat.isSymbolicLink()) {
-        fs.realpathSync(linkPath);
-        needCreate = false;
+      if (stat.isSymbolicLink() && symlinkPointsTo(linkPath, targetAbs)) needCreate = false;
+      else if (!stat.isSymbolicLink()) {
+        console.warn("Skipped", ".cursor/skills/" + name, "because it exists and is not a symlink");
+        continue;
       }
     } catch (_) {}
 
     if (needCreate) {
-      try {
-        fs.unlinkSync(linkPath);
-      } catch (_) {}
+      removePathIfExists(linkPath);
       fs.symlinkSync(targetRel, linkPath, type);
       console.log("Created", ".cursor/skills/" + name, "-> package skill (Cursor)");
     }
