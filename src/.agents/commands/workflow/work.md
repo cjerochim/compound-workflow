@@ -43,8 +43,9 @@ The input must be a plan file path.
 
 1.1. **Apply state-orchestration trigger (enforcement)**
 
-   If the plan or implementation involves XState/state-machine
-   orchestration, load `xstate-actor-orchestration` before coding.
+   If the plan or implementation involves state-machine or actor
+   orchestration, load the selected state-orchestration skill (see Skill
+   Index in AGENTS.md) before coding.
 
    Trigger examples:
 

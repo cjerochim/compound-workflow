@@ -70,8 +70,8 @@ Use **AskQuestion** to suggest:
 - Planned spawned-child actors or receptionist-style actor lookup
 
 If these signals appear, note that `/workflow:plan` should evaluate
-`xstate-actor-orchestration`. Do not force architecture decisions in
-brainstorm.
+whether to load a state-orchestration skill (see Skill Index in
+AGENTS.md). Do not force architecture decisions in brainstorm.
 
 ---
 

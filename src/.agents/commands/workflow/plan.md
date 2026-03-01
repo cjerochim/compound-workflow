@@ -90,10 +90,11 @@ Refine the idea through collaborative dialogue using **AskQuestion**:
 
 ### 0.5. State-Orchestration Fit Check (Decision in planning)
 
-Before finalizing architecture, decide whether to load
-`xstate-actor-orchestration`.
+Before finalizing architecture, decide whether to load an appropriate
+state-orchestration skill (see Skill Index in AGENTS.md; e.g.
+`xstate-actor-orchestration` when the stack uses that approach).
 
-Load it when complexity exceeds simple local state, especially for:
+Load one when complexity exceeds simple local state, especially for:
 
 - UI flows where a React container should orchestrate context/state and
   compose presentational components

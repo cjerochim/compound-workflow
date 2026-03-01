@@ -85,6 +85,7 @@ High-risk triggers include: security, payments, privacy, data migration/backfill
 
 ## Routing Rules
 
+- **Capability-first in commands:** Core workflow command docs should name capabilities (problem shape), not specific libraries. Concrete skill resolution comes from the Skill Index.
 - Prefer existing project patterns before introducing new ones.
 - Always run local repo + institutional learnings research first for planning.
 - Run external best-practice/framework research based on fidelity and risk.
