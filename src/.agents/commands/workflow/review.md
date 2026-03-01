@@ -43,12 +43,41 @@ State what you resolved or assumed.
 1. Determine target type from `$ARGUMENTS`: PR/URL, branch name, or `current`.
 2. If reviewing a PR and `gh` is available:
    - Fetch title/body/files via `gh pr view --json`
-   - Checkout the branch (direct checkout or via worktree)
+   - Resolve target branch metadata before selecting isolation context
 3. If target is a branch (not current):
-   - Ensure you are on the correct branch, or offer a worktree via `skill: git-worktree`
-4. If you are not on the target branch and user requested that target, offer a worktree via `skill: git-worktree`.
+   - Resolve isolation context before running review passes
+4. If you are not on the target branch and user requested that target, do not continue until isolation preflight is complete.
 
 Prefer reviewing the currently checked-out branch. Only switch branches or create worktrees when the user explicitly requests a different target.
+
+### Phase 1.5: Isolation Preflight Gate (HARD GATE for non-current targets)
+
+No diff analysis, lint, or reviewer-agent passes may run before this gate passes for non-current targets.
+
+Policy:
+
+- Target `current`: gate passes immediately on current checkout.
+- Target PR/branch not currently checked out:
+  - Default path: use `skill: git-worktree` for isolated review context.
+  - Opt-out path: explicit user confirmation to review without worktree, then switch to the requested non-default branch context.
+
+Gate completion record (REQUIRED for non-current targets):
+
+- `target_type: pr|branch|current`
+- `isolation_mode: worktree|direct-checkout`
+- `review_context_path` (worktree path) or `review_branch` (direct checkout)
+- `gate_status: passed`
+
+Never run non-current review from the default branch checkout without completing this gate.
+
+### Phase 1.6: Preflight Violation Recovery (REQUIRED)
+
+If review activity started before the isolation gate was complete:
+
+- Disclose the violation.
+- Stop analysis immediately.
+- Return to Phase 1.5 and complete the gate.
+- Resume only after `gate_status: passed`.
 
 Protected artifacts:
 

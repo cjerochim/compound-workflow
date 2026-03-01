@@ -88,20 +88,41 @@ The input must be a plan file path.
    - Prefer `test_command` and optional `test_fast_command` from `AGENTS.md`.
    - If missing, ask once for the repo's test command and suggest adding it to `AGENTS.md`.
 
-2. **Setup Environment**
+1.75. **Resolve Plan Scope Contract (REQUIRED)**
+
+   Before any environment setup or implementation, resolve the plan's scope contract:
+
+   - `solution_scope`: `partial_fix | full_remediation | migration`
+   - `completion_expectation`: explicit definition of done
+   - `non_goals`: explicitly out of scope
+
+   If any scope-contract field is missing:
+
+   - Pause execution and ask the user to update the plan via `/workflow:plan`, or provide explicit values now.
+   - Record the resolved values in the first todo Work Log entry before coding.
+
+   Scope implications:
+
+   - `partial_fix`: maintain an explicit remaining-gaps list while executing.
+   - `migration`: identify migration verification + rollback checks before executing todos.
+   - `full_remediation`: complete all known gaps in the scoped area before completion.
+
+2. **Setup Environment (HARD GATE)**
 
    Determine how to isolate the work for this plan.
 
-   Default: use a worktree (recommended). The user may opt out.
+   No implementation commands or code edits may run before this gate passes.
+
+   Default: use a worktree. Opt-out requires explicit user confirmation.
 
    1) Resolve your current branch (this is the default worktree base):
 
    - If you are already on a branch that clearly matches this plan, continue.
    - Otherwise, continue anyway — the current active branch remains the reference/base for a new worktree unless the user explicitly requests a different base.
 
-   2) Ask the user (opt-out prompt):
+   2) Ask the user (required decision prompt):
 
-   - "Use a worktree for this work? (default: Yes; recommended for isolation)"
+   - "Use a worktree for this work? (default: Yes; required unless you explicitly opt out)"
    - Options:
      - Yes (worktree)
      - No (stay in current checkout; create/switch to a feature branch)
@@ -127,7 +148,24 @@ The input must be a plan file path.
 
    4) If worktree is not chosen (opt-out):
 
+   - Require explicit user confirmation of the opt-out.
    - Create or switch to a feature branch (never work directly on the default branch).
+   - Record the execution branch in a visible place.
+
+   Gate completion record (REQUIRED before Phase 2):
+
+   - `worktree_decision: yes|no`
+   - `worktree_path: <path>` when yes, else `execution_branch: <branch>`
+   - `gate_status: passed`
+
+2.5. **Preflight Violation Recovery (REQUIRED)**
+
+   If implementation starts before the hard gate above is completed:
+
+   - Immediately disclose the violation.
+   - Stop all implementation actions.
+   - Return to Step 2 and complete the gate record.
+   - Resume only after `gate_status: passed`.
 
 3. **Create Todo List**
 
@@ -171,7 +209,10 @@ The input must be a plan file path.
 
 1. **Task Execution Loop**
 
-   **When a worktree was created for this run:** All implementation edits (file reads/writes) and all terminal commands (run tests, install, lint, etc.) MUST be performed with the worktree directory as the working context: use the worktree path for file paths and set terminal cwd to the worktree root. Do not make code changes in the main repo checkout.
+   All implementation edits (file reads/writes) and all terminal commands (run tests, install, lint, etc.) MUST use the execution context resolved in Step 2.
+
+   - If `worktree_decision: yes`: use the worktree path for file paths and set terminal cwd to the worktree root. Do not make code changes in the main repo checkout.
+   - If `worktree_decision: no`: use the recorded execution branch context only (never default branch).
 
    Todo selection rules (default):
 
@@ -256,6 +297,10 @@ The input must be a plan file path.
    If validation fails:
    - stop and fix immediately, or
    - if blocked, follow the Blocker Protocol.
+
+   Scope contract checks:
+   - If `solution_scope: partial_fix`, update remaining gaps in todo Work Log as they are discovered.
+   - If `solution_scope: migration`, record migration validation evidence and rollback readiness evidence before marking migration todos complete.
 
    **Blocker Protocol (pause implementation)**
 
@@ -362,6 +407,10 @@ The input must be a plan file path.
    - Code follows existing patterns
    - UI validation completed (if applicable)
    - No console errors or warnings
+   - Scope contract satisfied:
+     - `partial_fix`: remaining gaps are materialized as `pending` or `deferred` todos before completion
+     - `migration`: migration verification and rollback checks are documented as passing
+     - `full_remediation`: scoped remediation goals are complete per `completion_expectation`
 
 4. **Update Plan Status**
 
@@ -423,11 +472,14 @@ If the user wants to ship (commits/PR/screenshots), handle that as a separate ex
 Before marking work complete, verify:
 
 - [ ] All clarifying questions asked and answered
+- [ ] Hard gate completed before implementation (`worktree_decision`, execution context, `gate_status: passed`)
 - [ ] All todo files created for this plan are marked complete
 - [ ] Tests pass (run `test_command`)
 - [ ] Linting/formatting passes (run `lint_command` / `format_command` if configured)
 - [ ] Code follows existing patterns
 - [ ] UI validation completed (if applicable; use `/test-browser` when useful)
+- [ ] Scope contract satisfied (`solution_scope`, `completion_expectation`, `non_goals`)
+- [ ] For `partial_fix`, unresolved work is captured as `pending/deferred` todos
 - [ ] If shipping is requested, capture any required artifacts (screenshots, release notes) per repo conventions
 
 ## When to Use Reviewer Agents
@@ -446,6 +498,7 @@ For most features: tests + linting + following patterns is sufficient.
 
 - **Analysis paralysis** - Don't overthink, read the plan and execute
 - **Skipping clarifying questions** - Ask now, not after building wrong thing
+- **Skipping the worktree hard gate** - No implementation before Step 2 gate passes
 - **Ignoring plan references** - The plan has links for a reason
 - **Testing at the end** - Test continuously or suffer later
 - **Forgetting todo updates** - Update todo files and plan checkboxes or lose track of progress

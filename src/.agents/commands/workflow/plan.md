@@ -147,6 +147,16 @@ Select one: `High | Medium | Low`
 
 If confidence is `Low`, ask 1-2 focused clarifying questions before finalizing the plan.
 
+#### Solution Scope (REQUIRED)
+
+Select one: `partial_fix | full_remediation | migration`
+
+- `partial_fix`: intentionally scoped fix with known follow-up gaps.
+- `full_remediation`: complete resolution for the defined problem boundary.
+- `migration`: phased or structural transition from an existing implementation/state to a new one.
+
+If unclear, ask one focused clarification before finalizing the plan.
+
 #### Research Mode
 
 Decide whether to run external research.
@@ -170,6 +180,7 @@ Required announcement format:
 ```
 Fidelity selected: <Low|Medium|High>
 Confidence: <High|Medium|Low>
+Solution scope: <partial_fix|full_remediation|migration>
 
 Why this fidelity:
 1) ...
@@ -252,6 +263,27 @@ Think like a product manager - what would make this issue clear and actionable? 
 - [ ] Gather supporting materials (error logs, screenshots, design mockups)
 - [ ] Prepare code examples or reproduction steps if applicable, name the mock filenames in the lists
 
+### 2.5. Solution Scope Contract (REQUIRED for all plans)
+
+Every plan MUST include an explicit scope contract so `/workflow:work` can enforce intent.
+
+Required contract fields:
+
+- `solution_scope`: one of `partial_fix | full_remediation | migration`
+- `completion_expectation`: explicit definition of done for this plan
+- `non_goals`: explicitly out of scope for this plan
+
+Rules:
+
+- If `solution_scope: partial_fix`, include a **Remaining Gaps** checklist (`- [ ]`) with expected follow-up work.
+- If `solution_scope: migration`, include migration strategy, rollout safety checks, and rollback triggers/steps.
+- If `solution_scope: full_remediation`, define the remediation boundary so completion is unambiguous.
+
+Placement:
+
+- Put `solution_scope` in frontmatter.
+- Put `completion_expectation` and `non_goals` in a dedicated section (recommended: `## Scope Contract`) in the plan body.
+
 ### 3. Incorporate SpecFlow (if Step 1.7 ran)
 
 If SpecFlow was run in Step 1.7:
@@ -307,11 +339,23 @@ title: [Issue Title]
 type: [feat|fix|refactor]
 status: active
 date: YYYY-MM-DD
+solution_scope: [partial_fix|full_remediation|migration]
 ---
 
 # [Issue Title]
 
 [Brief problem/feature description]
+
+## Scope Contract
+
+- Completion expectation: [explicit done definition]
+- Non-goals:
+  - [out of scope item 1]
+  - [out of scope item 2]
+
+### Remaining Gaps (required if solution_scope = partial_fix)
+
+- [ ] [gap to handle later]
 
 ## Constraints
 
@@ -367,6 +411,7 @@ title: [Issue Title]
 type: [feat|fix|refactor]
 status: active
 date: YYYY-MM-DD
+solution_scope: [partial_fix|full_remediation|migration]
 ---
 
 # [Issue Title]
@@ -374,6 +419,17 @@ date: YYYY-MM-DD
 ## Overview
 
 [Comprehensive description]
+
+## Scope Contract
+
+- Completion expectation: [explicit done definition]
+- Non-goals:
+  - [out of scope item 1]
+  - [out of scope item 2]
+
+### Remaining Gaps (required if solution_scope = partial_fix)
+
+- [ ] [gap to handle later]
 
 ## Problem Statement / Motivation
 
@@ -446,6 +502,7 @@ title: [Issue Title]
 type: [feat|fix|refactor]
 status: active
 date: YYYY-MM-DD
+solution_scope: [partial_fix|full_remediation|migration]
 ---
 
 # [Issue Title]
@@ -453,6 +510,17 @@ date: YYYY-MM-DD
 ## Overview
 
 [Executive summary]
+
+## Scope Contract
+
+- Completion expectation: [explicit done definition]
+- Non-goals:
+  - [out of scope item 1]
+  - [out of scope item 2]
+
+### Remaining Gaps (required if solution_scope = partial_fix)
+
+- [ ] [gap to handle later]
 
 ## Problem Statement
 
@@ -634,6 +702,9 @@ Apply best practices for clarity and actionability, making the issue easy to sca
 - [ ] Title is searchable and descriptive
 - [ ] Labels accurately categorize the issue
 - [ ] All template sections are complete
+- [ ] `solution_scope`, completion expectation, and non-goals are explicitly documented
+- [ ] If `solution_scope = partial_fix`, Remaining Gaps checklist is present and actionable
+- [ ] If `solution_scope = migration`, migration safety checks + rollback triggers are specified
 - [ ] Links and references are working
 - [ ] Acceptance criteria are measurable
 - [ ] Add names of files in pseudo code examples and todo lists
@@ -653,12 +724,13 @@ Write the complete plan file to `docs/plans/YYYY-MM-DD-<type>-<slug>-plan.md`. T
 
 Confirm: "Plan written to docs/plans/[filename]"
 
-**Non-interactive mode:** When the invocation is non-interactive (e.g., `workflow:plan` run by automation, CI, or with an explicit non-interactive flag/convention), skip AskQuestion calls and do not present Post-Generation Options. For determinism, the repo should define the flag or convention (e.g., in `AGENTS.md` Repo Config Block or a documented env var). Still **declare** Fidelity, Confidence, Research mode, and Open questions in the required announcement format before writing the plan. Use these defaults when user input is unavailable: fidelity = Medium, confidence = Medium, research mode = local + external for Medium/High risk topics else local only. Proceed directly to writing the plan file and then exit or return the plan path as output.
+**Non-interactive mode:** When the invocation is non-interactive (e.g., `workflow:plan` run by automation, CI, or with an explicit non-interactive flag/convention), skip AskQuestion calls and do not present Post-Generation Options. For determinism, the repo should define the flag or convention (e.g., in `AGENTS.md` Repo Config Block or a documented env var). Still **declare** Fidelity, Confidence, Solution scope, Research mode, and Open questions in the required announcement format before writing the plan. Use these defaults when user input is unavailable: fidelity = Medium, confidence = Medium, solution_scope = full_remediation, research mode = local + external for Medium/High risk topics else local only. Proceed directly to writing the plan file and then exit or return the plan path as output.
 
 **Required in plan frontmatter:** Add these fields to the plan file:
 
 - `fidelity: low|medium|high`
 - `confidence: high|medium|low`
+- `solution_scope: partial_fix|full_remediation|migration`
 
 ## Output Format
 

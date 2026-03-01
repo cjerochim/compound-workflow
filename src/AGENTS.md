@@ -53,7 +53,9 @@ Use the canonical command names (`/workflow:plan`, `/workflow:work`, `/workflow:
 - **Brainstorm = WHAT, Plan = HOW.** `/workflow:plan` must not re-litigate decisions already captured in `docs/brainstorms/`.
 - **Local grounding is mandatory.** Every plan must cite at least 1–3 internal file path/line refs (existing patterns) and any relevant `docs/solutions/**` learnings.
 - **Fidelity + confidence are required declarations** in every plan file: always output the Fidelity/Confidence/Research-mode block; the chosen template must include the required sections for that fidelity (Low/Medium/High).
+- **Solution scope contract is mandatory in every plan.** Plans must declare `solution_scope` (`partial_fix|full_remediation|migration`) plus explicit completion expectation and non-goals so `/workflow:work` can enforce intent.
 - **SpecFlow is a validation gate, not a rewrite engine.** High fidelity required; Medium recommended; Low optional. Output must translate into acceptance criteria/edge cases, not new scope.
+- **Isolation preflight is a hard gate.** `/workflow:work` must complete and record worktree/isolation preflight before any implementation commands. `/workflow:review` must do the same for non-current PR/branch targets before analysis.
 - **Skills are invoked only by trigger.** `document-review` only when user selects "Review and refine" (or explicit request); guardrail skills (PII/financial/audit/data) only when the feature touches that domain.
 - **No new files/directories by default** beyond `docs/plans/...` for planning output.
 - **Plan file is the artifact.** Post-generation options are actions on the artifact; they do not change the workflow shape.
@@ -65,6 +67,7 @@ Use the canonical command names (`/workflow:plan`, `/workflow:work`, `/workflow:
 
 - `Fidelity selected`: `Low | Medium | High`
 - `Confidence`: `High | Medium | Low`
+- `solution_scope`: `partial_fix | full_remediation | migration`
 - Why this fidelity (2-4 reasons)
 - Research mode used (`local only` or `local + external`)
 - Open questions (if any)
