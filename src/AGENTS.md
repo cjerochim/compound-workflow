@@ -136,13 +136,14 @@ worktree_bootstrap_notes:
 
 - Commands: `.agents/commands/*.md` and `.agents/commands/workflow/*.md` (workflow namespace)
 - Skills: `.agents/skills/*/SKILL.md`
+- Skills may optionally include tool-specific agent metadata under `.agents/skills/*/agents/` (for example `openai.yaml`) when required by that skill's validator/runtime.
 - References: `.agents/references/**`
 - Agents: `.agents/agents/**/*.md`
 
 ## Implemented Components (Current Scope)
 
 - Commands: `workflow:brainstorm`, `workflow:plan`, `workflow:work`, `workflow:triage`, `workflow:review`, `workflow:compound` (under `.agents/commands/workflow/`), plus `test-browser`, `metrics`, `assess`, `setup`, `sync` (root commands)
-- Skills: `brainstorming`, `document-review`, `technical-review`, `compound-docs` (alias: `compound_doc`), `file-todos`, `agent-browser`, `git-worktree`, `process-metrics`, `pii-protection-prisma`, `financial-workflow-integrity`, `audit-traceability`, `data-foundations`
+- Skills: `brainstorming`, `document-review`, `technical-review`, `compound-docs` (alias: `compound_doc`), `file-todos`, `agent-browser`, `git-worktree`, `process-metrics`, `xstate-actor-orchestration`, `pii-protection-prisma`, `financial-workflow-integrity`, `audit-traceability`, `data-foundations`
 - Agents:
   - `repo-research-analyst`
   - `learnings-researcher`
@@ -202,6 +203,7 @@ Maintenance:
 | `agent-browser` | You need to inspect available agents/skills and route deterministically. |
 | `git-worktree` | You need isolated parallel work (review/feature) using git worktrees. |
 | `process-metrics` | You want to log and assess session performance and process improvements. |
+| `xstate-actor-orchestration` | You are evaluating complexity and need explicit state orchestration: React container-as-orchestrator for UI flows, or actor/state-machine orchestration for backend/internal workflows (especially multi-step async branching, retries/timeouts/cancellation, receptionist/child-actor coordination, or boolean-flag sprawl). |
 
 ### Reference standards (guardrails)
 

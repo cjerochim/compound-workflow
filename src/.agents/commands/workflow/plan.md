@@ -83,9 +83,25 @@ Refine the idea through collaborative dialogue using **AskQuestion**:
 - **User's intent**: Speed vs thoroughness? Exploration vs execution?
 - **Topic risk**: Security, payments, external APIs warrant more caution
 - **Uncertainty level**: Is the approach clear or open-ended?
+- **State complexity**: Multi-step async branching, retries/timeouts/cancellation, receptionist/child actors, cross-component/service coordination, or boolean-flag sprawl.
 
 **Skip option:** If the feature description is already detailed, offer:
 "Your description is clear. Should I proceed with research, or would you like to refine it further?"
+
+### 0.5. State-Orchestration Fit Check (Decision in planning)
+
+Before finalizing architecture, decide whether to load
+`xstate-actor-orchestration`.
+
+Load it when complexity exceeds simple local state, especially for:
+
+- UI flows where a React container should orchestrate context/state and
+  compose presentational components
+- Backend/internal workflows with hidden state complexity, lifecycle
+  management, retries/timeouts/cancellation, or actor coordination
+- Cases where more than one boolean/flag currently controls flow
+
+If not selected, document why simpler state management is sufficient.
 
 ## Main Tasks
 

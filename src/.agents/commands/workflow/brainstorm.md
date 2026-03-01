@@ -61,6 +61,18 @@ Use **AskQuestion** to suggest:
 > planning. Should I run `/workflow:plan` instead, or would you like to
 > explore the idea further?"
 
+**State orchestration candidate signals (detection only):**
+
+- Multi-step async flow with branching or compensation
+- More than one boolean/flag controlling the same flow
+- Retries, timeouts, cancellation, or recovery requirements
+- Cross-component or cross-service coordination
+- Planned spawned-child actors or receptionist-style actor lookup
+
+If these signals appear, note that `/workflow:plan` should evaluate
+`xstate-actor-orchestration`. Do not force architecture decisions in
+brainstorm.
+
 ---
 
 ### Phase 1: Understand the Idea

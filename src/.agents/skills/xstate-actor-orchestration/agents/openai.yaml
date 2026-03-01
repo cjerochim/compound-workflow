@@ -1,0 +1,4 @@
+interface:
+  display_name: "XState Actor Orchestration"
+  short_description: "Design and implement advanced XState actor systems"
+  default_prompt: "Use $xstate-actor-orchestration to model and implement this interaction flow with receptionist and orchestrator actor patterns."

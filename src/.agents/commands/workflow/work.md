@@ -41,6 +41,19 @@ The input must be a plan file path.
    - Get user approval to proceed
    - **Do not skip this** - better to ask questions now than build the wrong thing
 
+1.1. **Apply state-orchestration trigger (enforcement)**
+
+   If the plan or implementation involves XState/state-machine
+   orchestration, load `xstate-actor-orchestration` before coding.
+
+   Trigger examples:
+
+   - React container-as-orchestrator composition for complex UI flows
+   - Backend/internal workflow orchestration with hidden complexity
+   - Spawned children or receptionist-style actor lookup
+   - Retries/timeouts/cancellation/recovery state handling
+   - More than one boolean/flag controlling one workflow
+
 1.25. **Resolve Repo Defaults (ALWAYS FIRST)**
 
    Read `AGENTS.md` and look for the "Repo Config Block" YAML.
