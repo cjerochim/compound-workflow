@@ -7,6 +7,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -175,6 +176,12 @@ function readJsonMaybe(fileAbs) {
   return JSON.parse(stripJsonc(raw));
 }
 
+function hasCommand(cmd) {
+  const checker = process.platform === "win32" ? "where" : "which";
+  const result = spawnSync(checker, [cmd], { stdio: "ignore" });
+  return result.status === 0;
+}
+
 const SKILLS_SYMLINK_PATH = ".agents/compound-workflow-skills";
 
 function ensureSkillsSymlink(targetRoot, dryRun) {
@@ -341,6 +348,27 @@ function writeOpenCodeJson(targetRoot, dryRun) {
   console.log("Wrote:", opencodeAbs);
 }
 
+function reportOpenCodeIntegration(targetRoot, dryRun) {
+  const opencodeAbs = path.join(targetRoot, "opencode.json");
+  const skillsLinkAbs = path.join(targetRoot, SKILLS_SYMLINK_PATH);
+
+  if (dryRun) {
+    console.log("[dry-run] OpenCode integration check skipped.");
+    return;
+  }
+
+  const opencode = readJsonMaybe(opencodeAbs) ?? {};
+  const skillPaths = Array.isArray(opencode?.skills?.paths) ? opencode.skills.paths : [];
+  const hasSkillsPath = skillPaths.includes(SKILLS_SYMLINK_PATH);
+  const hasSkillsLink = fs.existsSync(skillsLinkAbs);
+
+  console.log(
+    "OpenCode integration:",
+    hasSkillsPath && hasSkillsLink ? "ok" : "incomplete",
+    `(skills.path=${hasSkillsPath ? "yes" : "no"}, symlink=${hasSkillsLink ? "yes" : "no"})`
+  );
+}
+
 function extractRepoConfigBlock(md) {
   const match = md.match(/(### Repo Config Block[^\n]*\n)?\s*```yaml\n([\s\S]*?)```/);
   if (!match) return { block: null, rest: md };
@@ -421,9 +449,11 @@ function main() {
 
   console.log("Target root:", targetRoot);
   console.log("Package root:", packageRoot);
+  console.log("OpenCode CLI detected:", hasCommand("opencode") ? "yes" : "no");
 
   writeOpenCodeJson(targetRoot, args.dryRun);
   ensureSkillsSymlink(targetRoot, args.dryRun);
+  reportOpenCodeIntegration(targetRoot, args.dryRun);
   ensureCursorIntegration(targetRoot, args.dryRun);
   writeAgentsMd(targetRoot, args.dryRun);
   ensureDirs(targetRoot, args.dryRun);
