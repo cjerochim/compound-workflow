@@ -86,6 +86,9 @@ High-risk triggers include: security, payments, privacy, data migration/backfill
 ## Routing Rules
 
 - **Capability-first in commands:** Core workflow command docs should name capabilities (problem shape), not specific libraries. Concrete skill resolution comes from the Skill Index.
+- **Centralized skill routing:** Add new domain/reference skill routing in this file (Skill Index + rules) rather than hard-coding per-skill logic into each workflow command, except for rare high-criticality cases.
+- **Default skill selection order:** (1) safety/guardrail standards when applicable, (2) domain architecture/reference skills, (3) workflow execution skills. Choose the minimal set that covers the problem.
+- **Explain selection:** When selecting skills, state which skills were selected and why.
 - Prefer existing project patterns before introducing new ones.
 - Always run local repo + institutional learnings research first for planning.
 - Run external best-practice/framework research based on fidelity and risk.
@@ -144,7 +147,7 @@ worktree_bootstrap_notes:
 ## Implemented Components (Current Scope)
 
 - Commands: `workflow:brainstorm`, `workflow:plan`, `workflow:work`, `workflow:triage`, `workflow:review`, `workflow:compound` (under `.agents/commands/workflow/`), plus `test-browser`, `metrics`, `assess`, `setup`, `sync` (root commands)
-- Skills: `brainstorming`, `document-review`, `technical-review`, `compound-docs` (alias: `compound_doc`), `file-todos`, `agent-browser`, `git-worktree`, `process-metrics`, `xstate-actor-orchestration`, `pii-protection-prisma`, `financial-workflow-integrity`, `audit-traceability`, `data-foundations`
+- Skills: `brainstorming`, `document-review`, `technical-review`, `compound-docs` (alias: `compound_doc`), `file-todos`, `agent-browser`, `git-worktree`, `process-metrics`, `react-ddd-mvc-frontend`, `xstate-actor-orchestration`, `pii-protection-prisma`, `financial-workflow-integrity`, `audit-traceability`, `data-foundations`
 - Agents:
   - `repo-research-analyst`
   - `learnings-researcher`
@@ -204,6 +207,7 @@ Maintenance:
 | `agent-browser` | You need to inspect available agents/skills and route deterministically. |
 | `git-worktree` | You need isolated parallel work (review/feature) using git worktrees. |
 | `process-metrics` | You want to log and assess session performance and process improvements. |
+| `react-ddd-mvc-frontend` | You need React frontend architecture guidance (DDD + MVC hybrid) during planning or review to enforce feature structure, layer boundaries, composable pure components, container/controller responsibilities, and maintainable patterns. |
 | `xstate-actor-orchestration` | You are evaluating complexity and need explicit state orchestration: React container-as-orchestrator for UI flows, or actor/state-machine orchestration for backend/internal workflows (especially multi-step async branching, retries/timeouts/cancellation, receptionist/child-actor coordination, or boolean-flag sprawl). |
 
 ### Reference standards (guardrails)
