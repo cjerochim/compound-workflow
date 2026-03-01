@@ -21,7 +21,7 @@ jobs:
 
       - run: npm install
 
-      - run: npm run check:pack-readme
+      - run: node scripts/check-pack-readme.mjs
 
       - run: npx semantic-release
         env:
