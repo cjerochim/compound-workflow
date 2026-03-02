@@ -40,7 +40,7 @@ Onboarding:
 
 - `/install` -> one action: writes opencode.json, merges AGENTS.md, creates dirs, preserves Repo Config Block (run `npx compound-workflow install` in the project)
 
-This workspace currently implements `brainstorm`, `plan`, `work`, `review`, `compound`, and optional QA utilities.
+This workspace currently implements `brainstorm`, `plan`, `triage`, `work`, `review`, `compound`, and optional QA utilities.
 
 Use the canonical command names (`/workflow:plan`, `/workflow:work`, `/workflow:review`, etc.). This template does not ship aliases.
 
@@ -154,7 +154,7 @@ worktree_bootstrap_notes:
 
 ## Implemented Components (Current Scope)
 
-- Commands: `workflow:brainstorm`, `workflow:plan`, `workflow:work`, `workflow:triage`, `workflow:review`, `workflow:compound` (under `.agents/commands/workflow/`), plus `test-browser`, `metrics`, `assess`, `setup`, `sync` (root commands)
+- Commands: `workflow:brainstorm`, `workflow:plan`, `workflow:triage`, `workflow:work`, `workflow:review`, `workflow:compound` (under `.agents/commands/workflow/`), plus `test-browser`, `metrics`, `assess`, `setup`, `sync` (root commands)
 - Skills: `brainstorming`, `document-review`, `technical-review`, `compound-docs` (alias: `compound_doc`), `capture-skill`, `file-todos`, `agent-browser`, `git-worktree`, `process-metrics`, `react-ddd-mvc-frontend`, `xstate-actor-orchestration`, `standards`, `pii-protection-prisma`, `financial-workflow-integrity`, `audit-traceability`, `data-foundations`
 - Agents:
   - `repo-research-analyst`

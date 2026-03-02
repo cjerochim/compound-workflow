@@ -10,6 +10,7 @@ argument-hint: "[optional: todo path, issue id, status filter ('pending'|'ready'
 Turn todo items into a prioritized executable queue.
 
 This command does not implement fixes. It approves and organizes work so `/workflow:work` can execute without ambiguity.
+Output of this command is the only executable queue for `/workflow:work`.
 
 ## Inputs
 

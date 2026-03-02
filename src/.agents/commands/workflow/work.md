@@ -91,6 +91,12 @@ The input must be a plan file path.
 
 1.6. **Agentic Access + Validation Preflight (HARD GATE)**
 
+   Contract checksum (MUST all be true before implementation):
+
+   - triage completed for this plan
+   - isolation gate recorded (`worktree_decision`, context, `gate_status: passed`)
+   - blocking spikes execute before dependent build todos
+
    Before any implementation commands:
 
    - Verify each `ready` todo has an executable Agentic Execution Contract:

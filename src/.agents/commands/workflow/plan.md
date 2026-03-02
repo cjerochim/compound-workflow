@@ -861,13 +861,15 @@ Examples:
 
 After writing the plan file, use **AskQuestion** to present these options:
 
+Do not route directly from plan generation to `/workflow:work`.
+
 **Question:** "Plan ready at `docs/plans/YYYY-MM-DD-<type>-<slug>-plan.md`. What would you like to do next?"
 
 **Options:**
 
 1. **Open plan in editor** - Open the plan file for review
 2. **Review and refine** - Improve the document through structured self-review
-3. **Start `/workflow:work`** - Begin implementing this plan locally
+3. **Start `/workflow:triage`** - Triage todos derived from this plan before execution
 4. **Create Issue** - Create issue in project tracker (GitHub/Linear)
 5. **Other** - Adjust the plan
 
@@ -880,13 +882,14 @@ Based on selection:
 
 - **Open plan in editor** → Open the plan file in the editor (navigate to `docs/plans/<plan_filename>.md`)
 - **Review and refine** → Load `document-review` skill.
+- **Start `/workflow:triage`** → Ensure plan todos exist (create via `file-todos` if needed), then run `/workflow:triage` to approve priority/dependencies and the executable ready queue.
 - **Technical review** → Load `technical-review` skill; then if user agrees to changes, load `document-review` to update the plan.
 - **Create Issue** → See "Issue Creation" section below
 - **Other** → Accept free text for rework or specific changes
 
 **Note:** Only if `/deepen-plan` exists in this repo and the user has enabled it (e.g., ultrathink), you may run `/deepen-plan` after plan creation for extra depth; it is optional, not required.
 
-Loop back to options after changes until user selects `/workflow:work` or ends the session.
+Loop back to options after changes until user selects `/workflow:triage` or ends the session.
 
 ## Issue Creation
 
@@ -928,6 +931,6 @@ When user selects "Create Issue", detect their project tracker from repo guidanc
 
 5. **After creation:**
    - Display the issue URL
-   - Ask if they want to proceed to `/workflow:work`
+   - Ask if they want to proceed to `/workflow:triage`
 
 NEVER CODE! Just research and write the plan.

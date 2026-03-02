@@ -48,11 +48,11 @@ To update to a new release, see [Updating compound-workflow](#updating-compound-
 
 ## Workflow at a glance
 
-Clarify what to build → plan how (fidelity + confidence) → execute via todos → triage and review → capture learnings → log and assess.
+Clarify what to build -> plan how (fidelity + confidence) -> triage todos -> execute -> review -> capture learnings -> log and assess.
 
 ```mermaid
 flowchart LR
-  A["brainstorm"] --> B["plan"] --> C["work"] --> D["triage"] --> E["review"] --> F["capture"] --> G["metrics"]
+  A["brainstorm"] --> B["plan"] --> C["triage"] --> D["work"] --> E["review"] --> F["capture"] --> G["metrics"]
 ```
 
 ---
@@ -63,8 +63,8 @@ flowchart LR
 |------|--------|---------|---------------|
 | Clarify what to build | Dialogue only; no code | `/workflow:brainstorm [topic]` | `docs/brainstorms/` |
 | Define how (fidelity + confidence) | Plan only; no code; include agentic access + validation contract | `/workflow:plan [description or brainstorm path]` | `docs/plans/` |
-| Execute | File-based todos; risk-tier testing; evidence-backed completion; no auto-ship | `/workflow:work <plan-path>` | `todos/` |
 | Ready the queue | Priority/dependencies + executable agentic contract checks for pending todos | `/workflow:triage` | — |
+| Execute | File-based todos; risk-tier testing; evidence-backed completion; no auto-ship | `/workflow:work <plan-path>` | `todos/` |
 | Validate quality | Evidence-based review + agentic executability checks; no fixes by default | `/workflow:review [PR, branch, or current]` | pass / pass-with-notes / fail |
 | Capture learnings | One solution doc for future use | `/workflow:compound [context]` | `docs/solutions/` |
 | Log and improve | Session log + optional aggregate review | `/metrics` + `/assess weekly 7` (or monthly) | `docs/metrics/daily/`, weekly/monthly |
@@ -77,13 +77,15 @@ flowchart LR
 
 **Intent:** Plan only; no code; fidelity + confidence; include an agentic access + validation contract. **Command:** `/workflow:plan [description or brainstorm path]`. **Output:** `docs/plans/`.
 
-#### 3. Execute (work)
+#### 3. Ready the queue (triage)
+
+**Intent:** Priority/dependencies for pending todos and readiness checks for agentic executability. **Command:** `/workflow:triage`. **Output:** —.
+
+#### 4. Execute (work)
 
 **Intent:** File-based todos; risk-tier testing; success-criteria evidence + quality gates before completion; no auto-ship. **Command:** `/workflow:work <plan-path>`. **Output:** `todos/`.
 
-#### 4. Ready the queue (triage)
-
-**Intent:** Priority/dependencies for pending todos and readiness checks for agentic executability. **Command:** `/workflow:triage`. **Output:** —.
+`/workflow:work` must not run until `/workflow:triage` has approved executable ready todos.
 
 #### 5. Validate quality (review)
 
