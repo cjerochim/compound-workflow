@@ -166,6 +166,7 @@ worktree_bootstrap_notes:
   - `lint`
   - `bug-reproduction-validator`
   - `agent-native-reviewer`
+  - `planning-technical-reviewer`
 
 ## Skill Index (When to Use What)
 

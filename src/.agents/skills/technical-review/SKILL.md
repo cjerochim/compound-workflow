@@ -7,6 +7,8 @@ description: Use when a feature approach or plan doc has passed document review 
 
 Review a feature approach or plan document for technical alignment with architecture, code standards, and quality. Output risk level, three options with justifications, and a recommendation. Do not approve for build until the plan is updated via a second document review.
 
+Primary execution model: run an independent planning-phase pass first using `planning-technical-reviewer` (when available), then synthesize final technical review verdict.
+
 ## When to Use
 
 - After **document review** on a feature approach doc (pre-build gate flow).
@@ -18,6 +20,12 @@ Review a feature approach or plan document for technical alignment with architec
 **If a document path is provided:** Read it, then proceed to Step 2.
 
 **If no document is specified:** Use the doc just reviewed in document review, or look for the most recent feature approach/plan in `docs/brainstorms/` or `docs/plans/` (e.g. by date prefix).
+
+## Step 1.5: Independent Fresh-Context Pass (Required)
+
+- If `planning-technical-reviewer` exists under `.agents/agents/review/`, run it on the plan first.
+- Treat its blocking findings as pre-build blockers.
+- If the agent is not available, explicitly state: "planning-technical-reviewer unavailable; running direct technical review (degraded bias resistance)".
 
 ## Step 2: Assess Against Technical Criteria
 
@@ -66,6 +74,7 @@ State the **preferred option** and clear rationale (e.g. "Recommend Option B bec
 End every technical review with:
 
 - `Risk level:` low | medium | high (plus one-line rationale)
+- `Fresh-context pass:` ran | unavailable (degraded)
 - `Options A/B/C:` 2–3 sentences each
 - `Recommendation:` preferred option and rationale
 - `Approved for build:` yes | no
