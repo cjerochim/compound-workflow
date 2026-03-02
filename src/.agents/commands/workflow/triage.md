@@ -1,19 +1,19 @@
 ---
 name: triage
 invocation: workflow:triage
-description: Triage pending todo files into an executable ready queue (priority, dependencies, recommended action)
-argument-hint: "[optional: todo path, issue id, or 'pending' (default)]"
+description: Triage and prioritize todo files into an executable ready queue (priority, dependencies, recommended action)
+argument-hint: "[optional: todo path, issue id, status filter ('pending'|'ready'|'active')]"
 ---
 
 # /workflow:triage
 
-Turn `todos/*-pending-*.md` items into an executable queue.
+Turn todo items into a prioritized executable queue.
 
 This command does not implement fixes. It approves and organizes work so `/workflow:work` can execute without ambiguity.
 
 ## Inputs
 
-- Default: triage all pending todos under `todos/`
+- Default: triage all active todos under `todos/` (`pending` + `ready`)
 - Optional: a specific todo file path or issue id
 
 ## Preconditions
@@ -24,9 +24,9 @@ This command does not implement fixes. It approves and organizes work so `/workf
 ## Workflow
 
 1. Identify the target set:
-   - all `todos/*-pending-*.md`, or
+   - all active todos (`todos/*-pending-*.md` + `todos/*-ready-*.md`), or
    - the requested todo
-2. For each pending todo:
+2. For each target todo:
    - read Problem Statement + Findings + Proposed Solutions
    - fill **Recommended Action** (make it executable)
    - set `priority` (`p1|p2|p3`)
@@ -45,8 +45,9 @@ This command does not implement fixes. It approves and organizes work so `/workf
    - **Blocking spikes first:** If a spike unblocks downstream build todos, prioritize approving that spike before its dependents. Do not approve dependent build todos as executable ahead of unresolved blocking spikes.
    - **Parallel spike readiness:** If multiple spike todos are independent (no dependency edges between them), they may be approved together for parallel execution.
 3. Decision:
-   - **approve now** -> rename `*-pending-*` -> `*-ready-*` and set frontmatter `status: ready` (only when Acceptance Criteria and Agentic Execution Contract are executable)
-   - **defer** -> rename `*-pending-*` -> `*-deferred-*` and set frontmatter `status: deferred` (keep priority, typically `p3`). Ensure Recommended Action, Findings, and Work Log have enough context for future reference. Deferred items are not executed until re-triaged to `ready`.
+   - **approve now** -> if pending, rename `*-pending-*` -> `*-ready-*` and set frontmatter `status: ready`; if already ready, keep `status: ready` and update priority/dependencies as needed
+   - **defer** -> rename `*-pending-*` or `*-ready-*` -> `*-deferred-*` and set frontmatter `status: deferred` (keep priority, typically `p3`). Ensure Recommended Action, Findings, and Work Log have enough context for future reference. Deferred items are not executed until re-triaged to `ready`.
+   - **needs rework** -> when a `ready` todo is not executable, rename `*-ready-*` -> `*-pending-*`, set `status: pending`, and record what is missing before re-approval.
    - **blocked follow-up** -> when work returns a blocked todo, keep it as `pending` (rename from `*-ready-*` when needed), add `tags: [blocker]`, and require blocker options + recommendation in Work Log before re-approval.
 4. Output:
    - list approved `ready` todos (blocking spikes first, then other unblocked items)

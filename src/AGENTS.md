@@ -26,13 +26,10 @@ This `.agents` workspace is portable and command-first.
 
 1. `/workflow:brainstorm` -> clarify what to build
 2. `/workflow:plan` -> define how to build it
-3. `/workflow:work` -> implement
-4. `/workflow:review` -> validate quality
-5. `/workflow:compound` -> capture durable learnings
-
-Supporting command:
-
-- `/workflow:triage` -> approve and prioritize pending todos
+3. `/workflow:triage` -> approve and prioritize the todo queue before execution
+4. `/workflow:work` -> implement
+5. `/workflow:review` -> validate quality
+6. `/workflow:compound` -> capture durable learnings
 
 Continuous improvement:
 
@@ -56,6 +53,7 @@ Use the canonical command names (`/workflow:plan`, `/workflow:work`, `/workflow:
 - **Solution scope contract is mandatory in every plan.** Plans must declare `solution_scope` (`partial_fix|full_remediation|migration`) plus explicit completion expectation and non-goals so `/workflow:work` can enforce intent.
 - **SpecFlow is a validation gate, not a rewrite engine.** High fidelity required; Medium recommended; Low optional. Output must translate into acceptance criteria/edge cases, not new scope.
 - **Isolation preflight is a hard gate.** `/workflow:work` must complete and record worktree/isolation preflight before any implementation commands. `/workflow:review` must do the same for non-current PR/branch targets before analysis.
+- **Triage before execution is mandatory.** `/workflow:work` must not execute todos until a `/workflow:triage` pass has prioritized the queue and validated dependencies/ready state for the current plan.
 - **Spike governance is explicit and ordered.** Risky plans must evaluate spike need, spike candidates must declare initial priority/dependencies/unblocks/timebox/deliverable, triage confirms those assumptions, and `/workflow:work` executes blocking spikes before dependent build todos.
 - **Agentic access/testability is mandatory in planning.** Every plan must include an executable access + validation contract so work/review can run deterministically.
 - **Todo completion requires evidence.** A todo may move to `complete` only after success criteria evidence and quality gate evidence are recorded in Work Log.
@@ -157,7 +155,7 @@ worktree_bootstrap_notes:
 ## Implemented Components (Current Scope)
 
 - Commands: `workflow:brainstorm`, `workflow:plan`, `workflow:work`, `workflow:triage`, `workflow:review`, `workflow:compound` (under `.agents/commands/workflow/`), plus `test-browser`, `metrics`, `assess`, `setup`, `sync` (root commands)
-- Skills: `brainstorming`, `document-review`, `technical-review`, `compound-docs` (alias: `compound_doc`), `file-todos`, `agent-browser`, `git-worktree`, `process-metrics`, `react-ddd-mvc-frontend`, `xstate-actor-orchestration`, `standards`, `pii-protection-prisma`, `financial-workflow-integrity`, `audit-traceability`, `data-foundations`
+- Skills: `brainstorming`, `document-review`, `technical-review`, `compound-docs` (alias: `compound_doc`), `capture-skill`, `file-todos`, `agent-browser`, `git-worktree`, `process-metrics`, `react-ddd-mvc-frontend`, `xstate-actor-orchestration`, `standards`, `pii-protection-prisma`, `financial-workflow-integrity`, `audit-traceability`, `data-foundations`
 - Agents:
   - `repo-research-analyst`
   - `learnings-researcher`
@@ -213,6 +211,7 @@ Maintenance:
 | `document-review` | You need to review a document/spec and extract issues, gaps, and concrete next actions. |
 | `technical-review` | A plan or feature approach has passed document review and must be checked for technical correctness before build. |
 | `compound-docs` (alias: `compound_doc`) | A durable learning (solved problem or implementation insight) should be captured as institutional knowledge. |
+| `capture-skill` | You want to capture conversation learnings as a reusable skill, while defaulting to project-overlay refinement and avoiding implicit edits to repo-provided base skills. |
 | `file-todos` | You need a file-backed todo workflow for iterative multi-step changes. |
 | `agent-browser` | You need to inspect available agents/skills and route deterministically. |
 | `git-worktree` | You need isolated parallel work (review/feature) using git worktrees. |

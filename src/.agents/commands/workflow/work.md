@@ -221,8 +221,9 @@ The input must be a plan file path.
 
    After creating todos:
 
-   - If any todos are `pending`, stop and offer `/workflow:triage` to approve and prioritize before execution.
-   - If all todos are `ready`, proceed to Phase 2.
+   - Run `/workflow:triage` before any implementation work to approve/prioritize the queue for this plan.
+   - Do not proceed to Phase 2 until triage completes and execution order is explicit.
+   - If triage leaves no unblocked `ready` todos, stop and report pending/deferred/blocked items.
 
 ### Phase 2: Execute
 
@@ -249,7 +250,7 @@ The input must be a plan file path.
 
    - If no unblocked `ready` todos remain:
      - summarize remaining `pending`, `deferred` (parked for reference), and blocked items
-     - recommend running `/workflow:triage` for pending items
+     - require re-running `/workflow:triage` for pending/blocked prioritization
      - stop (do not invent work)
 
    For each task in priority order:
