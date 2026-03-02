@@ -9,6 +9,8 @@ argument-hint: "[PR number, GitHub URL, branch name, or 'current']"
 
 Run a structured, evidence-based **code** review. This command produces findings and recommendations; it does not implement fixes by default.
 
+Contract precedence: if this command conflicts with other workflow docs, follow `docs/principles/workflow-baseline-principles.md`, then `src/AGENTS.md`, then this command.
+
 **If the user provides a document path** (e.g. a plan or spec): redirect to the `technical-review` skill for technical correctness (no edits), and/or the `document-review` skill to refine the document. This command does not review documents.
 
 Guardrails (unless explicitly requested):
@@ -115,6 +117,19 @@ Protected artifacts:
 - If changes touch existing behavior and risk is medium/high: `Task git-history-analyzer(<target context>)`
 - If changes depend on framework/library behavior and version constraints: `Task framework-docs-researcher(<topic>)`
 
+### Phase 3.5: Independent Reviewer Pass (REQUIRED)
+
+Before final verdict, run an explicit independent pass and record:
+
+- `review_independence_mode: independent|degraded`
+- `independence_evidence`: what independent pass ran
+- `skipped_passes`: what was skipped and why
+
+Mode rules:
+
+- `independent` (default): run a distinct fresh-context reviewer pass (separate reviewer/agent perspective from the main synthesis).
+- `degraded`: only when independent reviewer tooling/path is unavailable. Must include explicit disclosure that confidence is reduced and why fallback was used.
+
 Then perform the main review synthesis across:
 
 - change summary (surface area, high-risk files)
@@ -130,11 +145,16 @@ Then perform the main review synthesis across:
 Provide:
 
 - Review recommendation: `pass | pass-with-notes | fail`
+- `review_independence_mode: independent|degraded`
+- `verdict_confidence: normal|degraded` (use `degraded` only when `review_independence_mode=degraded`)
 - Top risks (1–5 bullets)
 - Findings list:
   - severity (`critical | high | medium | low`)
   - evidence (file references or commands/output)
   - recommended action (concise)
+- Independence evidence summary:
+  - what independent pass ran
+  - what was skipped and why
 - What ran vs skipped (selected agents/passes)
 - Validation coverage summary:
   - tests: pass|fail|not-run

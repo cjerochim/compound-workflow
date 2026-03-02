@@ -13,6 +13,8 @@ Execute a work plan efficiently while maintaining quality and finishing features
 
 This command takes a plan file and executes it systematically. The focus is on completing the work while understanding requirements quickly, following existing patterns, and maintaining quality throughout.
 
+Contract precedence: if this command conflicts with other workflow docs, follow `docs/principles/workflow-baseline-principles.md`, then `src/AGENTS.md`, then this command.
+
 Non-goals (unless explicitly requested):
 
 - Creating commits
@@ -89,22 +91,7 @@ The input must be a plan file path.
    - Prefer `test_command` and optional `test_fast_command` from `AGENTS.md`.
    - If missing, ask once for the repo's test command and suggest adding it to `AGENTS.md`.
 
-1.6. **Agentic Access + Validation Preflight (HARD GATE)**
-
-   Contract checksum (MUST all be true before implementation):
-
-   - triage completed for this plan
-   - isolation gate recorded (`worktree_decision`, context, `gate_status: passed`)
-   - blocking spikes execute before dependent build todos
-
-   Before any implementation commands:
-
-   - Verify each `ready` todo has an executable Agentic Execution Contract:
-     - access preconditions are explicit
-     - validation path is explicit (commands/routes/checks)
-     - evidence expectations are explicit
-     - quality gate commands are explicit or marked for ask-once fallback
-   - If a todo lacks this contract, move it to `pending` for triage before coding.
+1.6. **Run-Scoped Quality Gate Fallback Setup (PREP STEP)**
 
    Ask-once fallback policy for missing lint/typecheck config:
 
@@ -112,6 +99,8 @@ The input must be a plan file path.
    - Record run-provided commands in the first active todo Work Log entry.
    - Continue only when provided commands run successfully.
    - If commands are not provided or fail, do not mark related todos complete.
+
+   Note: full execution preflight (triage + contract checks + isolation checks) runs after todo creation/triage in Step 3.5.
 
 1.75. **Resolve Plan Scope Contract (REQUIRED)**
 
@@ -132,11 +121,15 @@ The input must be a plan file path.
    - `migration`: identify migration verification + rollback checks before executing todos.
    - `full_remediation`: complete all known gaps in the scoped area before completion.
 
-2. **Setup Environment (HARD GATE)**
+2. **Setup Environment (HARD GATE - WORKTREE FIRST)**
 
    Determine how to isolate the work for this plan.
 
-   No implementation commands or code edits may run before this gate passes.
+   This gate MUST run immediately after Step 1.75.
+
+   No file writes, implementation commands, test/lint/typecheck commands, or dependency-install commands may run before this gate passes.
+
+   Allowed before gate: read-only inspection only (e.g., `ls`, `rg`, `cat`, `git status`, `git branch`).
 
    Default: use a worktree. Opt-out requires explicit user confirmation.
 
@@ -153,6 +146,8 @@ The input must be a plan file path.
      - No (stay in current checkout; create/switch to a feature branch)
 
    If Yes: ask for the new branch name (e.g., `feat/<slug>`, `fix/<slug>`).
+
+   If the user does not explicitly choose "No", proceed with "Yes" by default.
 
    3) If worktree is chosen, run:
 
@@ -230,6 +225,23 @@ The input must be a plan file path.
    - Run `/workflow:triage` before any implementation work to approve/prioritize the queue for this plan.
    - Do not proceed to Phase 2 until triage completes and execution order is explicit.
    - If triage leaves no unblocked `ready` todos, stop and report pending/deferred/blocked items.
+
+3.5. **Execution Preflight (HARD GATE before Phase 2)**
+
+   Contract checksum (MUST all be true before implementation):
+
+   - triage completed for this plan
+   - isolation gate recorded (`worktree_decision`, execution context, `gate_status: passed`)
+   - blocking spikes execute before dependent build todos
+
+   Before any implementation commands:
+
+   - Verify each `ready` todo has an executable Agentic Execution Contract:
+     - access preconditions are explicit
+     - validation path is explicit (commands/routes/checks)
+     - evidence expectations are explicit
+     - quality gate commands are explicit or marked for ask-once fallback
+   - If a todo lacks this contract, move it to `pending` for triage before coding.
 
 ### Phase 2: Execute
 
@@ -431,13 +443,15 @@ The input must be a plan file path.
    - If `test_command` is not configured, ask once for the project's test command and suggest adding it to `AGENTS.md`.
    - If `lint_command` or `typecheck_command` is not configured, ask once for run-provided commands and use them for this run.
 
-2. **Consider Reviewer Agents** (Optional)
+2. **Prepare Review Handoff (REQUIRED for code/config changes)**
 
-   Use for complex, risky, or large changes.
+   If this run changed code or configuration, prepare an explicit `/workflow:review current` handoff summary:
 
-   If this repo defines preferred review agents in `AGENTS.md`, follow that.
+   - files changed
+   - validations run and outcomes
+   - known risks or unresolved notes
 
-   If not configured, skip specialist reviewers by default.
+   Docs-only runs may skip this handoff using the docs-only review exemption.
 
 3. **Final Validation**
    - All todo files created for this plan are marked complete
@@ -463,9 +477,14 @@ The input must be a plan file path.
      - Note any follow-up work needed
      - Suggest next steps if applicable
 
-   Risk-based recommendation:
+   Completion policy:
 
-   - If the plan fidelity is `high` or confidence is `low`, recommend running `/workflow:review current` before considering the work complete.
+   - If this run changed code or configuration, report status as:
+     - `implementation_complete: true`
+     - `workflow_complete: false (pending /workflow:review current)`
+   - If this run is docs-only (no code/config changes), report status as:
+     - `implementation_complete: true`
+     - `workflow_complete: true (docs-only review exemption)`
 
 Stop here by default.
 
@@ -475,11 +494,11 @@ If the user wants to ship (commits/PR/screenshots), handle that as a separate ex
 
 ## Key Principles
 
-### Start Fast, Execute Faster
+### Execute with Deterministic Gates
 
-- Get clarification once at the start, then execute
-- Don't wait for perfect understanding - ask questions and move
-- The goal is to **finish the feature**, not create perfect process
+- Resolve unclear requirements early, then execute decisively
+- Keep hard gates explicit and non-skippable
+- Optimize for correct, verifiable completion
 
 ### The Plan is Your Guide
 
@@ -498,7 +517,7 @@ If the user wants to ship (commits/PR/screenshots), handle that as a separate ex
 - Follow existing patterns
 - Write tests for new code
 - Run linting/typechecking/formatting as configured in `AGENTS.md` (or run-provided via ask-once fallback)
-- Use reviewer agents for complex/risky changes only
+- For code/config changes, require `/workflow:review current` before declaring workflow completion
 
 ### Ship Complete Features
 
@@ -521,25 +540,23 @@ Before marking work complete, verify:
 - [ ] For `partial_fix`, unresolved work is captured as `pending/deferred` todos
 - [ ] If shipping is requested, capture any required artifacts (screenshots, release notes) per repo conventions
 
-## When to Use Reviewer Agents
+## Review Completion Gate
 
-**Don't use by default.** Use reviewer agents only when:
+For code/config changes, completion of `/workflow:work` is implementation-complete only. Workflow completion requires `/workflow:review current`.
 
-- Large refactor affecting many files (10+)
-- Security-sensitive changes (authentication, permissions, data access)
-- Performance-critical code paths
-- Complex algorithms or business logic
-- User explicitly requests thorough review
+Docs-only exception:
 
-For most features: tests + linting + following patterns is sufficient.
+- If no code/config files changed, `/workflow:work` may close as workflow-complete without `/workflow:review`.
+- When taking this exemption, explicitly state "docs-only review exemption" in the final summary.
 
 ## Common Pitfalls to Avoid
 
 - **Analysis paralysis** - Don't overthink, read the plan and execute
 - **Skipping clarifying questions** - Ask now, not after building wrong thing
 - **Skipping the worktree hard gate** - No implementation before Step 2 gate passes
+- **Starting writes before isolation gate** - no file writes or run commands before Step 2
 - **Ignoring plan references** - The plan has links for a reason
 - **Testing at the end** - Test continuously or suffer later
 - **Forgetting todo updates** - Update todo files and plan checkboxes or lose track of progress
 - **80% done syndrome** - Finish the feature, don't move on early
-- **Over-reviewing simple changes** - Save reviewer agents for complex work
+- **Skipping required review on code/config changes** - workflow completion requires `/workflow:review current`

@@ -13,6 +13,8 @@ argument-hint: "[feature description, bug report, improvement idea, or brainstor
 
 Transform feature descriptions, bug reports, or improvement ideas into well-structured markdown plan files that follow project conventions and best practices. This command provides flexible detail levels to match your needs.
 
+Contract precedence: if this command conflicts with other workflow docs, follow `docs/principles/workflow-baseline-principles.md`, then `src/AGENTS.md`, then this command.
+
 This workflow MUST choose a planning fidelity and confidence level before final plan construction:
 
 - Fidelity: `Low | Medium | High`

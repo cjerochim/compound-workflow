@@ -57,6 +57,10 @@ flowchart LR
 
 ---
 
+If docs conflict: follow [docs/principles/workflow-baseline-principles.md](docs/principles/workflow-baseline-principles.md), then [src/AGENTS.md](src/AGENTS.md), then command docs under [src/.agents/commands/](src/.agents/commands/).
+
+---
+
 ## Step-by-step: intent and commands
 
 | Step | Intent | Command | Output / note |
@@ -64,8 +68,8 @@ flowchart LR
 | Clarify what to build | Dialogue only; no code | `/workflow:brainstorm [topic]` | `docs/brainstorms/` |
 | Define how (fidelity + confidence) | Plan only; no code; include agentic access + validation contract | `/workflow:plan [description or brainstorm path]` | `docs/plans/` |
 | Ready the queue | Priority/dependencies + executable agentic contract checks for pending todos | `/workflow:triage` | — |
-| Execute | File-based todos; risk-tier testing; evidence-backed completion; no auto-ship | `/workflow:work <plan-path>` | `todos/` |
-| Validate quality | Evidence-based review + agentic executability checks; no fixes by default | `/workflow:review [PR, branch, or current]` | pass / pass-with-notes / fail |
+| Execute | File-based todos; risk-tier testing; evidence-backed implementation; no auto-ship | `/workflow:work <plan-path>` | `todos/` |
+| Validate quality | Independent, evidence-based review for code/config changes (docs-only exempt); no fixes by default | `/workflow:review [PR, branch, or current]` | pass / pass-with-notes / fail |
 | Capture learnings | One solution doc for future use | `/workflow:compound [context]` | `docs/solutions/` |
 | Log and improve | Session log + optional aggregate review | `/metrics` + `/assess weekly 7` (or monthly) | `docs/metrics/daily/`, weekly/monthly |
 
@@ -87,9 +91,11 @@ flowchart LR
 
 `/workflow:work` must not run until `/workflow:triage` has approved executable ready todos.
 
+For code/config changes, `/workflow:work` ends at implementation-complete and requires `/workflow:review` before workflow completion. Docs-only work can close without `/workflow:review`.
+
 #### 5. Validate quality (review)
 
-**Intent:** Evidence-based review + agentic validation coverage checks; no fixes by default. **Command:** `/workflow:review [PR|branch|current]`. **Output:** pass / pass-with-notes / fail.
+**Intent:** Independent, evidence-based review with explicit independence mode (`independent|degraded`) and evidence disclosure; no fixes by default. **Command:** `/workflow:review [PR|branch|current]`. **Output:** pass / pass-with-notes / fail.
 
 #### 6. Capture learnings (compound)
 
@@ -151,7 +157,11 @@ Full “when to use what” and reference standards: [src/AGENTS.md](src/AGENTS.
 
 - **Todo completion requires evidence:** acceptance/success criteria plus quality gates must be recorded before `complete`.
 
+- **Independent review policy:** code/config changes require `/workflow:review` before workflow completion; docs-only changes are exempt.
+
 - **Quality gate fallback:** if `lint_command` or `typecheck_command` is missing from repo config, workflow asks once for run-provided commands and continues only if they pass.
+
+- **Artifact policy:** do not create ad-hoc artifacts outside canonical outputs (`docs/plans`, `todos`, `docs/solutions`, `docs/metrics`) unless explicitly requested.
 
 - Add a separate shipping command if you want automated commit/PR and quality gates.
 
@@ -176,4 +186,5 @@ If your project does not already have `.cursor/`, run `npx compound-workflow ins
 **Source of truth**
 
 - Workflows and commands: [src/.agents/](src/.agents/)
+- Baseline principles (tie-breaker): [docs/principles/workflow-baseline-principles.md](docs/principles/workflow-baseline-principles.md)
 - Principles and skill index: [src/AGENTS.md](src/AGENTS.md)

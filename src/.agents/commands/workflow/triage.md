@@ -12,6 +12,8 @@ Turn todo items into a prioritized executable queue.
 This command does not implement fixes. It approves and organizes work so `/workflow:work` can execute without ambiguity.
 Output of this command is the only executable queue for `/workflow:work`.
 
+Contract precedence: if this command conflicts with other workflow docs, follow `docs/principles/workflow-baseline-principles.md`, then `src/AGENTS.md`, then this command.
+
 ## Inputs
 
 - Default: triage all active todos under `todos/` (`pending` + `ready`)

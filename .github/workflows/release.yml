@@ -22,6 +22,7 @@ jobs:
       - run: npm install
 
       - run: node scripts/check-pack-readme.mjs
+      - run: node scripts/check-workflow-contracts.mjs
 
       - run: npx semantic-release
         env:

@@ -44,6 +44,15 @@ This workspace currently implements `brainstorm`, `plan`, `triage`, `work`, `rev
 
 Use the canonical command names (`/workflow:plan`, `/workflow:work`, `/workflow:review`, etc.). This template does not ship aliases.
 
+## Contract Precedence
+
+If workflow documents conflict, resolve them in this order:
+
+1. `docs/principles/workflow-baseline-principles.md`
+2. This file (`src/AGENTS.md`) non-negotiables and repo config
+3. Workflow command specs (`src/.agents/commands/workflow/*.md`)
+4. Skill docs (`src/.agents/skills/*/SKILL.md`)
+
 ## Non-negotiables (Structure Integrity)
 
 - **Commands are the public API.** Keep `/workflow:*` command docs stable; add capability via skills/agents, not new command variants.
@@ -56,11 +65,12 @@ Use the canonical command names (`/workflow:plan`, `/workflow:work`, `/workflow:
 - **Triage before execution is mandatory.** `/workflow:work` must not execute todos until a `/workflow:triage` pass has prioritized the queue and validated dependencies/ready state for the current plan.
 - **Spike governance is explicit and ordered.** Risky plans must evaluate spike need, spike candidates must declare initial priority/dependencies/unblocks/timebox/deliverable, triage confirms those assumptions, and `/workflow:work` executes blocking spikes before dependent build todos.
 - **Agentic access/testability is mandatory in planning.** Every plan must include an executable access + validation contract so work/review can run deterministically.
+- **Independent review is required for code/config changes.** `/workflow:review` must emit `review_independence_mode: independent|degraded`, plus independence evidence and skipped-pass disclosure.
 - **Todo completion requires evidence.** A todo may move to `complete` only after success criteria evidence and quality gate evidence are recorded in Work Log.
 - **Blockers change todo state immediately.** Blocked work must move from `ready` back to `pending` with `tags: [blocker]` and an options+recommendation decision record.
 - **Quality gates are enforced with ask-once fallback.** If `lint_command` or `typecheck_command` is missing, ask once per run and continue only when commands are provided and pass.
 - **Skills are invoked only by trigger.** `document-review` only when user selects "Review and refine" (or explicit request); guardrail skills (PII/financial/audit/data) only when the feature touches that domain.
-- **No new files/directories by default** beyond `docs/plans/...` for planning output.
+- **No ad-hoc artifacts outside canonical outputs** (`docs/plans`, `todos`, `docs/solutions`, `docs/metrics`) unless explicitly requested.
 - **Plan file is the artifact.** Post-generation options are actions on the artifact; they do not change the workflow shape.
 - **Tighten over expand.** Resolve ambiguity, standardize naming, enforce sections—avoid adding new process steps unless they reduce rework.
 
