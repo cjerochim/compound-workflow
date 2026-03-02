@@ -131,7 +131,7 @@ Full detail: [src/AGENTS.md](src/AGENTS.md), [src/.agents/commands/](src/.agents
 
 Commands are the public API. Skills and agents are invoked by commands; you don’t call them directly.
 
-- **Workflow skills:** `brainstorming`, `file-todos`, `compound-docs`, `document-review`, `technical-review`, `git-worktree`, `agent-browser`, `process-metrics`, `react-ddd-mvc-frontend`, `xstate-actor-orchestration`.
+- **Workflow skills:** `brainstorming`, `file-todos`, `compound-docs`, `document-review`, `technical-review`, `git-worktree`, `agent-browser`, `process-metrics`, `react-ddd-mvc-frontend`, `xstate-actor-orchestration`, `standards`.
 - **State orchestration:** Use a state-orchestration skill when complexity exceeds simple local state (e.g. `xstate-actor-orchestration` per Skill Index)—UI container-as-orchestrator flows, backend/internal actor orchestration, receptionist/child-actor patterns, retries/timeouts/cancellation, or boolean-flag sprawl.
 - **Skill-local metadata:** Some skills may include tool-specific metadata under `src/.agents/skills/<skill>/agents/` (for example `openai.yaml`) when required by skill validation/runtime.
 - **Guardrail standards:** `data-foundations`, `pii-protection-prisma`, `financial-workflow-integrity`, `audit-traceability` — applied when work touches multi-tenant data, PII, money, or audit.
