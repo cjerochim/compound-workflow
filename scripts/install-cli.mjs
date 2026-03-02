@@ -14,7 +14,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 function usage(exitCode = 0) {
   const msg = `
 Usage:
-  npx compound-workflow install [--root <projectDir>] [--dry-run] [--no-config]
+  npx compound-workflow install [--root <projectDir>] [--dry-run] [--no-config] [--cursor]
 
 One action: writes opencode.json (loads from package), merges AGENTS.md, creates dirs,
 and prompts for Repo Config Block (unless --no-config).
@@ -22,17 +22,19 @@ and prompts for Repo Config Block (unless --no-config).
   --root <dir>   Project directory (default: cwd)
   --dry-run      Print planned changes only
   --no-config   Skip Repo Config Block prompt (only write opencode.json + AGENTS.md + dirs)
+  --cursor      Force Cursor integration (create .cursor if missing, then wire links)
 `;
   (exitCode === 0 ? console.log : console.error)(msg.trimStart());
   process.exit(exitCode);
 }
 
 function parseArgs(argv) {
-  const out = { root: process.cwd(), dryRun: false, noConfig: false };
+  const out = { root: process.cwd(), dryRun: false, noConfig: false, cursor: false };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--dry-run") out.dryRun = true;
     else if (a === "--no-config") out.noConfig = true;
+    else if (a === "--cursor") out.cursor = true;
     else if (a === "--root") {
       const v = argv[i + 1];
       if (!v) usage(1);
@@ -233,11 +235,11 @@ function ensureSkillsSymlink(targetRoot, dryRun) {
   }
 }
 
-function ensureCursorDirSymlink(targetRoot, cursorSubdir, pkgSubdir, dryRun, label) {
+function ensureCursorDirSymlink(targetRoot, cursorSubdir, pkgSubdir, dryRun, label, cursorReady) {
   const cursorDir = path.join(targetRoot, ".cursor");
-  if (!fs.existsSync(cursorDir)) return;
+  if (!cursorReady) return { status: "skipped-missing-cursor" };
   const pkgPath = path.join(packageRoot, "src", ".agents", pkgSubdir);
-  if (!fs.existsSync(pkgPath)) return;
+  if (!fs.existsSync(pkgPath)) return { status: "skipped-missing-package-path" };
 
   const linkPath = path.join(cursorDir, cursorSubdir);
   const targetRel = path.join("..", "node_modules", "compound-workflow", "src", ".agents", pkgSubdir);
@@ -245,7 +247,7 @@ function ensureCursorDirSymlink(targetRoot, cursorSubdir, pkgSubdir, dryRun, lab
 
   if (dryRun) {
     console.log("[dry-run] Would create .cursor/" + cursorSubdir, "symlink (Cursor)");
-    return;
+    return { status: "dry-run" };
   }
 
   let needCreate = true;
@@ -254,7 +256,7 @@ function ensureCursorDirSymlink(targetRoot, cursorSubdir, pkgSubdir, dryRun, lab
     if (stat.isSymbolicLink() && symlinkPointsTo(linkPath, targetAbs)) needCreate = false;
     else if (!stat.isSymbolicLink()) {
       console.warn("Skipped", ".cursor/" + cursorSubdir, "because it exists and is not a symlink");
-      return;
+      return { status: "blocked-nonsymlink", path: linkPath };
     }
   } catch (_) {}
 
@@ -263,15 +265,17 @@ function ensureCursorDirSymlink(targetRoot, cursorSubdir, pkgSubdir, dryRun, lab
     const type = process.platform === "win32" ? "dir" : "dir";
     fs.symlinkSync(targetRel, linkPath, type);
     console.log("Created", ".cursor/" + cursorSubdir, "->", label || pkgSubdir, "(Cursor)");
+    return { status: "created" };
   }
+  return { status: "ok" };
 }
 
-function ensureCursorSkills(targetRoot, dryRun) {
+function ensureCursorSkills(targetRoot, dryRun, cursorReady) {
   const cursorDir = path.join(targetRoot, ".cursor");
-  if (!fs.existsSync(cursorDir)) return;
+  if (!cursorReady) return { blocked: [] };
 
   const packageSkillsDir = path.join(packageRoot, "src", ".agents", "skills");
-  if (!fs.existsSync(packageSkillsDir)) return;
+  if (!fs.existsSync(packageSkillsDir)) return { blocked: [] };
 
   const skillNames = [];
   try {
@@ -290,11 +294,19 @@ function ensureCursorSkills(targetRoot, dryRun) {
 
   if (dryRun) {
     console.log("[dry-run] Would create .cursor/skills/<skill> symlinks for:", skillNames.join(", "));
-    return;
+    return { blocked: [] };
   }
 
   if (!fs.existsSync(skillsDir)) fs.mkdirSync(skillsDir, { recursive: true });
+  else {
+    const stat = fs.lstatSync(skillsDir);
+    if (!stat.isDirectory()) {
+      console.warn("Skipped .cursor/skills because it exists and is not a directory");
+      return { blocked: [skillsDir] };
+    }
+  }
 
+  const blocked = [];
   for (const name of skillNames) {
     const linkPath = path.join(skillsDir, name);
     const targetRel = path.join("..", "..", "..", "node_modules", "compound-workflow", "src", ".agents", "skills", name);
@@ -305,6 +317,7 @@ function ensureCursorSkills(targetRoot, dryRun) {
       if (stat.isSymbolicLink() && symlinkPointsTo(linkPath, targetAbs)) needCreate = false;
       else if (!stat.isSymbolicLink()) {
         console.warn("Skipped", ".cursor/skills/" + name, "because it exists and is not a symlink");
+        blocked.push(linkPath);
         continue;
       }
     } catch (_) {}
@@ -315,13 +328,67 @@ function ensureCursorSkills(targetRoot, dryRun) {
       console.log("Created", ".cursor/skills/" + name, "-> package skill (Cursor)");
     }
   }
+  return { blocked };
 }
 
-function ensureCursorIntegration(targetRoot, dryRun) {
-  ensureCursorSkills(targetRoot, dryRun);
-  ensureCursorDirSymlink(targetRoot, "agents", "agents", dryRun, "package agents");
-  ensureCursorDirSymlink(targetRoot, "commands", "commands", dryRun, "package commands");
-  ensureCursorDirSymlink(targetRoot, "references", "references", dryRun, "package references");
+function verifyCursorIntegration(targetRoot) {
+  const cursorDir = path.join(targetRoot, ".cursor");
+  if (!fs.existsSync(cursorDir)) return [];
+
+  const checks = [
+    { name: ".cursor/agents", rel: path.join("agents") },
+    { name: ".cursor/commands", rel: path.join("commands") },
+    { name: ".cursor/references", rel: path.join("references") },
+  ];
+  const issues = [];
+
+  for (const check of checks) {
+    const linkPath = path.join(cursorDir, check.rel);
+    const expectedAbs = path.join(targetRoot, "node_modules", "compound-workflow", "src", ".agents", check.rel);
+    if (!symlinkPointsTo(linkPath, expectedAbs)) issues.push(`${check.name} is missing or not linked to package`);
+  }
+
+  const workCommand = path.join(cursorDir, "commands", "workflow", "work.md");
+  if (!fs.existsSync(workCommand)) {
+    issues.push(".cursor/commands/workflow/work.md is not reachable after integration");
+  }
+  return issues;
+}
+
+function ensureCursorIntegration(targetRoot, dryRun, forceCursor) {
+  const cursorDir = path.join(targetRoot, ".cursor");
+  let cursorReady = fs.existsSync(cursorDir);
+  if (!fs.existsSync(cursorDir)) {
+    if (!forceCursor) return { issues: [] };
+    if (dryRun) console.log("[dry-run] Would create .cursor directory (Cursor)");
+    else {
+      fs.mkdirSync(cursorDir, { recursive: true });
+      cursorReady = true;
+    }
+    if (dryRun) cursorReady = true;
+  }
+
+  const skillReport = ensureCursorSkills(targetRoot, dryRun, cursorReady);
+  const dirReports = [
+    ensureCursorDirSymlink(targetRoot, "agents", "agents", dryRun, "package agents", cursorReady),
+    ensureCursorDirSymlink(targetRoot, "commands", "commands", dryRun, "package commands", cursorReady),
+    ensureCursorDirSymlink(targetRoot, "references", "references", dryRun, "package references", cursorReady),
+  ];
+
+  const issues = [];
+  if (skillReport?.blocked?.length) {
+    for (const p of skillReport.blocked) issues.push(`${path.relative(targetRoot, p)} blocks symlink creation (not a symlink)`);
+  }
+  for (const report of dirReports) {
+    if (report?.status === "blocked-nonsymlink") {
+      issues.push(`${path.relative(targetRoot, report.path)} blocks symlink creation (not a symlink)`);
+    }
+  }
+
+  if (!dryRun) {
+    for (const issue of verifyCursorIntegration(targetRoot)) issues.push(issue);
+  }
+  return { issues };
 }
 
 function writeOpenCodeJson(targetRoot, dryRun) {
@@ -472,9 +539,18 @@ function main() {
   writeOpenCodeJson(targetRoot, args.dryRun);
   ensureSkillsSymlink(targetRoot, args.dryRun);
   reportOpenCodeIntegration(targetRoot, args.dryRun);
-  ensureCursorIntegration(targetRoot, args.dryRun);
+  const cursorReport = ensureCursorIntegration(targetRoot, args.dryRun, args.cursor);
   writeAgentsMd(targetRoot, args.dryRun);
   ensureDirs(targetRoot, args.dryRun);
+
+  if (cursorReport.issues.length) {
+    console.error("\nCursor integration drift detected:");
+    for (const issue of cursorReport.issues) console.error("-", issue);
+    if (!args.dryRun) {
+      console.error("Fix blockers (or remove conflicting paths) and rerun install.");
+      process.exit(2);
+    }
+  }
 
   if (!args.noConfig && !args.dryRun && process.stdin.isTTY) {
     console.log("\nRepo Config: edit AGENTS.md to set default_branch, test_command, lint_command, dev_server_url.");

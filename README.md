@@ -29,7 +29,7 @@ npx compound-workflow install
 
 **What Install does:** Merges `AGENTS.md` (preserves your Repo Config Block), creates standard dirs (`docs/`, `todos/`), writes `opencode.json` (for OpenCode), and—if the project has a `.cursor` directory—creates `.cursor/skills/<skill>`, `.cursor/agents`, `.cursor/commands`, and `.cursor/references` (symlinks into the package). All paths reference `node_modules/compound-workflow`; no file copying.
 
-**CLI options:** `--dry-run` (preview), `--root /path/to/project`, `--no-config` (skip Repo Config Block reminder).
+**CLI options:** `--dry-run` (preview), `--root /path/to/project`, `--no-config` (skip Repo Config Block reminder), `--cursor` (create `.cursor` and wire Cursor symlinks even if `.cursor` does not already exist).
 
 **Legacy (clone inside repo):** If you cloned this repo inside a host repo and need to copy files without npm, use `./scripts/sync-into-repo.sh` (copy only; does not update opencode.json). Prefer the npm + Install flow above.
 
@@ -158,6 +158,8 @@ Full “when to use what” and reference standards: [src/AGENTS.md](src/AGENTS.
 ## Troubleshooting
 
 **Skills not showing in Cursor?** Cursor discovers skills from (1) the plugin’s `skills/` directory when you load the plugin from this repo, or (2) the project’s `.cursor/skills/` when you use npm: ensure the project has a `.cursor` directory and run `npx compound-workflow install`—Install creates the full structure (`.cursor/skills/<skill>`, `.cursor/agents`, `.cursor/commands`, `.cursor/references`). If skills still don’t appear, check Cursor Settings → Rules and any `permission.skill` settings.
+
+If your project does not already have `.cursor/`, run `npx compound-workflow install --cursor` to create it and wire links. Install now fails fast when existing non-symlink files/directories block `.cursor` link creation, to prevent partial installs and command drift.
 
 **Skills not showing in OpenCode?** OpenCode uses the `.agents/compound-workflow-skills` symlink and `opencode.json` `skills.paths`. Run Install from the project root (`npx compound-workflow install`). The learnings-capture skill is named **compound-docs** (hyphen, plural); **compound_doc** (underscore) is an alias that resolves to the same skill.
 
