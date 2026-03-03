@@ -45,6 +45,11 @@
       "rel": "workflow/review.md"
     },
     {
+      "id": "workflow:tech-review",
+      "description": "Run technical review on a plan (technical correctness before build). Optional plan path or latest in docs/plans/.",
+      "rel": "workflow/tech-review.md"
+    },
+    {
       "id": "workflow:triage",
       "description": "Manual triage command to prioritize todo files into an executable ready queue (priority, dependencies, recommended action)",
       "rel": "workflow/triage.md"

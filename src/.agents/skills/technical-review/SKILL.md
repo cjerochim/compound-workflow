@@ -23,9 +23,8 @@ Primary execution model: run an independent planning-phase pass first using `pla
 
 ## Step 1.5: Independent Fresh-Context Pass (Required)
 
-- If `planning-technical-reviewer` exists under `.agents/agents/review/`, run it on the plan first.
-- Treat its blocking findings as pre-build blockers.
-- If the agent is not available, explicitly state: "planning-technical-reviewer unavailable; running direct technical review (degraded bias resistance)".
+- Run **Task planning-technical-reviewer(plan_path)** when the environment can run the Task; treat its output as the independent pass and its blocking findings as pre-build blockers.
+- If the Task cannot be run (e.g. no subagent/mcp_task support), explicitly state: "planning-technical-reviewer unavailable; running direct technical review (degraded bias resistance)" and perform the review in-context (load the planning-technical-reviewer agent doc and execute that review in this conversation), then synthesize the verdict.
 
 ## Step 1.6: Build Findings Queue (Required)
 
