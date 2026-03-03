@@ -19,10 +19,11 @@ Contract precedence: if this command conflicts with other workflow docs, follow 
 ## Execution
 
 1. Resolve the plan document (from argument, context, or discovery).
-2. Load the `technical-review` skill and run it on that plan. The skill runs **Task planning-technical-reviewer(plan_path)** when the environment can run the Task, then synthesizes the verdict and findings queue.
+2. **Run technical review as a subagent (mandatory when supported).** Load the `technical-review` skill and run it on that plan. You **must** attempt the independent pass via a subagent first: run **Task planning-technical-reviewer(plan_path)** (e.g. `mcp_task` with subagent_type and the plan path). Do **not** perform the planning-technical-reviewer pass in-context unless the environment cannot run the Task; if you fall back, you **must** state "planning-technical-reviewer unavailable; running direct technical review (degraded bias resistance)". After the subagent (or fallback) pass, synthesize the verdict and findings queue.
 3. After technical review, if the user agrees to changes, recommend loading `document-review` to update the plan, then proceed to build when ready.
 
 ## Guardrails
 
+- **Subagent mandatory when available.** You must run the planning-technical-reviewer pass as a subagent (Task / mcp_task) when the environment supports it. Do not run in-context unless the environment cannot run the Task; if you do, disclose the degraded mode.
 - Do not modify the plan in this command; technical review is read-only. Apply changes via document-review or user edit.
 - Do not create commits, push branches, or create pull requests.
