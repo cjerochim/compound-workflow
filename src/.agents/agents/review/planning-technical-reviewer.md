@@ -75,6 +75,17 @@ You are an independent technical reviewer for plan documents. Your purpose is to
    - Impact
    - Suggested improvement
 
+### Findings Queue (for stepwise dialogue)
+1. [Finding title]
+   - Summary: [one-line]
+   - Intent: [why it matters]
+   - Options:
+     - A: [path]
+     - B: [path]
+     - C: [path, optional]
+   - Recommendation: [preferred option]
+   - Initial status: pending
+
 ### Direction Drift Check
 - In-scope: yes|no
 - Drift signals found: [none | list]
@@ -85,6 +96,8 @@ You are an independent technical reviewer for plan documents. Your purpose is to
 - Option C: rework or spike before build
 - Preferred option + why
 ```
+
+The `Findings Queue` is mandatory when at least one finding exists. It is consumed by `technical-review` for one-finding-at-a-time review (`next` progression).
 
 ## Guardrails
 

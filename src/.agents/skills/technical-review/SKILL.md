@@ -5,7 +5,7 @@ description: Use when a feature approach or plan doc has passed document review 
 
 # Technical Review
 
-Review a feature approach or plan document for technical alignment with architecture, code standards, and quality. Output risk level, three options with justifications, and a recommendation. Do not approve for build until the plan is updated via a second document review.
+Review a feature approach or plan document for technical alignment with architecture, code standards, and quality. Keep a running summary of findings, then review findings one at a time through user-driven dialogue (`next`). For each finding, output intent, options, and a recommendation. Do not approve for build until the plan is updated via a second document review.
 
 Primary execution model: run an independent planning-phase pass first using `planning-technical-reviewer` (when available), then synthesize final technical review verdict.
 
@@ -26,6 +26,15 @@ Primary execution model: run an independent planning-phase pass first using `pla
 - If `planning-technical-reviewer` exists under `.agents/agents/review/`, run it on the plan first.
 - Treat its blocking findings as pre-build blockers.
 - If the agent is not available, explicitly state: "planning-technical-reviewer unavailable; running direct technical review (degraded bias resistance)".
+
+## Step 1.6: Build Findings Queue (Required)
+
+- Consolidate all blocking and non-blocking findings into an ordered queue.
+- Keep a persistent `Findings Summary` visible throughout the review with status per finding:
+  - `pending`
+  - `aligned`
+  - `deferred`
+- Do not process findings in bulk. Process one finding at a time.
 
 ## Step 2: Assess Against Technical Criteria
 
@@ -52,7 +61,29 @@ Assign one **overall** risk level for the plan:
 
 State the risk level and one-line rationale.
 
-## Step 4: Three Options with Justifications
+## Step 4: One-Finding Dialogue Loop (Required)
+
+For each queued finding, present:
+
+- `Finding:` concise summary
+- `Intent:` why this matters technically
+- `Options:` 2-3 viable paths with tradeoffs
+- `Recommendation:` preferred option with rationale
+- `Outcome:` leave as `pending` until user aligns
+
+After each finding, stop and prompt exactly:
+
+- `Say "next" to continue to the next finding.`
+
+Supported user controls in this loop:
+
+- `next` -> advance to the next pending finding
+- `accept` -> mark current finding as `aligned`, record chosen outcome
+- `revise: <note>` -> update current finding framing/options/recommendation before moving on
+
+Do not skip ahead automatically while findings remain pending.
+
+## Step 5: Three Options with Justifications (Overall Verdict)
 
 For each option, provide 2–3 sentences justification:
 
@@ -60,25 +91,27 @@ For each option, provide 2–3 sentences justification:
 - **Option B — Proceed with changes** — When risk is medium. List specific doc or code changes; justify why this is sufficient.
 - **Option C — Rework or spike** — When risk is high or uncertain. Say what to rework or spike; justify why build should wait.
 
-## Step 5: Recommendation
+## Step 6: Recommendation (Overall Verdict)
 
 State the **preferred option** and clear rationale (e.g. "Recommend Option B because …"). Tie to the risk level and findings.
 
-## Step 6: Output and Handoff
+## Step 7: Output and Handoff
 
-- **If pass (Option A or B with changes agreed):** Say "Approved for build" and optional notes. **Handoff:** Run **document review again** to update the plan with technical review findings (recommendation, agreed changes). Then build.
+- **If pass (Option A or B with changes agreed):** Say "Approved for build" and optional notes. **Handoff:** Run **document review again** to update the plan with all aligned technical review findings (recommendation, agreed changes, per-finding outcomes). Then build.
 - **If issues (Option C or B with open changes):** List issues to fix in the doc; do not approve for build until addressed. Handoff: update the plan (or re-run document review to incorporate fixes), then optionally re-run technical review.
 
 ## Required Output
 
 End every technical review with:
 
+- `Findings summary:` full list with status `pending|aligned|deferred`
+- `Per-finding outcomes:` one line each for every aligned finding
 - `Risk level:` low | medium | high (plus one-line rationale)
 - `Fresh-context pass:` ran | unavailable (degraded)
 - `Options A/B/C:` 2–3 sentences each
 - `Recommendation:` preferred option and rationale
 - `Approved for build:` yes | no
-- `Handoff:` re-run document review to update plan with findings before build (when approved), or list issues to fix (when not approved)
+- `Handoff:` re-run document review to update the plan with related findings and outcomes before build (when approved), or list issues to fix (when not approved)
 
 ## What NOT to Do
 
@@ -86,6 +119,7 @@ End every technical review with:
 - Do not add scope or new requirements.
 - Do not approve for build when risk is high and no rework is agreed.
 - Do not skip the second document review—the plan must be updated with technical review findings before build.
+- Do not collapse multiple findings into one response when interactive finding review is active.
 
 ## Integration
 
