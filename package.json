@@ -14,11 +14,12 @@
     "src",
     "scripts",
     ".cursor-plugin",
-    ".claude-plugin",
-    "skills"
+    ".claude-plugin"
   ],
   "scripts": {
     "postinstall": "node scripts/postinstall.mjs",
+    "generate:artifacts": "node scripts/generate-platform-artifacts.mjs",
+    "check:artifacts": "node scripts/generate-platform-artifacts.mjs --check",
     "check:pack-readme": "node scripts/check-pack-readme.mjs",
     "test:install": "node --test tests/install-cli.test.mjs"
   },

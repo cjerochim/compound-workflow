@@ -1,9 +1,18 @@
 {
   "name": "compound-workflow",
-  "version": "0.1.0",
-  "description": "Clarify → plan → execute → verify → capture workflow: commands, skills, and agents for Claude Code",
-  "author": { "name": "Compound Workflow" },
-  "keywords": ["workflow", "planning", "agents", "skills", "commands"],
+  "version": "1.4.5",
+  "description": "Clarify -> plan -> execute -> verify -> capture workflow: commands, skills, and agents for Claude Code",
+  "author": {
+    "name": "Compound Workflow"
+  },
+  "keywords": [
+    "workflow",
+    "planning",
+    "agents",
+    "skills",
+    "commands",
+    "claude"
+  ],
   "license": "MIT",
   "repository": "https://github.com/cjerochim/compound-workflow",
   "commands": "./src/.agents/commands",

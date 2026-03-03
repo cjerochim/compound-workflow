@@ -168,7 +168,7 @@ worktree_bootstrap_notes:
 
 ## Implemented Components (Current Scope)
 
-- Commands: `workflow:brainstorm`, `workflow:plan`, `workflow:triage`, `workflow:work`, `workflow:review`, `workflow:compound` (under `.agents/commands/workflow/`), plus `test-browser`, `metrics`, `assess`, `setup`, `sync` (root commands)
+- Commands: `workflow:brainstorm`, `workflow:plan`, `workflow:triage`, `workflow:work`, `workflow:review`, `workflow:compound` (under `.agents/commands/workflow/`), plus `test-browser`, `metrics`, `assess`, `install` (root commands)
 - Skills: `brainstorming`, `document-review`, `technical-review`, `compound-docs` (alias: `compound_doc`), `capture-skill`, `file-todos`, `agent-browser`, `git-worktree`, `process-metrics`, `react-ddd-mvc-frontend`, `xstate-actor-orchestration`, `standards`, `pii-protection-prisma`, `financial-workflow-integrity`, `audit-traceability`, `data-foundations`
 - Agents:
   - `repo-research-analyst`

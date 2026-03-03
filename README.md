@@ -27,14 +27,19 @@ flowchart LR
 npm install compound-workflow
 ```
 
-`npm install` adds the package and automatically configures your repo (`AGENTS.md`, required directories, and runtime wiring).
+`npm install` adds the package and automatically configures your repo (`AGENTS.md`, required directories, and native OpenCode wiring).
 If your package manager skips lifecycle scripts, run `npx compound-workflow install` manually.
 
 Install configures:
 
 - Workflow template content in `AGENTS.md`
 - Standard workspace directories for plans/todos/docs
-- Runtime configuration used by supported tools
+- `opencode.json` managed entries that reference `node_modules/compound-workflow/src/.agents/*`
+
+## Breaking Change (2.0.0)
+
+2.0.0 removes all legacy compatibility pathways (`/setup`, `/sync`, runtime mirror copies, and Cursor sync fallbacks).
+See migration notes in [docs/migrations/2026-03-03-v2-native-cutover.md](docs/migrations/2026-03-03-v2-native-cutover.md).
 
 ## Critical Path
 
