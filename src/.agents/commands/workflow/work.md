@@ -138,16 +138,23 @@ The input must be a plan file path.
    - If you are already on a branch that clearly matches this plan, continue.
    - Otherwise, continue anyway — the current active branch remains the reference/base for a new worktree unless the user explicitly requests a different base.
 
-   2) Ask the user (required decision prompt):
+   2) Resolve the user decision (required prompt/create gate):
 
-   - "Use a worktree for this work? (default: Yes; required unless you explicitly opt out)"
+   - If the user already gave an explicit instruction in this run:
+     - "create a worktree" / "yes use a worktree" => use worktree path
+     - "do not use a worktree" / "no worktree" => opt-out path
+   - Otherwise, you MUST ask this exact decision before proceeding:
+     - "Use a worktree for this work? (Yes/No; default recommendation: Yes)"
    - Options:
      - Yes (worktree)
      - No (stay in current checkout; create/switch to a feature branch)
 
-   If Yes: ask for the new branch name (e.g., `feat/<slug>`, `fix/<slug>`).
+   Mandatory behavior:
 
-   If the user does not explicitly choose "No", proceed with "Yes" by default.
+   - Do not infer or assume an answer when the user has not answered.
+   - Do not run `skill: git-worktree` until the user has answered Yes (or already explicitly requested worktree creation).
+   - If Yes: ask for the new branch name when missing (e.g., `feat/<slug>`, `fix/<slug>`), then continue.
+   - If No: require explicit opt-out confirmation, then continue with the non-worktree path.
 
    3) If worktree is chosen, run:
 

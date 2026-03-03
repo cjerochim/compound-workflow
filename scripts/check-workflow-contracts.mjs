@@ -89,6 +89,16 @@ const requiredChecks = [
   },
   {
     file: "src/.agents/commands/workflow/work.md",
+    pattern: "required prompt/create gate",
+    description: "mandatory worktree decision prompt/create gate in work command",
+  },
+  {
+    file: "src/.agents/commands/workflow/work.md",
+    pattern: "Do not infer or assume an answer when the user has not answered.",
+    description: "worktree decision cannot be silently assumed",
+  },
+  {
+    file: "src/.agents/commands/workflow/work.md",
     pattern:
       "No file writes, implementation commands, test/lint/typecheck commands, or dependency-install commands may run before this gate passes.",
     description: "pre-gate write/command prohibition in work command",

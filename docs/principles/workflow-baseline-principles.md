@@ -40,6 +40,7 @@ Optional manual command:
 
 - **Isolation-first execution**  
   Intent: Reduce branch contamination and accidental edits through worktrees or equivalent isolation by default.
+  `/workflow:work` must ask (or honor an explicit prior user instruction) whether to create/use a worktree before any implementation commands.
 
 - **No silent scope expansion**  
   Intent: Force explicit decisions when new work appears instead of quietly changing scope.

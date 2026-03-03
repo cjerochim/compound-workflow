@@ -14,29 +14,32 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 function usage(exitCode = 0) {
   const msg = `
 Usage:
-  npx compound-workflow install [all|--all] [--root <projectDir>] [--dry-run] [--no-config] [--cursor]
+  npx compound-workflow install [all|--all] [--root <projectDir>] [--dry-run] [--no-config]
 
 One action: writes opencode.json (loads from package), merges AGENTS.md, creates dirs,
 and prompts for Repo Config Block (unless --no-config).
 
-  all, --all    Full install shortcut (enables Cursor integration; creates .cursor if needed)
+  all, --all    Kept for compatibility
   --root <dir>   Project directory (default: cwd)
   --dry-run      Print planned changes only
   --no-config   Skip Repo Config Block prompt (only write opencode.json + AGENTS.md + dirs)
-  --cursor      Force Cursor integration (create .cursor if missing, then wire links)
 `;
   (exitCode === 0 ? console.log : console.error)(msg.trimStart());
   process.exit(exitCode);
 }
 
 function parseArgs(argv) {
-  const out = { root: process.cwd(), dryRun: false, noConfig: false, cursor: false };
+  const out = { root: process.cwd(), dryRun: false, noConfig: false };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--dry-run") out.dryRun = true;
     else if (a === "--no-config") out.noConfig = true;
-    else if (a === "--cursor") out.cursor = true;
-    else if (a === "--all" || a === "all") out.cursor = true;
+    else if (a === "--cursor") {
+      // Deprecated compatibility alias; install now auto-detects .cursor.
+    }
+    else if (a === "--all" || a === "all") {
+      // Deprecated compatibility alias; install now auto-detects .cursor.
+    }
     else if (a === "--root") {
       const v = argv[i + 1];
       if (!v) usage(1);
@@ -58,7 +61,10 @@ function realpathSafe(p) {
 
 const packageRoot = realpathSafe(path.join(__dirname, ".."));
 const packageAgents = path.join(packageRoot, "src", ".agents");
-const PKG_PREFIX = "node_modules/compound-workflow";
+const LOCAL_RUNTIME_ROOT = ".agents/compound-workflow";
+const LOCAL_COMMANDS_ROOT = `${LOCAL_RUNTIME_ROOT}/commands`;
+const LOCAL_AGENTS_ROOT = `${LOCAL_RUNTIME_ROOT}/agents`;
+const LOCAL_REFERENCES_ROOT = `${LOCAL_RUNTIME_ROOT}/references`;
 
 function walkFiles(dirAbs, predicate) {
   const out = [];
@@ -101,14 +107,14 @@ function discoverCommands(agentsRoot) {
   const files = walkFiles(commandsDir, (p) => p.endsWith(".md"));
   const map = new Map();
   for (const fileAbs of files) {
-    const rel = path.relative(packageRoot, fileAbs).replaceAll(path.sep, "/");
+    const relWithinCommands = path.relative(commandsDir, fileAbs).replaceAll(path.sep, "/");
     const md = fs.readFileSync(fileAbs, "utf8");
     const fm = parseFrontmatter(md);
     const id = (fm.invocation || fm.name || path.basename(fileAbs, ".md")).trim();
     const description = (fm.description || id).trim();
     if (!id) continue;
-    const pkgRel = `${PKG_PREFIX}/${rel}`;
-    map.set(id, { id, rel: pkgRel, description });
+    const localRel = `${LOCAL_COMMANDS_ROOT}/${relWithinCommands}`;
+    map.set(id, { id, rel: localRel, description });
   }
   return map;
 }
@@ -118,16 +124,63 @@ function discoverAgents(agentsRoot) {
   const files = walkFiles(agentsDir, (p) => p.endsWith(".md"));
   const map = new Map();
   for (const fileAbs of files) {
-    const rel = path.relative(packageRoot, fileAbs).replaceAll(path.sep, "/");
+    const relWithinAgents = path.relative(agentsDir, fileAbs).replaceAll(path.sep, "/");
     const md = fs.readFileSync(fileAbs, "utf8");
     const fm = parseFrontmatter(md);
     const id = (fm.name || path.basename(fileAbs, ".md")).trim();
     const description = (fm.description || id).trim();
     if (!id) continue;
-    const pkgRel = `${PKG_PREFIX}/${rel}`;
-    map.set(id, { id, rel: pkgRel, description });
+    const localRel = `${LOCAL_AGENTS_ROOT}/${relWithinAgents}`;
+    map.set(id, { id, rel: localRel, description });
   }
   return map;
+}
+
+function copyDirContents(sourceDir, targetDir) {
+  if (!fs.existsSync(sourceDir)) return;
+  fs.mkdirSync(targetDir, { recursive: true });
+  const entries = fs.readdirSync(sourceDir, { withFileTypes: true });
+  for (const entry of entries) {
+    const src = path.join(sourceDir, entry.name);
+    const dst = path.join(targetDir, entry.name);
+    if (entry.isDirectory()) {
+      copyDirContents(src, dst);
+      continue;
+    }
+    if (entry.isFile()) {
+      fs.mkdirSync(path.dirname(dst), { recursive: true });
+      fs.copyFileSync(src, dst);
+    }
+    if (entry.isSymbolicLink()) {
+      const real = realpathSafe(src);
+      const realStat = fs.statSync(real);
+      if (realStat.isDirectory()) {
+        copyDirContents(real, dst);
+      } else if (realStat.isFile()) {
+        fs.mkdirSync(path.dirname(dst), { recursive: true });
+        fs.copyFileSync(real, dst);
+      }
+    }
+  }
+}
+
+function syncRuntimeAssets(targetRoot, dryRun) {
+  const mappings = [
+    { label: "commands", src: path.join(packageAgents, "commands"), dst: path.join(targetRoot, LOCAL_COMMANDS_ROOT) },
+    { label: "agents", src: path.join(packageAgents, "agents"), dst: path.join(targetRoot, LOCAL_AGENTS_ROOT) },
+    { label: "references", src: path.join(packageAgents, "references"), dst: path.join(targetRoot, LOCAL_REFERENCES_ROOT) },
+  ];
+
+  for (const mapping of mappings) {
+    if (!fs.existsSync(mapping.src)) continue;
+    if (dryRun) {
+      console.log("[dry-run] Would sync", mapping.label, "to", path.relative(targetRoot, mapping.dst));
+      continue;
+    }
+    fs.rmSync(mapping.dst, { recursive: true, force: true });
+    copyDirContents(mapping.src, mapping.dst);
+    console.log("Synced", mapping.label + ":", path.relative(targetRoot, mapping.dst));
+  }
 }
 
 function ensureObject(v) {
@@ -237,39 +290,29 @@ function ensureSkillsSymlink(targetRoot, dryRun) {
   }
 }
 
-function ensureCursorDirSymlink(targetRoot, cursorSubdir, pkgSubdir, dryRun, label, cursorReady) {
+function ensureCursorDirSync(targetRoot, cursorSubdir, pkgSubdir, dryRun, label, cursorReady) {
   const cursorDir = path.join(targetRoot, ".cursor");
   if (!cursorReady) return { status: "skipped-missing-cursor" };
   const pkgPath = path.join(packageRoot, "src", ".agents", pkgSubdir);
   if (!fs.existsSync(pkgPath)) return { status: "skipped-missing-package-path" };
 
-  const linkPath = path.join(cursorDir, cursorSubdir);
-  const targetRel = path.join("..", "node_modules", "compound-workflow", "src", ".agents", pkgSubdir);
-  const targetAbs = path.resolve(path.dirname(linkPath), targetRel);
-
+  const targetPath = path.join(cursorDir, cursorSubdir);
   if (dryRun) {
-    console.log("[dry-run] Would create .cursor/" + cursorSubdir, "symlink (Cursor)");
+    console.log("[dry-run] Would sync .cursor/" + cursorSubdir, "from", label || pkgSubdir, "(Cursor)");
     return { status: "dry-run" };
   }
 
-  let needCreate = true;
-  try {
-    const stat = fs.lstatSync(linkPath);
-    if (stat.isSymbolicLink() && symlinkPointsTo(linkPath, targetAbs)) needCreate = false;
-    else if (!stat.isSymbolicLink()) {
-      console.warn("Skipped", ".cursor/" + cursorSubdir, "because it exists and is not a symlink");
-      return { status: "blocked-nonsymlink", path: linkPath };
+  if (fs.existsSync(targetPath)) {
+    const stat = fs.lstatSync(targetPath);
+    if (!stat.isDirectory()) {
+      return { status: "blocked-nondirectory", path: targetPath };
     }
-  } catch (_) {}
-
-  if (needCreate) {
-    removePathIfExists(linkPath);
-    const type = process.platform === "win32" ? "dir" : "dir";
-    fs.symlinkSync(targetRel, linkPath, type);
-    console.log("Created", ".cursor/" + cursorSubdir, "->", label || pkgSubdir, "(Cursor)");
-    return { status: "created" };
   }
-  return { status: "ok" };
+
+  fs.rmSync(targetPath, { recursive: true, force: true });
+  copyDirContents(pkgPath, targetPath);
+  console.log("Synced", ".cursor/" + cursorSubdir, "from", label || pkgSubdir, "(Cursor)");
+  return { status: "synced" };
 }
 
 function ensureCursorSkills(targetRoot, dryRun, cursorReady) {
@@ -278,29 +321,13 @@ function ensureCursorSkills(targetRoot, dryRun, cursorReady) {
 
   const packageSkillsDir = path.join(packageRoot, "src", ".agents", "skills");
   if (!fs.existsSync(packageSkillsDir)) return { blocked: [] };
-
-  const skillNames = [];
-  try {
-    for (const name of fs.readdirSync(packageSkillsDir)) {
-      const skillPath = path.join(packageSkillsDir, name);
-      if (fs.statSync(skillPath).isDirectory() && fs.existsSync(path.join(skillPath, "SKILL.md"))) {
-        skillNames.push(name);
-      }
-    }
-  } catch (_) {
-    return;
-  }
-
   const skillsDir = path.join(cursorDir, "skills");
-  const type = process.platform === "win32" ? "dir" : "dir";
-
   if (dryRun) {
-    console.log("[dry-run] Would create .cursor/skills/<skill> symlinks for:", skillNames.join(", "));
+    console.log("[dry-run] Would sync .cursor/skills from package skills (Cursor)");
     return { blocked: [] };
   }
 
-  if (!fs.existsSync(skillsDir)) fs.mkdirSync(skillsDir, { recursive: true });
-  else {
+  if (fs.existsSync(skillsDir)) {
     const stat = fs.lstatSync(skillsDir);
     if (!stat.isDirectory()) {
       console.warn("Skipped .cursor/skills because it exists and is not a directory");
@@ -308,29 +335,10 @@ function ensureCursorSkills(targetRoot, dryRun, cursorReady) {
     }
   }
 
-  const blocked = [];
-  for (const name of skillNames) {
-    const linkPath = path.join(skillsDir, name);
-    const targetRel = path.join("..", "..", "node_modules", "compound-workflow", "src", ".agents", "skills", name);
-    const targetAbs = path.resolve(path.dirname(linkPath), targetRel);
-    let needCreate = true;
-    try {
-      const stat = fs.lstatSync(linkPath);
-      if (stat.isSymbolicLink() && symlinkPointsTo(linkPath, targetAbs)) needCreate = false;
-      else if (!stat.isSymbolicLink()) {
-        console.warn("Skipped", ".cursor/skills/" + name, "because it exists and is not a symlink");
-        blocked.push(linkPath);
-        continue;
-      }
-    } catch (_) {}
-
-    if (needCreate) {
-      removePathIfExists(linkPath);
-      fs.symlinkSync(targetRel, linkPath, type);
-      console.log("Created", ".cursor/skills/" + name, "-> package skill (Cursor)");
-    }
-  }
-  return { blocked };
+  fs.rmSync(skillsDir, { recursive: true, force: true });
+  copyDirContents(packageSkillsDir, skillsDir);
+  console.log("Synced .cursor/skills from package skills (Cursor)");
+  return { blocked: [] };
 }
 
 function verifyCursorIntegration(targetRoot) {
@@ -345,13 +353,12 @@ function verifyCursorIntegration(targetRoot) {
   const issues = [];
 
   for (const check of checks) {
-    const linkPath = path.join(cursorDir, check.rel);
-    const expectedAbs = path.join(targetRoot, "node_modules", "compound-workflow", "src", ".agents", check.rel);
-    if (!fs.existsSync(linkPath)) issues.push(`${check.name} is missing`);
+    const dirPath = path.join(cursorDir, check.rel);
+    if (!fs.existsSync(dirPath)) issues.push(`${check.name} is missing`);
     else {
-      const stat = fs.lstatSync(linkPath);
-      if (stat.isSymbolicLink() && !symlinkPointsTo(linkPath, expectedAbs)) {
-        issues.push(`${check.name} symlink points to unexpected target`);
+      const stat = fs.lstatSync(dirPath);
+      if (!stat.isDirectory()) {
+        issues.push(`${check.name} exists but is not a directory`);
       }
     }
   }
@@ -413,9 +420,9 @@ function ensureCursorIntegration(targetRoot, dryRun, forceCursor) {
 
   const skillReport = ensureCursorSkills(targetRoot, dryRun, cursorReady);
   const dirReports = [
-    ensureCursorDirSymlink(targetRoot, "agents", "agents", dryRun, "package agents", cursorReady),
-    ensureCursorDirSymlink(targetRoot, "commands", "commands", dryRun, "package commands", cursorReady),
-    ensureCursorDirSymlink(targetRoot, "references", "references", dryRun, "package references", cursorReady),
+    ensureCursorDirSync(targetRoot, "agents", "agents", dryRun, "package agents", cursorReady),
+    ensureCursorDirSync(targetRoot, "commands", "commands", dryRun, "package commands", cursorReady),
+    ensureCursorDirSync(targetRoot, "references", "references", dryRun, "package references", cursorReady),
   ];
 
   const issues = [];
@@ -423,8 +430,8 @@ function ensureCursorIntegration(targetRoot, dryRun, forceCursor) {
     for (const p of skillReport.blocked) issues.push(`${path.relative(targetRoot, p)} blocks symlink creation (not a symlink)`);
   }
   for (const report of dirReports) {
-    if (report?.status === "blocked-nonsymlink") {
-      issues.push(`${path.relative(targetRoot, report.path)} blocks symlink creation (not a symlink)`);
+    if (report?.status === "blocked-nondirectory") {
+      issues.push(`${path.relative(targetRoot, report.path)} blocks sync (not a directory)`);
     }
   }
 
@@ -579,12 +586,14 @@ function main() {
   console.log("Package root:", packageRoot);
   console.log("OpenCode CLI detected:", hasCommand("opencode") ? "yes" : "no");
 
+  syncRuntimeAssets(targetRoot, args.dryRun);
   writeOpenCodeJson(targetRoot, args.dryRun);
   ensureSkillsSymlink(targetRoot, args.dryRun);
   reportOpenCodeIntegration(targetRoot, args.dryRun);
-  const cursorReport = ensureCursorIntegration(targetRoot, args.dryRun, args.cursor);
+  const cursorExists = fs.existsSync(path.join(targetRoot, ".cursor"));
+  const cursorReport = ensureCursorIntegration(targetRoot, args.dryRun, cursorExists);
   if (cursorReport.status === "skipped-no-cursor") {
-    console.log("Cursor integration: skipped (.cursor missing). Run install with `all` or `--cursor` to create it.");
+    console.log("Cursor integration: skipped (.cursor not found).");
   } else {
     console.log("Cursor integration: verified skills, agents, commands, and references.");
   }
