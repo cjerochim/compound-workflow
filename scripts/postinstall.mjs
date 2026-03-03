@@ -57,7 +57,7 @@ function run() {
 
   if (result.status !== 0) {
     console.warn(
-      "[compound-workflow] automatic setup failed; run `npx compound-workflow install` in your project."
+      "[compound-workflow] automatic setup failed; re-run `npm install compound-workflow` or run `npx compound-workflow install` in your project."
     );
   }
 }

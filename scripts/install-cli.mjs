@@ -14,11 +14,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 function usage(exitCode = 0) {
   const msg = `
 Usage:
-  npx compound-workflow install [--root <projectDir>] [--dry-run] [--no-config]
+  (automatic) npm install compound-workflow   # runs install via postinstall; no npx needed
+  (manual)    npx compound-workflow install [--root <projectDir>] [--dry-run] [--no-config]
 
-Native-only install: writes opencode.json (loads from package), merges AGENTS.md,
-creates standard docs/todos directories, and prompts for Repo Config Block
-(unless --no-config).
+Install writes opencode.json (from package), merges AGENTS.md, creates standard
+docs/todos directories, and prompts for Repo Config Block (unless --no-config).
 
   --root <dir>  Project directory (default: cwd)
   --dry-run     Print planned changes only
@@ -366,6 +366,7 @@ function main() {
 
   const genScript = path.join(PACKAGE_ROOT, "scripts", "generate-platform-artifacts.mjs");
   if (fs.existsSync(genScript)) {
+    console.log("[compound-workflow] Regenerating manifest from package source...");
     const result = spawnSync(process.execPath, [genScript], {
       cwd: PACKAGE_ROOT,
       stdio: "pipe",

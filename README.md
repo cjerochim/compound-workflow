@@ -24,18 +24,37 @@ flowchart LR
 
 ## Get Started
 
+**1. Install the package**
+
 ```bash
 npm install compound-workflow
 ```
 
-`npm install` adds the package and automatically configures your repo (`AGENTS.md`, required directories, and native OpenCode wiring).
-If your package manager skips lifecycle scripts, run `npx compound-workflow install` manually.
+**2. Automatic setup**
 
-Install configures:
+The package’s `postinstall` script runs and configures your repo: `AGENTS.md`, standard directories, and OpenCode wiring. No separate npx step is needed.
 
-- Workflow template content in `AGENTS.md`
-- Standard workspace directories for plans/todos/docs
-- `opencode.json` managed entries that reference `node_modules/compound-workflow/src/.agents/*`
+**3. If lifecycle scripts were skipped**
+
+If your package manager didn’t run postinstall, run once:
+
+```bash
+npx compound-workflow install
+```
+
+**4. After updating the package**
+
+To get the latest commands and wiring (e.g. after `npm update compound-workflow` or a new release), run install again so your project’s `opencode.json` is refreshed:
+
+```bash
+npx compound-workflow install
+```
+
+**What gets configured**
+
+- Workflow template in `AGENTS.md`
+- Standard workspace directories (plans, todos, docs)
+- `opencode.json` managed entries pointing at `node_modules/compound-workflow/src/.agents/*`
 
 ## Breaking Change (2.0.0)
 
