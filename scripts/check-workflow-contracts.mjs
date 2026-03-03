@@ -12,6 +12,16 @@ const requiredChecks = [
     description: "baseline principles tie-breaker rule",
   },
   {
+    file: "docs/principles/workflow-baseline-principles.md",
+    pattern: "/workflow:work` - implement in isolation with evidence (includes required triage gate)",
+    description: "canonical flow routes triage through work by default",
+  },
+  {
+    file: "docs/principles/workflow-baseline-principles.md",
+    pattern: "Optional manual command:",
+    description: "principles preserve standalone manual triage command",
+  },
+  {
     file: "src/AGENTS.md",
     pattern: "## Contract Precedence",
     description: "AGENTS contract precedence section",
@@ -33,12 +43,18 @@ const requiredChecks = [
   },
   {
     file: "README.md",
-    pattern: "code/config changes require `/workflow:review`",
+    anyOf: [
+      "code/config changes require `/workflow:review`",
+      "Independent review policy:",
+    ],
     description: "README review gate policy",
   },
   {
     file: "README.md",
-    pattern: "Standards baseline policy:",
+    anyOf: [
+      "Standards baseline policy:",
+      "standards baseline gate",
+    ],
     description: "README standards baseline guardrail",
   },
   {
@@ -52,9 +68,19 @@ const requiredChecks = [
     description: "triage command precedence note",
   },
   {
+    file: "src/.agents/commands/workflow/triage.md",
+    pattern: "independently runnable",
+    description: "triage command explicitly standalone while work auto-runs triage",
+  },
+  {
     file: "src/.agents/commands/workflow/work.md",
     pattern: "Contract precedence:",
     description: "work command precedence note",
+  },
+  {
+    file: "src/.agents/commands/workflow/plan.md",
+    pattern: "Start `/workflow:work`",
+    description: "plan command default next-step routes to work",
   },
   {
     file: "src/.agents/commands/workflow/work.md",
@@ -160,7 +186,11 @@ const readFile = (relativePath) => {
 
 for (const check of requiredChecks) {
   const contents = readFile(check.file);
-  if (!contents.includes(check.pattern)) {
+  const hasPattern = check.pattern ? contents.includes(check.pattern) : false;
+  const hasAnyOf = Array.isArray(check.anyOf)
+    ? check.anyOf.some((pattern) => contents.includes(pattern))
+    : false;
+  if (!hasPattern && !hasAnyOf) {
     failures.push(`Missing required contract text (${check.description}) in ${check.file}`);
   }
 }

@@ -13,10 +13,13 @@ When command docs or guidance conflict, these principles are the tie-breaker.
 
 1. `/workflow:brainstorm` - clarify WHAT to build
 2. `/workflow:plan` - define HOW to build it
-3. `/workflow:triage` - approve and order executable work
-4. `/workflow:work` - implement in isolation with evidence
-5. `/workflow:review` - run independent quality validation
-6. `/workflow:compound` - capture durable learnings
+3. `/workflow:work` - implement in isolation with evidence (includes required triage gate)
+4. `/workflow:review` - run independent quality validation
+5. `/workflow:compound` - capture durable learnings
+
+Optional manual command:
+
+- `/workflow:triage` - explicitly curate/prioritize the queue before or during execution when needed
 
 ## Principles
 
@@ -33,7 +36,7 @@ When command docs or guidance conflict, these principles are the tie-breaker.
   Intent: Define scope, completion criteria, non-goals, and validation upfront so implementation cannot drift.
 
 - **Triage defines the executable queue**  
-  Intent: Ensure only approved, dependency-aware, ready todos can be executed.
+  Intent: Ensure only approved, dependency-aware, ready todos can be executed (via `/workflow:work` default triage gate or explicit `/workflow:triage`).
 
 - **Isolation-first execution**  
   Intent: Reduce branch contamination and accidental edits through worktrees or equivalent isolation by default.

@@ -36,13 +36,20 @@ Install configures:
 - Standard workspace directories for plans/todos/docs
 - Runtime configuration used by supported tools
 
-After install, start with:
+## Critical Path
+
+After install, use this default sequence:
 
 1. `/workflow:brainstorm` for requirements clarity
 2. `/workflow:plan` for implementation design
 3. `/workflow:work` to execute against the approved plan (includes automatic triage)
 4. `/workflow:review` to validate quality before completion
 5. `/workflow:compound` to capture reusable learnings
+
+Optional:
+
+- `/workflow:triage` for manual backlog curation before or during execution
+- `/metrics` and `/assess` for process improvement
 
 ## Commands (Quick Map)
 
@@ -69,4 +76,9 @@ Canonical command docs: [src/.agents/commands/](src/.agents/commands/)
 - Project command and policy index: [src/AGENTS.md](src/AGENTS.md)
 - Command definitions: [src/.agents/commands/](src/.agents/commands/)
 
-If there is any conflict across docs, treat principles as the tiebreaker, then `src/AGENTS.md`, then command docs.
+If docs conflict: follow `docs/principles/workflow-baseline-principles.md`, then `src/AGENTS.md`, then command docs.
+
+Guardrails:
+
+- Independent review policy: code/config changes require `/workflow:review` before workflow completion (docs-only changes are exempt).
+- Standards baseline policy: code/config changes must pass the standards baseline gate in `/workflow:work` and `/workflow:review`.

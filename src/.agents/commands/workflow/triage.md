@@ -1,7 +1,7 @@
 ---
 name: triage
 invocation: workflow:triage
-description: Optional manual triage to prioritize todo files into an executable ready queue (priority, dependencies, recommended action)
+description: Manual triage command to prioritize todo files into an executable ready queue (priority, dependencies, recommended action)
 argument-hint: "[optional: todo path, issue id, status filter ('pending'|'ready'|'active')]"
 ---
 
@@ -9,7 +9,7 @@ argument-hint: "[optional: todo path, issue id, status filter ('pending'|'ready'
 
 Turn todo items into a prioritized executable queue.
 
-This command is optional. `/workflow:work` runs triage automatically before execution.
+This command is independently runnable. `/workflow:work` runs the same triage gate automatically before execution.
 Use `/workflow:triage` when you want explicit manual queue curation before or during execution.
 This command does not implement fixes. It approves and organizes work so `/workflow:work` can execute without ambiguity.
 Output of this command is the only executable queue for `/workflow:work`.

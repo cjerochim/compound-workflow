@@ -863,17 +863,16 @@ Examples:
 
 After writing the plan file, use **AskQuestion** to present these options:
 
-Do not route directly from plan generation to `/workflow:work`.
-
 **Question:** "Plan ready at `docs/plans/YYYY-MM-DD-<type>-<slug>-plan.md`. What would you like to do next?"
 
 **Options:**
 
 1. **Open plan in editor** - Open the plan file for review
 2. **Review and refine** - Improve the document through structured self-review
-3. **Start `/workflow:triage`** - Triage todos derived from this plan before execution
-4. **Create Issue** - Create issue in project tracker (GitHub/Linear)
-5. **Other** - Adjust the plan
+3. **Start `/workflow:work`** - Execute this plan (includes default triage gate)
+4. **Start `/workflow:triage`** - Manually curate/prioritize queue before execution
+5. **Create Issue** - Create issue in project tracker (GitHub/Linear)
+6. **Other** - Adjust the plan
 
 Optional (only if those workflows exist in this repo):
 
@@ -884,6 +883,7 @@ Based on selection:
 
 - **Open plan in editor** → Open the plan file in the editor (navigate to `docs/plans/<plan_filename>.md`)
 - **Review and refine** → Load `document-review` skill.
+- **Start `/workflow:work`** → Run `/workflow:work <plan_path>`; `/workflow:work` must run triage before implementation.
 - **Start `/workflow:triage`** → Ensure plan todos exist (create via `file-todos` if needed), then run `/workflow:triage` to approve priority/dependencies and the executable ready queue.
 - **Technical review** → Load `technical-review` skill; then if user agrees to changes, load `document-review` to update the plan.
 - **Create Issue** → See "Issue Creation" section below
@@ -891,7 +891,7 @@ Based on selection:
 
 **Note:** Only if `/deepen-plan` exists in this repo and the user has enabled it (e.g., ultrathink), you may run `/deepen-plan` after plan creation for extra depth; it is optional, not required.
 
-Loop back to options after changes until user selects `/workflow:triage` or ends the session.
+Loop back to options after changes until user selects `/workflow:work`, `/workflow:triage`, or ends the session.
 
 ## Issue Creation
 
@@ -933,6 +933,6 @@ When user selects "Create Issue", detect their project tracker from repo guidanc
 
 5. **After creation:**
    - Display the issue URL
-   - Ask if they want to proceed to `/workflow:triage`
+   - Ask if they want to proceed to `/workflow:work` (default path) or `/workflow:triage` (manual queue curation)
 
 NEVER CODE! Just research and write the plan.
