@@ -20,6 +20,7 @@
     "postinstall": "node scripts/postinstall.mjs",
     "generate:artifacts": "node scripts/generate-platform-artifacts.mjs",
     "check:artifacts": "node scripts/generate-platform-artifacts.mjs --check",
+    "check:version-parity": "node scripts/check-version-parity.mjs",
     "check:pack-readme": "node scripts/check-pack-readme.mjs",
     "test:install": "node --test tests/install-cli.test.mjs"
   },
@@ -27,6 +28,7 @@
     "node": ">=18"
   },
   "devDependencies": {
+    "@semantic-release/exec": "^6.0.0",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/npm": "^13.1.4",
     "semantic-release": "^25.0.3"

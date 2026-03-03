@@ -137,19 +137,17 @@ function readGeneratedManifest() {
   return manifest;
 }
 
-const GENERATED_MANIFEST = readGeneratedManifest();
-const PACKAGE_COMMAND_ROOT = GENERATED_MANIFEST.commandRoot;
-const PACKAGE_AGENT_ROOT = GENERATED_MANIFEST.agentRoot;
-const PACKAGE_SKILL_ROOT = GENERATED_MANIFEST.skillsPath;
+let GENERATED_MANIFEST;
+let PACKAGE_COMMAND_ROOT;
+let PACKAGE_AGENT_ROOT;
+let PACKAGE_SKILL_ROOT;
 
-const LEGACY_MANAGED_COMMAND_ROOTS = [
-  ".agents/compound-workflow/commands",
-  PACKAGE_COMMAND_ROOT,
-];
-const LEGACY_MANAGED_AGENT_ROOTS = [
-  ".agents/compound-workflow/agents",
-  PACKAGE_AGENT_ROOT,
-];
+function getLegacyCommandRoots() {
+  return [".agents/compound-workflow/commands", PACKAGE_COMMAND_ROOT, "src/.agents/commands"];
+}
+function getLegacyAgentRoots() {
+  return [".agents/compound-workflow/agents", PACKAGE_AGENT_ROOT, "src/.agents/agents"];
+}
 
 function managedCommandPath(entry) {
   const template = entry?.template;
@@ -167,14 +165,18 @@ function managedAgentPath(entry) {
 }
 
 function isManagedCommandPath(commandPath) {
-  return LEGACY_MANAGED_COMMAND_ROOTS.some((root) => commandPath.startsWith(`${root}/`));
+  return getLegacyCommandRoots().some((root) => commandPath.startsWith(`${root}/`));
 }
 
 function isManagedAgentPath(agentPath) {
-  return LEGACY_MANAGED_AGENT_ROOTS.some((root) => agentPath.startsWith(`${root}/`));
+  return getLegacyAgentRoots().some((root) => agentPath.startsWith(`${root}/`));
 }
 
-function writeOpenCodeJson(targetRoot, dryRun) {
+function writeOpenCodeJson(targetRoot, dryRun, isSelfInstall) {
+  const commandRoot = isSelfInstall ? "src/.agents/commands" : PACKAGE_COMMAND_ROOT;
+  const agentRoot = isSelfInstall ? "src/.agents/agents" : PACKAGE_AGENT_ROOT;
+  const skillRoot = isSelfInstall ? "src/.agents/skills" : PACKAGE_SKILL_ROOT;
+
   const opencodeAbs = path.join(targetRoot, "opencode.json");
   const existing = readJsonMaybe(opencodeAbs) ?? {};
   const next = structuredClone(existing);
@@ -183,10 +185,9 @@ function writeOpenCodeJson(targetRoot, dryRun) {
   next.skills = ensureObject(next.skills);
   next.skills.paths = Array.isArray(next.skills.paths) ? next.skills.paths : [];
 
-  // Full cutover: remove old symlink-based managed path and use direct package skills path.
   next.skills.paths = next.skills.paths.filter((p) => p !== ".agents/compound-workflow-skills");
-  if (!next.skills.paths.includes(PACKAGE_SKILL_ROOT)) {
-    next.skills.paths.unshift(PACKAGE_SKILL_ROOT);
+  if (!next.skills.paths.includes(skillRoot)) {
+    next.skills.paths.unshift(skillRoot);
   }
 
   next.command = ensureObject(next.command);
@@ -195,19 +196,17 @@ function writeOpenCodeJson(targetRoot, dryRun) {
   const commands = GENERATED_MANIFEST.commands;
   const agents = GENERATED_MANIFEST.agents;
 
-  // Upsert managed commands.
   for (const command of commands) {
     next.command[command.id] = {
       ...ensureObject(next.command[command.id]),
       description: command.description,
       agent: "build",
-      template: `@AGENTS.md\n@${PACKAGE_COMMAND_ROOT}/${command.rel}\nArguments: $ARGUMENTS\n`,
+      template: `@AGENTS.md\n@${commandRoot}/${command.rel}\nArguments: $ARGUMENTS\n`,
     };
   }
 
-  // Remove stale managed commands.
   const managedCommandTargets = new Set(
-    commands.map((command) => `${PACKAGE_COMMAND_ROOT}/${command.rel}`)
+    commands.map((command) => `${commandRoot}/${command.rel}`)
   );
   for (const [id, entry] of Object.entries(next.command)) {
     const commandPath = managedCommandPath(entry);
@@ -215,20 +214,18 @@ function writeOpenCodeJson(targetRoot, dryRun) {
     if (!managedCommandTargets.has(commandPath)) delete next.command[id];
   }
 
-  // Upsert managed agents.
   for (const agent of agents) {
     next.agent[agent.id] = {
       ...ensureObject(next.agent[agent.id]),
       description: agent.description,
       mode: "subagent",
-      prompt: `{file:${PACKAGE_AGENT_ROOT}/${agent.rel}}`,
+      prompt: `{file:${agentRoot}/${agent.rel}}`,
       permission: { ...ensureObject(next.agent[agent.id]?.permission), edit: "deny" },
     };
   }
 
-  // Remove stale managed agents.
   const managedAgentTargets = new Set(
-    agents.map((agent) => `${PACKAGE_AGENT_ROOT}/${agent.rel}`)
+    agents.map((agent) => `${agentRoot}/${agent.rel}`)
   );
   for (const [id, entry] of Object.entries(next.agent)) {
     const agentPath = managedAgentPath(entry);
@@ -316,16 +313,45 @@ function ensureDirs(targetRoot, dryRun) {
   }
 }
 
+function writePluginManifests(targetRoot, dryRun, isSelfInstall) {
+  const pathsBase = isSelfInstall ? "src/.agents" : "node_modules/compound-workflow/src/.agents";
+  const pathOverrides = {
+    commands: `${pathsBase}/commands`,
+    agents: `${pathsBase}/agents`,
+    skills: `${pathsBase}/skills`,
+  };
+  const cursorSrc = path.join(PACKAGE_ROOT, ".cursor-plugin", "plugin.json");
+  const claudeSrc = path.join(PACKAGE_ROOT, ".claude-plugin", "plugin.json");
+  const cursorManifest = readJsonMaybe(cursorSrc);
+  const claudeManifest = readJsonMaybe(claudeSrc);
+  if (!cursorManifest || !claudeManifest) return;
+
+  const cursorOut = { ...cursorManifest, ...pathOverrides };
+  const claudeOut = { ...claudeManifest, ...pathOverrides };
+  const cursorDir = path.join(targetRoot, ".cursor-plugin");
+  const claudeDir = path.join(targetRoot, ".claude-plugin");
+
+  if (dryRun) {
+    console.log("[dry-run] Would write .cursor-plugin/plugin.json and .claude-plugin/plugin.json");
+    return;
+  }
+  fs.mkdirSync(cursorDir, { recursive: true });
+  fs.mkdirSync(claudeDir, { recursive: true });
+  fs.writeFileSync(path.join(cursorDir, "plugin.json"), JSON.stringify(cursorOut, null, 2) + "\n", "utf8");
+  fs.writeFileSync(path.join(claudeDir, "plugin.json"), JSON.stringify(claudeOut, null, 2) + "\n", "utf8");
+  console.log("Wrote: .cursor-plugin/plugin.json, .claude-plugin/plugin.json");
+}
+
 function reportOpenCodeIntegration(targetRoot, dryRun) {
   if (dryRun) {
-    console.log("[dry-run] OpenCode integration check skipped.");
+    console.log("[dry-run] OpenCode integration check skipped (state would be updated by install).");
     return;
   }
 
   const opencodeAbs = path.join(targetRoot, "opencode.json");
   const opencode = readJsonMaybe(opencodeAbs) ?? {};
   const skillPaths = Array.isArray(opencode?.skills?.paths) ? opencode.skills.paths : [];
-  const hasSkillPath = skillPaths.includes(PACKAGE_SKILL_ROOT);
+  const hasSkillPath = skillPaths.includes(PACKAGE_SKILL_ROOT) || skillPaths.includes("src/.agents/skills");
 
   console.log(
     "OpenCode integration:",
@@ -338,13 +364,24 @@ function main() {
   const args = parseArgs(process.argv);
   const targetRoot = realpathSafe(args.root);
 
+  try {
+    GENERATED_MANIFEST = readGeneratedManifest();
+    PACKAGE_COMMAND_ROOT = GENERATED_MANIFEST.commandRoot;
+    PACKAGE_AGENT_ROOT = GENERATED_MANIFEST.agentRoot;
+    PACKAGE_SKILL_ROOT = GENERATED_MANIFEST.skillsPath;
+  } catch (err) {
+    console.error("Error: OpenCode manifest not found. Run 'npm run generate:artifacts' in the package or reinstall compound-workflow.");
+    process.exit(2);
+  }
+
   if (!fs.existsSync(PACKAGE_AGENTS_ROOT)) {
     console.error("Error: package agents dir not found:", PACKAGE_AGENTS_ROOT);
     process.exit(2);
   }
 
+  const isSelfInstall = realpathSafe(targetRoot) === realpathSafe(PACKAGE_ROOT);
   const pkgInTarget = path.join(targetRoot, "node_modules", "compound-workflow");
-  if (!fs.existsSync(pkgInTarget) && !args.dryRun) {
+  if (!isSelfInstall && !fs.existsSync(pkgInTarget) && !args.dryRun) {
     console.error("Error: compound-workflow not found in project. Run: npm install compound-workflow");
     process.exit(2);
   }
@@ -353,7 +390,8 @@ function main() {
   console.log("Package root:", PACKAGE_ROOT);
   console.log("OpenCode CLI detected:", hasCommand("opencode") ? "yes" : "no");
 
-  writeOpenCodeJson(targetRoot, args.dryRun);
+  writeOpenCodeJson(targetRoot, args.dryRun, isSelfInstall);
+  writePluginManifests(targetRoot, args.dryRun, isSelfInstall);
   reportOpenCodeIntegration(targetRoot, args.dryRun);
   writeAgentsMd(targetRoot, args.dryRun);
   ensureDirs(targetRoot, args.dryRun);

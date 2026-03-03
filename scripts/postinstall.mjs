@@ -38,7 +38,10 @@ function shouldSkip(targetRoot) {
 }
 
 function run() {
-  const targetRoot = process.env.INIT_CWD ? path.resolve(process.env.INIT_CWD) : "";
+  let targetRoot = process.env.INIT_CWD ? path.resolve(process.env.INIT_CWD) : process.cwd();
+  if (!process.env.INIT_CWD) {
+    console.log("[compound-workflow] INIT_CWD not set; using process.cwd() as project root.");
+  }
   const skipReason = shouldSkip(targetRoot);
   if (skipReason) {
     console.log(`[compound-workflow] postinstall skipped (${skipReason})`);

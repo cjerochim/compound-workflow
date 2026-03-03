@@ -133,9 +133,9 @@ function main() {
     keywords: ["workflow", "cursor", "agents", "commands", "skills"],
     license: pkg.license,
     repository: repositoryUrl,
-    commands: "src/.agents/commands",
-    agents: "src/.agents/agents",
-    skills: "src/.agents/skills",
+    commands: "./src/.agents/commands",
+    agents: "./src/.agents/agents",
+    skills: "./src/.agents/skills",
   };
 
   const openCodeManaged = {

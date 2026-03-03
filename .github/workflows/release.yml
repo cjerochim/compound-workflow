@@ -22,6 +22,7 @@ jobs:
       - run: npm install
 
       - run: npm run check:artifacts
+      - run: npm run check:version-parity
       - run: node scripts/check-pack-readme.mjs
       - run: node scripts/check-workflow-contracts.mjs
       - run: npm run test:install

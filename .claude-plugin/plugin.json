@@ -1,6 +1,6 @@
 {
   "name": "compound-workflow",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "description": "Clarify -> plan -> execute -> verify -> capture workflow: commands, skills, and agents for Claude Code",
   "author": {
     "name": "Compound Workflow"
