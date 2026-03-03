@@ -2,7 +2,7 @@
 /**
  * compound-workflow install
  * One action: opencode.json (load from package) + AGENTS.md merge + dirs + Repo Config Block.
- * Run from project: npx compound-workflow install [--root <dir>] [--dry-run] [--no-config]
+ * Run from project: npx compound-workflow install [all|--all] [--root <dir>] [--dry-run] [--no-config]
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -14,11 +14,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 function usage(exitCode = 0) {
   const msg = `
 Usage:
-  npx compound-workflow install [--root <projectDir>] [--dry-run] [--no-config] [--cursor]
+  npx compound-workflow install [all|--all] [--root <projectDir>] [--dry-run] [--no-config] [--cursor]
 
 One action: writes opencode.json (loads from package), merges AGENTS.md, creates dirs,
 and prompts for Repo Config Block (unless --no-config).
 
+  all, --all    Full install shortcut (enables Cursor integration; creates .cursor if needed)
   --root <dir>   Project directory (default: cwd)
   --dry-run      Print planned changes only
   --no-config   Skip Repo Config Block prompt (only write opencode.json + AGENTS.md + dirs)
@@ -35,6 +36,7 @@ function parseArgs(argv) {
     if (a === "--dry-run") out.dryRun = true;
     else if (a === "--no-config") out.noConfig = true;
     else if (a === "--cursor") out.cursor = true;
+    else if (a === "--all" || a === "all") out.cursor = true;
     else if (a === "--root") {
       const v = argv[i + 1];
       if (!v) usage(1);
@@ -309,7 +311,7 @@ function ensureCursorSkills(targetRoot, dryRun, cursorReady) {
   const blocked = [];
   for (const name of skillNames) {
     const linkPath = path.join(skillsDir, name);
-    const targetRel = path.join("..", "..", "..", "node_modules", "compound-workflow", "src", ".agents", "skills", name);
+    const targetRel = path.join("..", "..", "node_modules", "compound-workflow", "src", ".agents", "skills", name);
     const targetAbs = path.resolve(path.dirname(linkPath), targetRel);
     let needCreate = true;
     try {
@@ -345,12 +347,53 @@ function verifyCursorIntegration(targetRoot) {
   for (const check of checks) {
     const linkPath = path.join(cursorDir, check.rel);
     const expectedAbs = path.join(targetRoot, "node_modules", "compound-workflow", "src", ".agents", check.rel);
-    if (!symlinkPointsTo(linkPath, expectedAbs)) issues.push(`${check.name} is missing or not linked to package`);
+    if (!fs.existsSync(linkPath)) issues.push(`${check.name} is missing`);
+    else {
+      const stat = fs.lstatSync(linkPath);
+      if (stat.isSymbolicLink() && !symlinkPointsTo(linkPath, expectedAbs)) {
+        issues.push(`${check.name} symlink points to unexpected target`);
+      }
+    }
   }
 
-  const workCommand = path.join(cursorDir, "commands", "workflow", "work.md");
-  if (!fs.existsSync(workCommand)) {
-    issues.push(".cursor/commands/workflow/work.md is not reachable after integration");
+  const packageSkillsDir = path.join(packageRoot, "src", ".agents", "skills");
+  if (fs.existsSync(packageSkillsDir)) {
+    const missingSkills = [];
+    for (const name of fs.readdirSync(packageSkillsDir)) {
+      const skillPath = path.join(packageSkillsDir, name);
+      if (!fs.statSync(skillPath).isDirectory()) continue;
+      if (!fs.existsSync(path.join(skillPath, "SKILL.md"))) continue;
+      const cursorSkill = path.join(cursorDir, "skills", name, "SKILL.md");
+      if (!fs.existsSync(cursorSkill)) missingSkills.push(name);
+    }
+    if (missingSkills.length) {
+      issues.push(
+        `.cursor/skills is missing ${missingSkills.length} package skill(s), e.g. ${missingSkills[0]}`
+      );
+    }
+  }
+
+  const packageRoots = [
+    { label: "commands", pkgDir: path.join(packageRoot, "src", ".agents", "commands"), cursorSubdir: "commands" },
+    { label: "agents", pkgDir: path.join(packageRoot, "src", ".agents", "agents"), cursorSubdir: "agents" },
+    { label: "references", pkgDir: path.join(packageRoot, "src", ".agents", "references"), cursorSubdir: "references" },
+  ];
+  for (const item of packageRoots) {
+    if (!fs.existsSync(item.pkgDir)) continue;
+    const pkgFiles = walkFiles(item.pkgDir, () => true);
+    let missingCount = 0;
+    let firstMissing = null;
+    for (const abs of pkgFiles) {
+      const rel = path.relative(item.pkgDir, abs);
+      const targetFile = path.join(cursorDir, item.cursorSubdir, rel);
+      if (!fs.existsSync(targetFile)) {
+        missingCount++;
+        if (!firstMissing) firstMissing = rel;
+      }
+    }
+    if (missingCount) {
+      issues.push(`.cursor/${item.label} is missing ${missingCount} package file(s), e.g. ${firstMissing}`);
+    }
   }
   return issues;
 }
@@ -359,7 +402,7 @@ function ensureCursorIntegration(targetRoot, dryRun, forceCursor) {
   const cursorDir = path.join(targetRoot, ".cursor");
   let cursorReady = fs.existsSync(cursorDir);
   if (!fs.existsSync(cursorDir)) {
-    if (!forceCursor) return { issues: [] };
+    if (!forceCursor) return { issues: [], status: "skipped-no-cursor" };
     if (dryRun) console.log("[dry-run] Would create .cursor directory (Cursor)");
     else {
       fs.mkdirSync(cursorDir, { recursive: true });
@@ -388,7 +431,7 @@ function ensureCursorIntegration(targetRoot, dryRun, forceCursor) {
   if (!dryRun) {
     for (const issue of verifyCursorIntegration(targetRoot)) issues.push(issue);
   }
-  return { issues };
+  return { issues, status: "configured" };
 }
 
 function writeOpenCodeJson(targetRoot, dryRun) {
@@ -540,6 +583,11 @@ function main() {
   ensureSkillsSymlink(targetRoot, args.dryRun);
   reportOpenCodeIntegration(targetRoot, args.dryRun);
   const cursorReport = ensureCursorIntegration(targetRoot, args.dryRun, args.cursor);
+  if (cursorReport.status === "skipped-no-cursor") {
+    console.log("Cursor integration: skipped (.cursor missing). Run install with `all` or `--cursor` to create it.");
+  } else {
+    console.log("Cursor integration: verified skills, agents, commands, and references.");
+  }
   writeAgentsMd(targetRoot, args.dryRun);
   ensureDirs(targetRoot, args.dryRun);
 

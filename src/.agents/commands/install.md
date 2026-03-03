@@ -1,8 +1,8 @@
 ---
 name: install
 invocation: install
-description: Install compound-workflow in this project (one action)—opencode.json, AGENTS.md, dirs, and Repo Config Block.
-argument-hint: "[--dry-run] [--root <path>] [--no-config]"
+description: Install compound-workflow in this project (one action)—opencode.json, AGENTS.md, dirs, Repo Config Block, and optional Cursor wiring.
+argument-hint: "[all|--all] [--dry-run] [--root <path>] [--no-config] [--cursor]"
 ---
 
 # /install
@@ -24,6 +24,7 @@ Run in the **workspace root** (or the directory the user specifies):
 
 ```bash
 npx compound-workflow@latest install
+npx compound-workflow@latest install all
 ```
 
 Or with a specific root and flags:
@@ -32,11 +33,14 @@ Or with a specific root and flags:
 npx compound-workflow install --root /path/to/project
 npx compound-workflow install --dry-run
 npx compound-workflow install --no-config
+npx compound-workflow install --cursor
 ```
 
+- **all / --all**: Full install shortcut; same as `--cursor` (creates `.cursor` if missing, then wires skills/agents/commands/references).
 - **--dry-run**: Print planned changes only; no writes.
 - **--root &lt;path&gt;**: Target project directory (default: current directory).
 - **--no-config**: Skip Repo Config Block reminder; only write opencode.json, AGENTS.md merge, and dirs.
+- **--cursor**: Force Cursor integration (create `.cursor` if missing, then wire skills/agents/commands/references).
 
 Do not copy files from a compound-workflow clone; the Install CLI uses the package from `node_modules/compound-workflow`.
 

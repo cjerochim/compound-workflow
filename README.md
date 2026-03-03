@@ -19,6 +19,7 @@ Runtime assets live in `src/.agents/` and `src/AGENTS.md`. Supports **Cursor**, 
 ```bash
 npm install compound-workflow
 npx compound-workflow install
+npx compound-workflow install all
 ```
 
 **2. Choose how you use it:**
@@ -29,7 +30,7 @@ npx compound-workflow install
 
 **What Install does:** Merges `AGENTS.md` (preserves your Repo Config Block), creates standard dirs (`docs/`, `todos/`), writes `opencode.json` (for OpenCode), and—if the project has a `.cursor` directory—creates `.cursor/skills/<skill>`, `.cursor/agents`, `.cursor/commands`, and `.cursor/references` (symlinks into the package). All paths reference `node_modules/compound-workflow`; no file copying.
 
-**CLI options:** `--dry-run` (preview), `--root /path/to/project`, `--no-config` (skip Repo Config Block reminder), `--cursor` (create `.cursor` and wire Cursor symlinks even if `.cursor` does not already exist).
+**CLI options:** `all` / `--all` (full install shortcut; same as `--cursor`), `--dry-run` (preview), `--root /path/to/project`, `--no-config` (skip Repo Config Block reminder), `--cursor` (create `.cursor` and wire Cursor symlinks even if `.cursor` does not already exist).
 
 **Legacy (clone inside repo):** If you cloned this repo inside a host repo and need to copy files without npm, use `./scripts/sync-into-repo.sh` (copy only; does not update opencode.json). Prefer the npm + Install flow above.
 
@@ -158,6 +159,8 @@ Full “when to use what” and reference standards: [src/AGENTS.md](src/AGENTS.
 - **Todo completion requires evidence:** acceptance/success criteria plus quality gates must be recorded before `complete`.
 
 - **Independent review policy:** code/config changes require `/workflow:review` before workflow completion; docs-only changes are exempt.
+
+- **Standards baseline policy:** code/config changes must pass `skill: standards` as a hard gate (declarative flow, immutable transforms, maintainability boundaries) in both `/workflow:work` and `/workflow:review`; docs-only changes are exempt.
 
 - **Quality gate fallback:** if `lint_command` or `typecheck_command` is missing from repo config, workflow asks once for run-provided commands and continues only if they pass.
 

@@ -22,6 +22,11 @@ const requiredChecks = [
     description: "canonical artifact policy in AGENTS",
   },
   {
+    file: "src/AGENTS.md",
+    pattern: "Standards baseline is mandatory for code/config changes.",
+    description: "standards hard-gate policy in AGENTS",
+  },
+  {
     file: "README.md",
     pattern: "If docs conflict:",
     description: "README conflict resolution note",
@@ -30,6 +35,11 @@ const requiredChecks = [
     file: "README.md",
     pattern: "code/config changes require `/workflow:review`",
     description: "README review gate policy",
+  },
+  {
+    file: "README.md",
+    pattern: "Standards baseline policy:",
+    description: "README standards baseline guardrail",
   },
   {
     file: "src/.agents/commands/workflow/plan.md",
@@ -63,6 +73,16 @@ const requiredChecks = [
     description: "implementation-complete pending-review status in work command",
   },
   {
+    file: "src/.agents/commands/workflow/work.md",
+    pattern: "Standards Compliance Gate (REQUIRED for code/config changes)",
+    description: "required standards gate in work command",
+  },
+  {
+    file: "src/.agents/commands/workflow/work.md",
+    pattern: "This gate cannot run until the isolation/worktree gate is passed and recorded (`gate_status: passed`).",
+    description: "standards gate ordering with worktree gate",
+  },
+  {
     file: "src/.agents/commands/workflow/review.md",
     pattern: "Contract precedence:",
     description: "review command precedence note",
@@ -82,6 +102,26 @@ const requiredChecks = [
     pattern: "what was skipped and why",
     description: "review skipped-pass disclosure requirement",
   },
+  {
+    file: "src/.agents/commands/workflow/review.md",
+    pattern: "standards_compliance: pass|pass-with-notes|fail",
+    description: "review standards compliance output field",
+  },
+  {
+    file: "src/.agents/commands/workflow/review.md",
+    pattern: "standards `MUST` violations => blocking finding and review recommendation `fail`",
+    description: "review must-violation fail criteria",
+  },
+  {
+    file: "src/.agents/skills/standards/SKILL.md",
+    pattern: "## Mandatory Baseline (Declarative, Immutable, Maintainable)",
+    description: "standards mandatory baseline section",
+  },
+  {
+    file: "src/.agents/skills/standards/SKILL.md",
+    pattern: "### MUST NOT",
+    description: "standards must-not checklist",
+  },
 ];
 
 const forbiddenChecks = [
@@ -99,6 +139,11 @@ const forbiddenChecks = [
     file: "src/.agents/commands/workflow/work.md",
     pattern: "skip specialist reviewers by default",
     description: "legacy skip-by-default specialist reviewer wording",
+  },
+  {
+    file: "src/.agents/commands/workflow/work.md",
+    pattern: "Follow project coding standards (see AGENTS.md)",
+    description: "legacy advisory-only coding standards wording in work command",
   },
 ];
 

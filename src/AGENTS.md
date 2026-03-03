@@ -66,6 +66,7 @@ If workflow documents conflict, resolve them in this order:
 - **Spike governance is explicit and ordered.** Risky plans must evaluate spike need, spike candidates must declare initial priority/dependencies/unblocks/timebox/deliverable, triage confirms those assumptions, and `/workflow:work` executes blocking spikes before dependent build todos.
 - **Agentic access/testability is mandatory in planning.** Every plan must include an executable access + validation contract so work/review can run deterministically.
 - **Independent review is required for code/config changes.** `/workflow:review` must emit `review_independence_mode: independent|degraded`, plus independence evidence and skipped-pass disclosure.
+- **Standards baseline is mandatory for code/config changes.** `/workflow:work` and `/workflow:review` must apply `skill: standards` as a hard gate for declarative flow, immutable transforms, and maintainability boundaries.
 - **Todo completion requires evidence.** A todo may move to `complete` only after success criteria evidence and quality gate evidence are recorded in Work Log.
 - **Blockers change todo state immediately.** Blocked work must move from `ready` back to `pending` with `tags: [blocker]` and an options+recommendation decision record.
 - **Quality gates are enforced with ask-once fallback.** If `lint_command` or `typecheck_command` is missing, ask once per run and continue only when commands are provided and pass.

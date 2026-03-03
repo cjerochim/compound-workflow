@@ -394,7 +394,7 @@ The input must be a plan file path.
    - The plan should reference similar code - read those files first
    - Match naming conventions exactly
    - Reuse existing components where possible
-   - Follow project coding standards (see AGENTS.md)
+   - Load and follow `skill: standards` as the mandatory baseline for declarative, immutable, maintainable implementation quality
    - When in doubt, grep for similar implementations
 
  3. **Test Continuously**
@@ -453,11 +453,30 @@ The input must be a plan file path.
 
    Docs-only runs may skip this handoff using the docs-only review exemption.
 
-3. **Final Validation**
+3. **Standards Compliance Gate (REQUIRED for code/config changes)**
+
+   For code/config changes, standards compliance is a hard gate before todo completion:
+
+   - Use `skill: standards` as the source of truth.
+   - This gate cannot run until the isolation/worktree gate is passed and recorded (`gate_status: passed`).
+   - Record standards evidence in todo Work Log using the standards evidence format:
+     - declarative flow
+     - immutable transforms
+     - maintainability boundaries
+     - hidden mutable state check
+   - If any mandatory standards line fails:
+     - do not rename todo to `*-complete-*.md`
+     - move todo back to `pending`
+     - add `tags: [blocker]`
+     - record blocking rationale + remediation steps in Work Log
+
+   Docs-only runs: mark this gate `not_applicable` and continue.
+
+4. **Final Validation**
    - All todo files created for this plan are marked complete
    - All tests pass
    - Linting/typechecking/formatting checks pass (configured or run-provided via ask-once fallback)
-   - Code follows existing patterns
+   - Code follows existing patterns and passes the standards compliance gate
    - UI validation completed (if applicable)
    - No console errors or warnings
    - Scope contract satisfied:
@@ -465,14 +484,14 @@ The input must be a plan file path.
      - `migration`: migration verification and rollback checks are documented as passing
      - `full_remediation`: scoped remediation goals are complete per `completion_expectation`
 
-4. **Update Plan Status**
+5. **Update Plan Status**
 
    If the input document has YAML frontmatter with a `status` field, update it to `completed`:
    ```
    status: active  →  status: completed
    ```
 
-5. **Notify User**
+6. **Notify User**
      - Summarize what was completed
      - Note any follow-up work needed
      - Suggest next steps if applicable

@@ -103,6 +103,11 @@ Protected artifacts:
 
 - `Task learnings-researcher(<target context>)` (related prior solutions)
 - `Task lint(<changed files context>)` only if `lint_command` is configured in the Repo Config Block
+- Run the standards compliance pass using `skill: standards` as mandatory baseline for code/config changes:
+  - evaluate declarative flow
+  - evaluate immutable transforms
+  - evaluate maintainability boundaries
+  - evaluate hidden mutable state
 - Verify agentic executability from plan/todo artifacts when available:
   - access prerequisites are explicit
   - validation commands are explicit and reproducible
@@ -139,6 +144,7 @@ Then perform the main review synthesis across:
 - risk and failure modes
 - operational considerations (monitoring, rollback)
 - readability/maintainability
+- standards compliance using `skill: standards` (MUST/MUST NOT baseline)
 
 ### Phase 4: Synthesis + Verdict
 
@@ -147,11 +153,18 @@ Provide:
 - Review recommendation: `pass | pass-with-notes | fail`
 - `review_independence_mode: independent|degraded`
 - `verdict_confidence: normal|degraded` (use `degraded` only when `review_independence_mode=degraded`)
+- `standards_compliance: pass|pass-with-notes|fail`
+  - `fail`: one or more standards MUST violations (blocking)
+  - `pass-with-notes`: no MUST violations, but SHOULD-level maintainability concerns
+  - `pass`: no material standards violations
 - Top risks (1–5 bullets)
 - Findings list:
   - severity (`critical | high | medium | low`)
   - evidence (file references or commands/output)
   - recommended action (concise)
+  - standards classification:
+    - standards `MUST` violations => blocking finding and review recommendation `fail`
+    - standards `SHOULD` violations => non-blocking finding and review recommendation `pass-with-notes`
 - Independence evidence summary:
   - what independent pass ran
   - what was skipped and why

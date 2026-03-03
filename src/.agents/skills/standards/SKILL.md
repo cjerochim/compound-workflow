@@ -5,6 +5,43 @@ description: General coding practices, implementation styles, and patterns for t
 
 # Altai Code Standards
 
+## Mandatory Baseline (Declarative, Immutable, Maintainable)
+
+These rules are mandatory for code/config implementation work. They are pass/fail gates, not advisory guidance.
+
+### MUST
+
+- **MUST keep orchestration declarative** in containers/controllers: describe state transitions and event flow explicitly instead of imperative step-by-step control logic.
+- **MUST use immutable transforms** for domain and controller data operations (`input -> output`), returning new values instead of mutating existing objects/arrays.
+- **MUST keep domain logic in pure entity functions** (no side effects, no hidden mutable module state, no IO in entity transforms/predicates).
+- **MUST keep maintainability boundaries clear**:
+  - containers wire/select/send and avoid business rules
+  - controllers manage state transitions and delegate reusable logic to entities
+  - presentation components remain UI-focused
+- **MUST keep branching complexity controlled** with early exits and extracted helpers when conditional logic grows.
+
+### MUST NOT
+
+- **MUST NOT implement mutation-heavy imperative handlers** that modify shared state in-place across multiple steps.
+- **MUST NOT use hidden mutable accumulators** (`let` variables mutated through control flow) when a pure transform is feasible.
+- **MUST NOT mix business decision logic into containers/presentation** when it belongs in domain entities/controllers.
+- **MUST NOT allow branching sprawl** in controllers/containers (deep nesting, chained `else-if`, or nested ternaries for workflow logic).
+- **MUST NOT complete code/config work without standards evidence** recorded in work/review outputs.
+
+### Required Evidence Format (Work and Review)
+
+Use this format when reporting standards compliance in execution or review evidence:
+
+```markdown
+standards_compliance:
+- declarative_flow: pass|fail (evidence: file:line)
+- immutable_transforms: pass|fail (evidence: file:line)
+- maintainability_boundaries: pass|fail (evidence: file:line)
+- hidden_mutable_state: pass|fail (evidence: file:line)
+```
+
+If any mandatory line is `fail`, code/config work is not complete.
+
 ## Core Principles
 
 1. **Simplicity over cleverness** - Prefer straightforward solutions
