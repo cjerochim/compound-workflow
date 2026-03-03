@@ -68,3 +68,36 @@ test("install skips cursor sync when .cursor is not present", () => {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }
 });
+
+test("install skips .cursor/commands when .cursor-plugin already supplies commands", () => {
+  const projectRoot = createTempProject();
+  try {
+    fs.mkdirSync(path.join(projectRoot, ".cursor"), { recursive: true });
+    fs.mkdirSync(path.join(projectRoot, ".cursor-plugin"), { recursive: true });
+    fs.writeFileSync(
+      path.join(projectRoot, ".cursor-plugin", "plugin.json"),
+      JSON.stringify({ name: "x", commands: "src/.agents/commands" }),
+      "utf8"
+    );
+
+    const result = spawnSync(
+      process.execPath,
+      [installCli, "install", "--root", projectRoot, "--no-config"],
+      { cwd: repoRoot, encoding: "utf8" }
+    );
+
+    assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
+    assert.equal(
+      fs.existsSync(path.join(projectRoot, ".cursor", "commands")),
+      false,
+      "installer should skip .cursor/commands when plugin already provides commands"
+    );
+    assert.match(
+      result.stdout,
+      /commands supplied by \.cursor-plugin/,
+      "expected installer output to explain skipped cursor command sync"
+    );
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});

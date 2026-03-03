@@ -341,15 +341,27 @@ function ensureCursorSkills(targetRoot, dryRun, cursorReady) {
   return { blocked: [] };
 }
 
-function verifyCursorIntegration(targetRoot) {
+function hasCursorPluginCommands(targetRoot) {
+  const pluginPath = path.join(targetRoot, ".cursor-plugin", "plugin.json");
+  if (!fs.existsSync(pluginPath)) return false;
+  try {
+    const parsed = JSON.parse(fs.readFileSync(pluginPath, "utf8"));
+    return typeof parsed?.commands === "string" && parsed.commands.trim().length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function verifyCursorIntegration(targetRoot, options = {}) {
   const cursorDir = path.join(targetRoot, ".cursor");
   if (!fs.existsSync(cursorDir)) return [];
+  const skipCommands = options.skipCommands === true;
 
   const checks = [
     { name: ".cursor/agents", rel: path.join("agents") },
-    { name: ".cursor/commands", rel: path.join("commands") },
     { name: ".cursor/references", rel: path.join("references") },
   ];
+  if (!skipCommands) checks.splice(1, 0, { name: ".cursor/commands", rel: path.join("commands") });
   const issues = [];
 
   for (const check of checks) {
@@ -381,10 +393,16 @@ function verifyCursorIntegration(targetRoot) {
   }
 
   const packageRoots = [
-    { label: "commands", pkgDir: path.join(packageRoot, "src", ".agents", "commands"), cursorSubdir: "commands" },
     { label: "agents", pkgDir: path.join(packageRoot, "src", ".agents", "agents"), cursorSubdir: "agents" },
     { label: "references", pkgDir: path.join(packageRoot, "src", ".agents", "references"), cursorSubdir: "references" },
   ];
+  if (!skipCommands) {
+    packageRoots.unshift({
+      label: "commands",
+      pkgDir: path.join(packageRoot, "src", ".agents", "commands"),
+      cursorSubdir: "commands",
+    });
+  }
   for (const item of packageRoots) {
     if (!fs.existsSync(item.pkgDir)) continue;
     const pkgFiles = walkFiles(item.pkgDir, () => true);
@@ -408,6 +426,7 @@ function verifyCursorIntegration(targetRoot) {
 function ensureCursorIntegration(targetRoot, dryRun, forceCursor) {
   const cursorDir = path.join(targetRoot, ".cursor");
   let cursorReady = fs.existsSync(cursorDir);
+  const skipCommands = hasCursorPluginCommands(targetRoot);
   if (!fs.existsSync(cursorDir)) {
     if (!forceCursor) return { issues: [], status: "skipped-no-cursor" };
     if (dryRun) console.log("[dry-run] Would create .cursor directory (Cursor)");
@@ -421,9 +440,11 @@ function ensureCursorIntegration(targetRoot, dryRun, forceCursor) {
   const skillReport = ensureCursorSkills(targetRoot, dryRun, cursorReady);
   const dirReports = [
     ensureCursorDirSync(targetRoot, "agents", "agents", dryRun, "package agents", cursorReady),
-    ensureCursorDirSync(targetRoot, "commands", "commands", dryRun, "package commands", cursorReady),
     ensureCursorDirSync(targetRoot, "references", "references", dryRun, "package references", cursorReady),
   ];
+  if (!skipCommands) {
+    dirReports.splice(1, 0, ensureCursorDirSync(targetRoot, "commands", "commands", dryRun, "package commands", cursorReady));
+  }
 
   const issues = [];
   if (skillReport?.blocked?.length) {
@@ -436,9 +457,9 @@ function ensureCursorIntegration(targetRoot, dryRun, forceCursor) {
   }
 
   if (!dryRun) {
-    for (const issue of verifyCursorIntegration(targetRoot)) issues.push(issue);
+    for (const issue of verifyCursorIntegration(targetRoot, { skipCommands })) issues.push(issue);
   }
-  return { issues, status: "configured" };
+  return { issues, status: "configured", skipCommands };
 }
 
 function writeOpenCodeJson(targetRoot, dryRun) {
@@ -595,7 +616,11 @@ function main() {
   if (cursorReport.status === "skipped-no-cursor") {
     console.log("Cursor integration: skipped (.cursor not found).");
   } else {
-    console.log("Cursor integration: verified skills, agents, commands, and references.");
+    if (cursorReport.skipCommands) {
+      console.log("Cursor integration: verified skills, agents, references (commands supplied by .cursor-plugin).");
+    } else {
+      console.log("Cursor integration: verified skills, agents, commands, and references.");
+    }
   }
   writeAgentsMd(targetRoot, args.dryRun);
   ensureDirs(targetRoot, args.dryRun);
