@@ -18,6 +18,7 @@
   ],
   "scripts": {
     "postinstall": "node scripts/postinstall.mjs",
+    "prepublishOnly": "npm run generate:artifacts",
     "generate:artifacts": "node scripts/generate-platform-artifacts.mjs",
     "check:artifacts": "node scripts/generate-platform-artifacts.mjs --check",
     "check:version-parity": "node scripts/check-version-parity.mjs",

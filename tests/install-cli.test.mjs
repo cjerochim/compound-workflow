@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const installCli = path.join(repoRoot, "scripts", "install-cli.mjs");
+const generateArtifacts = path.join(repoRoot, "scripts", "generate-platform-artifacts.mjs");
 
 function createTempProject() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "compound-workflow-install-"));
@@ -164,6 +165,43 @@ test("install prunes legacy managed paths and removes deprecated skill symlink p
   }
 });
 
+test("generated manifest has required shape and includes all registry-driven commands", () => {
+  const result = spawnSync(process.execPath, [generateArtifacts], { cwd: repoRoot, encoding: "utf8" });
+  assert.equal(result.status, 0, `generate:artifacts failed: ${result.stderr}\n${result.stdout}`);
+
+  const manifestPath = path.join(repoRoot, "src", "generated", "opencode.managed.json");
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+
+  assert.ok(manifest.commandRoot, "manifest must have commandRoot");
+  assert.ok(manifest.agentRoot, "manifest must have agentRoot");
+  assert.ok(manifest.skillsPath, "manifest must have skillsPath");
+  assert.ok(Array.isArray(manifest.commands), "manifest must have commands array");
+  assert.ok(Array.isArray(manifest.agents), "manifest must have agents array");
+
+  const commandIds = manifest.commands.map((c) => c.id);
+  assert.ok(commandIds.includes("workflow:tech-review"), "manifest must include workflow:tech-review command");
+  assert.ok(commandIds.includes("workflow:work"), "manifest must include workflow:work command");
+  assert.ok(manifest.agents.some((a) => a.id === "planning-technical-reviewer"), "manifest must include planning-technical-reviewer agent");
+});
+
+test("install is deterministic: two runs produce identical opencode.json", () => {
+  const projectRoot = createTempProject();
+
+  try {
+    const r1 = runInstall(projectRoot);
+    assert.equal(r1.status, 0, `first install failed: ${r1.stderr}\n${r1.stdout}`);
+    const opencode1 = JSON.parse(fs.readFileSync(path.join(projectRoot, "opencode.json"), "utf8"));
+
+    const r2 = runInstall(projectRoot);
+    assert.equal(r2.status, 0, `second install failed: ${r2.stderr}\n${r2.stdout}`);
+    const opencode2 = JSON.parse(fs.readFileSync(path.join(projectRoot, "opencode.json"), "utf8"));
+
+    assert.deepStrictEqual(opencode1, opencode2, "install output must be deterministic");
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
 test("install from consumer project (package in node_modules) reads manifest and writes opencode.json", () => {
   const projectRoot = createTempProject();
   copyMinimalPackageIntoNodeModules(projectRoot);
@@ -179,6 +217,10 @@ test("install from consumer project (package in node_modules) reads manifest and
       opencode.command["workflow:work"].template,
       /@node_modules\/compound-workflow\/src\/.agents\/commands\/workflow\/work\.md/,
       "workflow command template should point at package command path"
+    );
+    assert.ok(
+      opencode.command["workflow:tech-review"],
+      "opencode must include workflow:tech-review command"
     );
     assert.ok(
       opencode.skills.paths.includes("node_modules/compound-workflow/src/.agents/skills"),

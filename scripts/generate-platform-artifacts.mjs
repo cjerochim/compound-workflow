@@ -7,6 +7,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
 const agentsRoot = path.join(repoRoot, "src", ".agents");
 
+function loadRegistry() {
+  const registryPath = path.join(agentsRoot, "registry.json");
+  if (!fs.existsSync(registryPath)) {
+    throw new Error(`Registry not found at ${registryPath}`);
+  }
+  return JSON.parse(fs.readFileSync(registryPath, "utf8"));
+}
+
 function walkFiles(dirAbs, predicate) {
   const out = [];
   const stack = [dirAbs];
@@ -42,44 +50,64 @@ function parseFrontmatter(md) {
   return out;
 }
 
-function discoverCommands() {
-  const commandsDir = path.join(agentsRoot, "commands");
-  const files = walkFiles(commandsDir, (p) => p.endsWith(".md"));
-  const commands = [];
-
-  for (const fileAbs of files) {
-    const relWithin = path.relative(commandsDir, fileAbs).replaceAll(path.sep, "/");
-    const frontmatter = parseFrontmatter(fs.readFileSync(fileAbs, "utf8"));
-    const id = (frontmatter.invocation || frontmatter.name || path.basename(fileAbs, ".md")).trim();
-    if (!id) continue;
-    commands.push({
-      id,
-      description: (frontmatter.description || id).trim(),
-      rel: relWithin,
-    });
+/**
+ * Resolve id from frontmatter and config. idFrom = list of frontmatter keys; idFallback = "basename" | "dirname".
+ */
+function resolveId(frontmatter, fileAbs, dirAbs, config) {
+  for (const key of config.idFrom || []) {
+    if (key === "dirname") {
+      const relDir = path.relative(dirAbs, path.dirname(fileAbs));
+      return (relDir ? relDir.replaceAll(path.sep, "/") : path.basename(path.dirname(fileAbs))).trim();
+    }
+    const v = frontmatter[key];
+    if (typeof v === "string" && v.trim()) return v.trim();
   }
-
-  return commands.sort((a, b) => a.id.localeCompare(b.id));
+  if (config.idFallback === "basename") return path.basename(fileAbs, ".md").trim();
+  if (config.idFallback === "dirname") return path.basename(path.dirname(fileAbs)).trim();
+  return path.basename(fileAbs, ".md").trim();
 }
 
-function discoverAgents() {
-  const agentDir = path.join(agentsRoot, "agents");
-  const files = walkFiles(agentDir, (p) => p.endsWith(".md"));
-  const agents = [];
+function resolveDescription(frontmatter, config, id) {
+  const key = config.descriptionFrom;
+  if (key && frontmatter[key] != null) return String(frontmatter[key]).trim();
+  if (config.descriptionFallback === "id") return id || "";
+  return id || "";
+}
 
-  for (const fileAbs of files) {
-    const relWithin = path.relative(agentDir, fileAbs).replaceAll(path.sep, "/");
-    const frontmatter = parseFrontmatter(fs.readFileSync(fileAbs, "utf8"));
-    const id = (frontmatter.name || path.basename(fileAbs, ".md")).trim();
-    if (!id) continue;
-    agents.push({
-      id,
-      description: (frontmatter.description || id).trim(),
-      rel: relWithin,
-    });
+/**
+ * Discover assets of one type from registry config. Returns array of { id, description, rel }.
+ */
+function discoverByType(agentsRootAbs, typeKey, config) {
+  const dirAbs = path.join(agentsRootAbs, config.dir);
+  if (!fs.existsSync(dirAbs)) return [];
+
+  let files = [];
+  if (config.glob === "**/*.md") {
+    files = walkFiles(dirAbs, (p) => p.endsWith(".md"));
+  } else if (config.glob === "*/SKILL.md") {
+    const entries = fs.readdirSync(dirAbs, { withFileTypes: true });
+    for (const e of entries) {
+      if (e.isDirectory()) {
+        const skillMd = path.join(dirAbs, e.name, "SKILL.md");
+        if (fs.existsSync(skillMd)) files.push(skillMd);
+      }
+    }
+    files.sort();
+  } else {
+    files = walkFiles(dirAbs, (p) => p.endsWith(".md"));
   }
 
-  return agents.sort((a, b) => a.id.localeCompare(b.id));
+  const out = [];
+  for (const fileAbs of files) {
+    const rel = path.relative(dirAbs, fileAbs).replaceAll(path.sep, "/");
+    const raw = fs.readFileSync(fileAbs, "utf8");
+    const frontmatter = parseFrontmatter(raw);
+    const id = resolveId(frontmatter, fileAbs, dirAbs, config);
+    if (!id) continue;
+    const description = resolveDescription(frontmatter, config, id);
+    out.push({ id, description, rel });
+  }
+  return out.sort((a, b) => a.id.localeCompare(b.id));
 }
 
 function normalizeRepoUrl(repoValue) {
@@ -105,12 +133,24 @@ function writeJson(absPath, value, checkOnly, changed) {
 
 function main() {
   const checkOnly = process.argv.includes("--check");
+  const registry = loadRegistry();
+  const roots = registry.roots?.consumer || {};
+  const assetTypes = registry.assetTypes || {};
+
+  const commands =
+    assetTypes.command != null
+      ? discoverByType(agentsRoot, "command", assetTypes.command)
+      : [];
+  const agents =
+    assetTypes.agent != null ? discoverByType(agentsRoot, "agent", assetTypes.agent) : [];
 
   const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8"));
   const repositoryUrl = normalizeRepoUrl(pkg.repository);
-  const commands = discoverCommands();
-  const agents = discoverAgents();
   const changed = [];
+
+  const commandRoot = roots.commands || "node_modules/compound-workflow/src/.agents/commands";
+  const agentRoot = roots.agents || "node_modules/compound-workflow/src/.agents/agents";
+  const skillsPath = roots.skills || "node_modules/compound-workflow/src/.agents/skills";
 
   const claudePlugin = {
     name: pkg.name,
@@ -140,9 +180,9 @@ function main() {
 
   const openCodeManaged = {
     $schema: "https://opencode.ai/config.json",
-    skillsPath: "node_modules/compound-workflow/src/.agents/skills",
-    commandRoot: "node_modules/compound-workflow/src/.agents/commands",
-    agentRoot: "node_modules/compound-workflow/src/.agents/agents",
+    skillsPath,
+    commandRoot,
+    agentRoot,
     commands,
     agents,
   };
