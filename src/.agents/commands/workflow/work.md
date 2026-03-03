@@ -100,7 +100,7 @@ The input must be a plan file path.
    - Continue only when provided commands run successfully.
    - If commands are not provided or fail, do not mark related todos complete.
 
-   Note: full execution preflight (triage + contract checks + isolation checks) runs after todo creation/triage in Step 3.5.
+   Note: full execution preflight (auto-triage + contract checks + isolation checks) runs after todo creation in Step 3.5.
 
 1.75. **Resolve Plan Scope Contract (REQUIRED)**
 
@@ -217,20 +217,21 @@ The input must be a plan file path.
    - Each todo MUST include a link back to the plan file in `Resources` and reference the specific section(s) it implements.
    - Default todo `status`:
      - `ready` when the plan is approved and confidence is not low
-     - `pending` when plan confidence is low or requires explicit triage
+     - `pending` when plan confidence is low or requires additional triage decisions
    - Default todo `priority`: `p2` unless the plan indicates urgency/risk.
 
-   After creating todos:
+   After creating todos, run an in-command triage pass (same readiness/dependency rules as `/workflow:triage`) before any implementation work:
 
-   - Run `/workflow:triage` before any implementation work to approve/prioritize the queue for this plan.
-   - Do not proceed to Phase 2 until triage completes and execution order is explicit.
-   - If triage leaves no unblocked `ready` todos, stop and report pending/deferred/blocked items.
+   - approve/prioritize queue items for this plan
+   - make execution order explicit
+   - if no unblocked `ready` todos remain, stop and report pending/deferred/blocked items
+   - use standalone `/workflow:triage` only when the user explicitly requests manual queue curation
 
 3.5. **Execution Preflight (HARD GATE before Phase 2)**
 
    Contract checksum (MUST all be true before implementation):
 
-   - triage completed for this plan
+   - auto-triage completed for this plan (or standalone `/workflow:triage` completed)
    - isolation gate recorded (`worktree_decision`, execution context, `gate_status: passed`)
    - blocking spikes execute before dependent build todos
 
@@ -241,7 +242,7 @@ The input must be a plan file path.
      - validation path is explicit (commands/routes/checks)
      - evidence expectations are explicit
      - quality gate commands are explicit or marked for ask-once fallback
-   - If a todo lacks this contract, move it to `pending` for triage before coding.
+   - If a todo lacks this contract, move it to `pending` and require triage resolution before coding.
 
 ### Phase 2: Execute
 
@@ -268,7 +269,7 @@ The input must be a plan file path.
 
    - If no unblocked `ready` todos remain:
      - summarize remaining `pending`, `deferred` (parked for reference), and blocked items
-     - require re-running `/workflow:triage` for pending/blocked prioritization
+     - require re-running triage (auto-triage within `/workflow:work` or standalone `/workflow:triage`) for pending/blocked prioritization
      - stop (do not invent work)
 
    For each task in priority order:
@@ -319,7 +320,7 @@ The input must be a plan file path.
     - If new, non-critical work is discovered, do NOT silently expand scope.
     - Ask the user to choose one:
       1) Do now (scope increase): only if small + tightly coupled
-      2) Create a triage item: create a new `pending` todo (default `p3` unless urgent) to be approved or deferred via `/workflow:triage`
+      2) Create a triage item: create a new `pending` todo (default `p3` unless urgent) to be approved or deferred via triage
       3) Park for reference: create a todo with Problem Statement + Findings + rationale, then mark it **deferred** (`*-deferred-*.md`, `status: deferred`) so it is kept for future reference but not in the executable queue
       4) Compound candidate only: capture as a `/workflow:compound` documentation candidate (no todo by default)
     - Always record the decision in the todo Work Log.
@@ -368,7 +369,7 @@ The input must be a plan file path.
    - Convert the decision into explicit todos (implementation/investigation/deferral).
    - If the chosen option is to run a timeboxed investigation or prototype, follow the **Spike Protocol** below.
    - Record the decision + rationale in the todo Work Log.
-   - Re-approve the todo through `/workflow:triage` before returning it to `ready`.
+   - Re-approve the todo through triage before returning it to `ready`.
 
    **Spike Protocol (allocate a spike)**
 
@@ -376,7 +377,7 @@ The input must be a plan file path.
 
    Steps:
 
-   1. **Spike todo:** Create a new `todos/*-pending-*.md` todo tagged `tags: [spike]` (or convert the current blocked todo to a spike todo). Fill Problem Statement, Proposed Solutions (options), and Acceptance Criteria (deliverable). Carry forward any plan metadata (initial priority, depends_on, unblocks, parallelizable). If triage has not been run, recommend `/workflow:triage` to approve the spike and set timebox + deliverable; then treat the spike as `ready` once approved.
+   1. **Spike todo:** Create a new `todos/*-pending-*.md` todo tagged `tags: [spike]` (or convert the current blocked todo to a spike todo). Fill Problem Statement, Proposed Solutions (options), and Acceptance Criteria (deliverable). Carry forward any plan metadata (initial priority, depends_on, unblocks, parallelizable). Ensure triage approves the spike and sets timebox + deliverable before treating it as `ready`.
    2. **Isolated execution:** Recommend a dedicated spike worktree. Use `skill: git-worktree` with branch name `spike/<todo_id>-<slug>` (e.g. `spike/003-auth-approach`). Run worktree bootstrap per the git-worktree skill. Execute the spike in that worktree so build work is not mixed with exploration.
    3. **Research subagents (per spike):** Run mandatory baseline research in parallel:
       - Always (when agents exist): Task repo-research-analyst(context), Task learnings-researcher(context)

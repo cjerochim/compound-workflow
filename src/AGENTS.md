@@ -26,10 +26,13 @@ This `.agents` workspace is portable and command-first.
 
 1. `/workflow:brainstorm` -> clarify what to build
 2. `/workflow:plan` -> define how to build it
-3. `/workflow:triage` -> approve and prioritize the todo queue before execution
-4. `/workflow:work` -> implement
-5. `/workflow:review` -> validate quality
-6. `/workflow:compound` -> capture durable learnings
+3. `/workflow:work` -> implement (includes triage gate for todo readiness/prioritization)
+4. `/workflow:review` -> validate quality
+5. `/workflow:compound` -> capture durable learnings
+
+Optional manual step:
+
+- `/workflow:triage` -> explicitly curate/prioritize backlog items before execution when needed
 
 Continuous improvement:
 
@@ -62,7 +65,7 @@ If workflow documents conflict, resolve them in this order:
 - **Solution scope contract is mandatory in every plan.** Plans must declare `solution_scope` (`partial_fix|full_remediation|migration`) plus explicit completion expectation and non-goals so `/workflow:work` can enforce intent.
 - **SpecFlow is a validation gate, not a rewrite engine.** High fidelity required; Medium recommended; Low optional. Output must translate into acceptance criteria/edge cases, not new scope.
 - **Isolation preflight is a hard gate.** `/workflow:work` must complete and record worktree/isolation preflight before any implementation commands. `/workflow:review` must do the same for non-current PR/branch targets before analysis.
-- **Triage before execution is mandatory.** `/workflow:work` must not execute todos until a `/workflow:triage` pass has prioritized the queue and validated dependencies/ready state for the current plan.
+- **Triage before execution is mandatory.** `/workflow:work` must run a triage pass before executing todos to prioritize the queue and validate dependencies/ready state for the current plan. `/workflow:triage` remains available as an explicit manual command.
 - **Spike governance is explicit and ordered.** Risky plans must evaluate spike need, spike candidates must declare initial priority/dependencies/unblocks/timebox/deliverable, triage confirms those assumptions, and `/workflow:work` executes blocking spikes before dependent build todos.
 - **Agentic access/testability is mandatory in planning.** Every plan must include an executable access + validation contract so work/review can run deterministically.
 - **Independent review is required for code/config changes.** `/workflow:review` must emit `review_independence_mode: independent|degraded`, plus independence evidence and skipped-pass disclosure.
