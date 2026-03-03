@@ -2,6 +2,7 @@
 
 Compound Workflow is a portable, command-first system for shipping software with less ambiguity and stronger verification.
 It follows a simple cycle: **clarify -> plan -> execute -> verify -> capture**.
+
 Use it when you want repeatable delivery without ad-hoc process drift.
 
 Inspired by [Compound Engineering](https://every.to/guides/compound-engineering) (Every).
@@ -60,18 +61,18 @@ Optional:
 
 Core flow: `/workflow:brainstorm` -> `/workflow:plan` -> `/workflow:work` -> `/workflow:review` -> `/workflow:compound` -> `/metrics` (optional `/assess` for rollups).
 
-| Command | Purpose | Related skills | Related agents |
-|---|---|---|---|
-| `/install` | Configure workflow files and runtime wiring in the repo | install CLI (no workflow skill routing) | none |
-| `/workflow:brainstorm` | Clarify what to build through structured discussion | `brainstorming` (primary), `document-review` (optional refinement) | `repo-research-analyst` |
-| `/workflow:plan` | Convert intent into an executable plan with fidelity/confidence | state-orchestration skill when needed (for example `xstate-actor-orchestration`) | `repo-research-analyst`, `learnings-researcher`, `best-practices-researcher`, `framework-docs-researcher`, `git-history-analyzer`, `spec-flow-analyzer`, `planning-technical-reviewer` |
-| `/workflow:triage` | Manual queue curation for complex/multi-item backlogs (optional; `/workflow:work` runs triage automatically) | `file-todos` | none |
-| `/workflow:work` | Execute plan/todos with quality gates and validation evidence | `git-worktree`, `file-todos`, `standards`, state-orchestration skill when needed | `repo-research-analyst`, `learnings-researcher`, `best-practices-researcher`, `framework-docs-researcher`, `git-history-analyzer` |
-| `/workflow:review` | Perform independent quality review before completion | `git-worktree` (for non-current targets), `standards` | `learnings-researcher`, `lint`, `bug-reproduction-validator`, `git-history-analyzer`, `framework-docs-researcher`, `agent-native-reviewer` |
-| `/workflow:compound` | Capture reusable implementation learnings in `docs/solutions/` | `compound-docs` (primary), `document-review` (optional) | `learnings-researcher`, `best-practices-researcher`, `framework-docs-researcher` |
-| `/metrics` | Log session outcomes and improvement actions | `process-metrics`, `file-todos` (optional for follow-ups) | none |
-| `/assess` | Aggregate metrics trends and propose process improvements | `file-todos` (for approved follow-up actions) | none |
-| `/test-browser` | Validate affected routes with browser-level checks | `agent-browser`, `git-worktree` (optional branch isolation) | none |
+| Command                | Purpose                                                                                                      | Related skills                                                                   | Related agents                                                                                                                                                                         |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/install`             | Configure workflow files and runtime wiring in the repo                                                      | install CLI (no workflow skill routing)                                          | none                                                                                                                                                                                   |
+| `/workflow:brainstorm` | Clarify what to build through structured discussion                                                          | `brainstorming` (primary), `document-review` (optional refinement)               | `repo-research-analyst`                                                                                                                                                                |
+| `/workflow:plan`       | Convert intent into an executable plan with fidelity/confidence                                              | state-orchestration skill when needed (for example `xstate-actor-orchestration`) | `repo-research-analyst`, `learnings-researcher`, `best-practices-researcher`, `framework-docs-researcher`, `git-history-analyzer`, `spec-flow-analyzer`, `planning-technical-reviewer` |
+| `/workflow:triage`     | Manual queue curation for complex/multi-item backlogs (optional; `/workflow:work` runs triage automatically) | `file-todos`                                                                     | none                                                                                                                                                                                   |
+| `/workflow:work`       | Execute plan/todos with quality gates and validation evidence                                                | `git-worktree`, `file-todos`, `standards`, state-orchestration skill when needed | `repo-research-analyst`, `learnings-researcher`, `best-practices-researcher`, `framework-docs-researcher`, `git-history-analyzer`                                                      |
+| `/workflow:review`     | Perform independent quality review before completion                                                         | `git-worktree` (for non-current targets), `standards`                            | `learnings-researcher`, `lint`, `bug-reproduction-validator`, `git-history-analyzer`, `framework-docs-researcher`, `agent-native-reviewer`                                             |
+| `/workflow:compound`   | Capture reusable implementation learnings in `docs/solutions/`                                               | `compound-docs` (primary), `document-review` (optional)                          | `learnings-researcher`, `best-practices-researcher`, `framework-docs-researcher`                                                                                                       |
+| `/metrics`             | Log session outcomes and improvement actions                                                                 | `process-metrics`, `file-todos` (optional for follow-ups)                        | none                                                                                                                                                                                   |
+| `/assess`              | Aggregate metrics trends and propose process improvements                                                    | `file-todos` (for approved follow-up actions)                                    | none                                                                                                                                                                                   |
+| `/test-browser`        | Validate affected routes with browser-level checks                                                           | `agent-browser`, `git-worktree` (optional branch isolation)                      | none                                                                                                                                                                                   |
 
 Canonical command docs: [src/.agents/commands/](src/.agents/commands/)
 
