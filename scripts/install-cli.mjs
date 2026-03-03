@@ -364,6 +364,19 @@ function main() {
   const args = parseArgs(process.argv);
   const targetRoot = realpathSafe(args.root);
 
+  const genScript = path.join(PACKAGE_ROOT, "scripts", "generate-platform-artifacts.mjs");
+  if (fs.existsSync(genScript)) {
+    const result = spawnSync(process.execPath, [genScript], {
+      cwd: PACKAGE_ROOT,
+      stdio: "pipe",
+      encoding: "utf8",
+    });
+    if (result.status !== 0) {
+      console.error("Failed to regenerate manifest:", result.stderr || result.error || "unknown");
+      process.exit(1);
+    }
+  }
+
   try {
     GENERATED_MANIFEST = readGeneratedManifest();
     PACKAGE_COMMAND_ROOT = GENERATED_MANIFEST.commandRoot;
