@@ -1,6 +1,6 @@
 {
   "name": "compound-workflow",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "description": "Clarify → plan → execute → verify → capture. One Install action for Cursor, Claude, and OpenCode.",
   "license": "MIT",
   "repository": {
