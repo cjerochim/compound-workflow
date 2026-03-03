@@ -27,6 +27,8 @@ Do not create drafts, notes, or intermediate files.
 After the primary solution doc is written, optional post-capture actions (by explicit user choice) may update other references (e.g. patterns indexes).
 </critical_requirement>
 
+It is critical that you follow this workflow in order; do not skip or shortcut steps.
+
 ## Usage
 
 ```bash
@@ -49,14 +51,16 @@ After the primary solution doc is written, optional post-capture actions (by exp
 - **Implementation insight:** For feature work, confirm implementation is complete and there is a reusable learning or pattern to capture (no "problem solved" requirement for this path).
 - If critical context is missing, ask targeted questions and wait. Then **invoke the `compound-docs` skill** (it defines required fields, validation gates, and template).
 
-### 2. Optional enrichment (before write)
+### 2. Required research (before write)
 
-Run only agents that exist in this `.agents` workspace. **Enrichment is read-only**—it informs the doc content but must not write files.
+Research is required and must run in subagents. Do not perform research in-context. Run all research via Task (subagent). If the environment cannot run the Task, state that and perform a minimal in-context fallback, then proceed to capture.
 
-- Related docs: `Task learnings-researcher(<symptom/module/root cause keywords>)`
-- Optional: `Task best-practices-researcher(<topic>)`, `Task framework-docs-researcher(<topic>)`
+Run only agents that exist in this `.agents` workspace. **Research is read-only**—it informs the doc content but must not write files.
 
-Complete enrichment before assembly. Report which ran vs skipped.
+- **Required:** `Task learnings-researcher(<symptom/module/root cause keywords>)` (related docs).
+- **Conditional** (when the topic warrants, e.g. framework usage or cross-cutting patterns): `Task best-practices-researcher(<topic>)`, `Task framework-docs-researcher(<topic>)`. When run, these must also run as Tasks.
+
+Complete research before assembly. Report which enrichments ran (required: learnings-researcher; conditional: best-practices, framework-docs) and which were skipped.
 
 ### 3. Capture
 
@@ -105,14 +109,14 @@ User may optionally run `document-review` on the created doc. If the repo has do
 
 ## Success output (shape)
 
-Report which optional enrichments ran vs skipped. Then output the path of the created file. Present the **`compound-docs` decision menu** (see skill) and wait for user choice—do not substitute a shorter custom menu.
+Report which enrichments ran (required: learnings-researcher; conditional: best-practices, framework-docs) and which were skipped. Then output the path of the created file. Present the **`compound-docs` decision menu** (see skill) and wait for user choice—do not substitute a shorter custom menu.
 
 Example summary (generic, portable):
 
 ```
 ✓ Documentation complete
 
-Optional enrichments: related-docs ran|skipped, best-practices ran|skipped, framework-docs ran|skipped
+Enrichments: learnings-researcher (required) ran|skipped; best-practices ran|skipped; framework-docs ran|skipped
 
 File created: docs/solutions/<category>/YYYY-MM-DD-<module-slug>-<symptom-slug>.md
 

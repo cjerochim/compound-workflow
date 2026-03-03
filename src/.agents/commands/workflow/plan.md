@@ -15,6 +15,8 @@ Transform feature descriptions, bug reports, or improvement ideas into well-stru
 
 Contract precedence: if this command conflicts with other workflow docs, follow `docs/principles/workflow-baseline-principles.md`, then `src/AGENTS.md`, then this command.
 
+It is critical that you follow this workflow in order; do not skip or shortcut steps.
+
 This workflow MUST choose a planning fidelity and confidence level before final plan construction:
 
 - Fidelity: `Low | Medium | High`
@@ -833,7 +835,7 @@ Write the complete plan file to `docs/plans/YYYY-MM-DD-<type>-<slug>-plan.md`. T
 
 Confirm: "Plan written to docs/plans/[filename]"
 
-**Auto technical review (when Fidelity is Medium or High):** After writing the plan file, if the declared **Fidelity is Medium or High**, automatically run technical review: run **Task planning-technical-reviewer(plan_path)** when the environment can run the Task, or load the `technical-review` skill so the subagent is used when available. Use the plan path just written. If Fidelity is Low, skip this step; the user can still choose "Technical review" from Post-Generation Options or call `/workflow:tech-review` later.
+**Technical review (required when Fidelity is Medium or High):** After writing the plan file, if the declared **Fidelity is Medium or High**, you **must** run technical review—it is not optional. Run **Task planning-technical-reviewer(plan_path)** using the plan path just written. Do not perform technical review in-context unless the environment cannot run the Task; if you fall back, state "planning-technical-reviewer unavailable; running direct technical review (degraded bias resistance)" and then load the `technical-review` skill and run it in-context. If Fidelity is Low, skip this step; the user can still choose "Technical review" from Post-Generation Options or call `/workflow:tech-review` later.
 
 **Non-interactive mode:** When the invocation is non-interactive (e.g., `workflow:plan` run by automation, CI, or with an explicit non-interactive flag/convention), skip AskQuestion calls and do not present Post-Generation Options. For determinism, the repo should define the flag or convention (e.g., in `AGENTS.md` Repo Config Block or a documented env var). Still **declare** Fidelity, Confidence, Solution scope, Spike evaluation, Spikes needed, Research mode, and Open questions in the required announcement format before writing the plan. Use these defaults when user input is unavailable: fidelity = Medium, confidence = Medium, solution_scope = full_remediation, spike evaluation = not-required unless risky-work triggers are present, spikes needed = n/a when spike evaluation is not required, research mode = local + external for Medium/High risk topics else local only. Proceed directly to writing the plan file and then exit or return the plan path as output.
 
@@ -862,6 +864,8 @@ Examples:
 - ❌ `docs/plans/feat-user-auth-plan.md` (missing date prefix)
 
 ## Post-Generation Options
+
+Technical review (above) is required for Medium/High fidelity and must be run via subagent when available.
 
 After writing the plan file, use **AskQuestion** to present these options:
 

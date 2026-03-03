@@ -15,6 +15,8 @@ This command takes a plan file and executes it systematically. The focus is on c
 
 Contract precedence: if this command conflicts with other workflow docs, follow `docs/principles/workflow-baseline-principles.md`, then `src/AGENTS.md`, then this command.
 
+It is critical that you follow this workflow in order; do not skip or shortcut steps.
+
 Non-goals (unless explicitly requested):
 
 - Creating commits

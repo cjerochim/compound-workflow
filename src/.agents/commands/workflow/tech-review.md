@@ -11,6 +11,8 @@ Run technical review on a feature approach or plan document. Checks technical al
 
 Contract precedence: if this command conflicts with other workflow docs, follow `docs/principles/workflow-baseline-principles.md`, then `src/AGENTS.md`, then this command.
 
+It is critical that you follow this workflow in order; do not skip or shortcut steps.
+
 ## Inputs
 
 - **Plan path (optional):** `$ARGUMENTS` — path to the plan file (e.g. `docs/plans/YYYY-MM-DD-<type>-<slug>-plan.md`).

@@ -18,6 +18,8 @@ it.
 discussion-first facilitation (one-question-then-prompts), approach
 exploration patterns, and YAGNI principles.
 
+It is critical that you follow this workflow in order; do not skip or shortcut steps.
+
 ## Guardrails
 
 - Do not write or modify application code.

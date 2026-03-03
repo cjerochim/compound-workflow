@@ -23,6 +23,9 @@ Optional manual command:
 
 ## Principles
 
+- **Agents must follow each workflow command in order**  
+  Intent: Skipping or shortcutting steps is not permitted; follow the workflow sequence as specified.
+
 - **Commands are the public API**  
   Intent: Keep behavior predictable by routing work through stable commands instead of ad-hoc agent behavior.
 

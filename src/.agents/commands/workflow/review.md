@@ -13,6 +13,8 @@ Contract precedence: if this command conflicts with other workflow docs, follow 
 
 **If the user provides a document path** (e.g. a plan or spec): redirect to the `technical-review` skill for technical correctness (no edits), and/or the `document-review` skill to refine the document. This command does not review documents.
 
+It is critical that you follow this workflow in order; do not skip or shortcut steps.
+
 Guardrails (unless explicitly requested):
 
 - Do not modify code or documents
