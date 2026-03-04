@@ -12,7 +12,7 @@ Checks:
   - Managed entries in opencode.json point to existing source files
   - Flags missing required frontmatter fields:
     - commands: description (all)
-    - commands/workflow/**: invocation (recommended/expected)
+    - commands/workflow-*.md: invocation (recommended/expected)
     - agents: description (all)
 `;
   (exitCode === 0 ? console.log : console.error)(msg.trimStart());
@@ -178,7 +178,7 @@ function main() {
   for (const c of cmds) {
     if (!c.id) errors.push(`Command missing id (name/invocation): ${c.rel}`);
     if (!c.fm.description) errors.push(`Command missing frontmatter description: ${c.rel} (${c.id || "?"})`);
-    if (c.rel.startsWith(".agents/commands/workflow/") && !c.fm.invocation) {
+    if (c.rel.includes("commands/workflow-") && !c.fm.invocation) {
       errors.push(`Workflow command missing frontmatter invocation: ${c.rel} (${c.id || "?"})`);
     }
     if (c.id && !commandsReg[c.id]) errors.push(`Command not registered in opencode.json: ${c.id} (source: ${c.rel})`);

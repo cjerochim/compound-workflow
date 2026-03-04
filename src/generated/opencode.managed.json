@@ -27,37 +27,37 @@
     {
       "id": "workflow:brainstorm",
       "description": "Explore requirements and approaches through collaborative dialogue before planning implementation",
-      "rel": "workflow/brainstorm.md"
+      "rel": "workflow-brainstorm.md"
     },
     {
       "id": "workflow:compound",
       "description": "Document a durable learning (solved problem or implementation insight) into docs/solutions/ to compound institutional knowledge",
-      "rel": "workflow/compound.md"
+      "rel": "workflow-compound.md"
     },
     {
       "id": "workflow:plan",
       "description": "Transform feature descriptions into well-structured project plans using an explicit fidelity and confidence model",
-      "rel": "workflow/plan.md"
+      "rel": "workflow-plan.md"
     },
     {
       "id": "workflow:review",
       "description": "Review a PR/branch/diff with structured findings. Does not implement fixes unless explicitly requested.",
-      "rel": "workflow/review.md"
+      "rel": "workflow-review.md"
     },
     {
       "id": "workflow:tech-review",
       "description": "Run technical review on a plan (technical correctness before build). Optional plan path or latest in docs/plans/.",
-      "rel": "workflow/tech-review.md"
+      "rel": "workflow-tech-review.md"
     },
     {
       "id": "workflow:triage",
       "description": "Manual triage command to prioritize todo files into an executable ready queue (priority, dependencies, recommended action)",
-      "rel": "workflow/triage.md"
+      "rel": "workflow-triage.md"
     },
     {
       "id": "workflow:work",
       "description": "Execute a plan file systematically (implementation + verification) without auto-shipping",
-      "rel": "workflow/work.md"
+      "rel": "workflow-work.md"
     }
   ],
   "agents": [

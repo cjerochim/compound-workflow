@@ -1,8 +1,17 @@
 #!/usr/bin/env node
 /**
  * compound-workflow install
+ *
  * Native-only install: writes opencode.json from package metadata,
  * merges AGENTS.md, and ensures standard docs/todo directories.
+ *
+ * DECLARATIVE SOURCE OF TRUTH (no manual wiring):
+ * - Commands: add/remove .md under src/.agents/commands/ (frontmatter: invocation, name, description).
+ *   Registry (src/.agents/registry.json) + generate-platform-artifacts → opencode.managed.json → install.
+ * - Agents: add/remove .md under src/.agents/agents/ (frontmatter: name, description). Same pipeline.
+ * - Skills: add/remove dir src/.agents/skills/<name>/SKILL.md. OpenCode uses skills path; install syncs
+ *   each skill into .cursor/skills/ (symlinks) so Cursor discovers them. Prune removes stale symlinks.
+ * Run install (or npm install compound-workflow) after any change; no other registration needed.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -356,6 +365,85 @@ function writePluginManifests(targetRoot, dryRun, isSelfInstall) {
   console.log("Wrote: .cursor-plugin/plugin.json, .claude-plugin/plugin.json, .cursor-plugin/registration.json");
 }
 
+/**
+ * Cursor discovers skills only from .agents/skills, .cursor/skills, ~/.cursor/skills.
+ * Populate .cursor/skills/ with symlinks to the package skills so Cursor finds them.
+ */
+function syncCursorSkills(targetRoot, dryRun, isSelfInstall) {
+  const packageSkillsAbs = isSelfInstall
+    ? path.join(PACKAGE_ROOT, "src", ".agents", "skills")
+    : path.join(targetRoot, "node_modules", "compound-workflow", "src", ".agents", "skills");
+  if (!fs.existsSync(packageSkillsAbs)) return;
+
+  const cursorSkillsDir = path.join(targetRoot, ".cursor", "skills");
+  let entries;
+  try {
+    entries = fs.readdirSync(packageSkillsAbs, { withFileTypes: true });
+  } catch {
+    return;
+  }
+
+  const skillDirs = entries.filter((e) => e.isDirectory() && fs.existsSync(path.join(packageSkillsAbs, e.name, "SKILL.md"))).map((e) => e.name);
+  if (skillDirs.length === 0) return;
+
+  if (dryRun) {
+    console.log("[dry-run] Would symlink", skillDirs.length, "skills into .cursor/skills/");
+    return;
+  }
+
+  fs.mkdirSync(cursorSkillsDir, { recursive: true });
+  const packageSkillsReal = realpathSafe(packageSkillsAbs);
+  const skillSet = new Set(skillDirs);
+
+  // Prune: remove symlinks that point at our package but are no longer in the package
+  try {
+    for (const entry of fs.readdirSync(cursorSkillsDir, { withFileTypes: true })) {
+      if (!entry.isSymbolicLink()) continue;
+      const linkPath = path.join(cursorSkillsDir, entry.name);
+      try {
+        const resolved = realpathSafe(linkPath);
+        if (!resolved.startsWith(packageSkillsReal + path.sep) && resolved !== packageSkillsReal) continue;
+        const base = path.basename(resolved);
+        if (skillSet.has(base)) continue;
+        fs.rmSync(linkPath);
+      } catch {
+        /* ignore broken symlinks or permission errors */
+      }
+    }
+  } catch {
+    /* .cursor/skills not readable */
+  }
+
+  for (const name of skillDirs) {
+    const linkPath = path.join(cursorSkillsDir, name);
+    const targetPath = path.join(packageSkillsAbs, name);
+    try {
+      if (fs.existsSync(linkPath)) {
+        const stat = fs.lstatSync(linkPath);
+        if (!stat.isSymbolicLink()) continue;
+        try {
+          if (realpathSafe(linkPath) !== realpathSafe(targetPath)) continue;
+        } catch {
+          continue;
+        }
+        fs.rmSync(linkPath);
+      }
+      fs.symlinkSync(targetPath, linkPath, "dir");
+    } catch (err) {
+      if (err.code === "EPERM" && process.platform === "win32") {
+        try {
+          fs.symlinkSync(targetPath, linkPath, "junction");
+        } catch {
+          console.warn("[cursor] Could not symlink skill", name, err.message);
+        }
+      } else {
+        console.warn("[cursor] Could not symlink skill", name, err.message);
+      }
+    }
+  }
+  console.log("Synced", skillDirs.length, "skills to .cursor/skills/");
+}
+
 function cursorDetected() {
   return fs.existsSync(path.join(os.homedir(), ".cursor"));
 }
@@ -477,6 +565,7 @@ function main() {
 
   writeOpenCodeJson(targetRoot, args.dryRun, isSelfInstall);
   writePluginManifests(targetRoot, args.dryRun, isSelfInstall);
+  syncCursorSkills(targetRoot, args.dryRun, isSelfInstall);
   applyCursorRegistration(targetRoot, args.dryRun, args.noRegisterCursor, args.registerCursor);
   reportOpenCodeIntegration(targetRoot, args.dryRun);
   writeAgentsMd(targetRoot, args.dryRun);

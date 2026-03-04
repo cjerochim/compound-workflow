@@ -43,6 +43,15 @@ function copyMinimalPackageIntoNodeModules(projectRoot) {
   );
 }
 
+/** Copy skills dir (one skill) so syncCursorSkills runs and creates .cursor/skills symlinks. */
+function copySkillsIntoNodeModules(projectRoot) {
+  const pkgSkills = path.join(projectRoot, "node_modules", "compound-workflow", "src", ".agents", "skills");
+  const srcSkills = path.join(repoRoot, "src", ".agents", "skills", "brainstorming");
+  if (!fs.existsSync(srcSkills)) return;
+  fs.mkdirSync(path.join(pkgSkills, "brainstorming"), { recursive: true });
+  fs.copyFileSync(path.join(srcSkills, "SKILL.md"), path.join(pkgSkills, "brainstorming", "SKILL.md"));
+}
+
 function runInstall(projectRoot) {
   return spawnSync(
     process.execPath,
@@ -70,7 +79,7 @@ test("install writes native OpenCode mappings and does not create runtime mirror
     const opencode = JSON.parse(fs.readFileSync(path.join(projectRoot, "opencode.json"), "utf8"));
     assert.match(
       opencode.command["workflow:work"].template,
-      /@node_modules\/compound-workflow\/src\/.agents\/commands\/workflow\/work\.md/,
+      /@node_modules\/compound-workflow\/src\/.agents\/commands\/workflow-work\.md/,
       "workflow command template should point at package command path"
     );
     assert.match(
@@ -218,7 +227,7 @@ test("install from consumer project (package in node_modules) reads manifest and
     const opencode = JSON.parse(fs.readFileSync(opencodePath, "utf8"));
     assert.match(
       opencode.command["workflow:work"].template,
-      /@node_modules\/compound-workflow\/src\/.agents\/commands\/workflow\/work\.md/,
+      /@node_modules\/compound-workflow\/src\/.agents\/commands\/workflow-work\.md/,
       "workflow command template should point at package command path"
     );
     assert.ok(
@@ -229,6 +238,28 @@ test("install from consumer project (package in node_modules) reads manifest and
       opencode.skills.paths.includes("node_modules/compound-workflow/src/.agents/skills"),
       "skills path should include package skills path"
     );
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("install syncs package skills into .cursor/skills as symlinks for Cursor discovery", () => {
+  const projectRoot = createTempProject();
+  copyMinimalPackageIntoNodeModules(projectRoot);
+  copySkillsIntoNodeModules(projectRoot);
+
+  try {
+    const result = runInstallFromConsumerProject(projectRoot);
+    assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
+    assert.ok(fs.existsSync(path.join(projectRoot, ".cursor", "skills")), ".cursor/skills should exist");
+    const skillLink = path.join(projectRoot, ".cursor", "skills", "brainstorming");
+    assert.ok(fs.existsSync(skillLink), ".cursor/skills/brainstorming should exist");
+    const stat = fs.lstatSync(skillLink);
+    assert.ok(stat.isSymbolicLink(), ".cursor/skills/brainstorming should be a symlink");
+    const target = path.join(projectRoot, "node_modules", "compound-workflow", "src", ".agents", "skills", "brainstorming");
+    const resolved = fs.realpathSync(skillLink);
+    assert.equal(resolved, fs.realpathSync(target), "symlink should point at package skill dir");
+    assert.ok(fs.existsSync(path.join(resolved, "SKILL.md")), "resolved skill dir should contain SKILL.md");
   } finally {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }

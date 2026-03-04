@@ -54,7 +54,7 @@ If workflow documents conflict, resolve them in this order:
 
 1. `docs/principles/workflow-baseline-principles.md`
 2. This file (`src/AGENTS.md`) non-negotiables and repo config
-3. Workflow command specs (`src/.agents/commands/workflow/*.md`)
+3. Workflow command specs (`src/.agents/commands/workflow-*.md`)
 4. Skill docs (`src/.agents/skills/*/SKILL.md`)
 
 ## Non-negotiables (Structure Integrity)
@@ -141,7 +141,7 @@ If you want commands to read these values deterministically, add a small YAML bl
 
 ## Directory Layout
 
-- Commands: `.agents/commands/*.md` and `.agents/commands/workflow/*.md` (workflow namespace)
+- Commands: `.agents/commands/*.md` and `.agents/commands/workflow-*.md` (workflow namespace)
 - Skills: `.agents/skills/*/SKILL.md`
 - Skills may optionally include tool-specific agent metadata under `.agents/skills/*/agents/` (for example `openai.yaml`) when required by that skill's validator/runtime.
 - References: `.agents/references/**`
@@ -149,7 +149,7 @@ If you want commands to read these values deterministically, add a small YAML bl
 
 ## Implemented Components (Current Scope)
 
-- Commands: `workflow:brainstorm`, `workflow:plan`, `workflow:triage`, `workflow:work`, `workflow:review`, `workflow:tech-review`, `workflow:compound` (under `.agents/commands/workflow/`), plus `test-browser`, `metrics`, `assess`, `install` (root commands)
+- Commands: `workflow:brainstorm`, `workflow:plan`, `workflow:triage`, `workflow:work`, `workflow:review`, `workflow:tech-review`, `workflow:compound` (under `.agents/commands/` as `workflow-*.md`), plus `test-browser`, `metrics`, `assess`, `install` (root commands)
 - Skills: `brainstorming`, `document-review`, `technical-review`, `compound-docs` (alias: `compound_doc`), `capture-skill`, `file-todos`, `agent-browser`, `git-worktree`, `process-metrics`, `react-ddd-mvc-frontend`, `xstate-actor-orchestration`, `standards`, `pii-protection-prisma`, `financial-workflow-integrity`, `audit-traceability`, `data-foundations`
 - Agents:
   - `repo-research-analyst`

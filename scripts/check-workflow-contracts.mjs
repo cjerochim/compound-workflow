@@ -58,93 +58,93 @@ const requiredChecks = [
     description: "README standards baseline guardrail",
   },
   {
-    file: "src/.agents/commands/workflow/plan.md",
+    file: "src/.agents/commands/workflow-plan.md",
     pattern: "Contract precedence:",
     description: "plan command precedence note",
   },
   {
-    file: "src/.agents/commands/workflow/triage.md",
+    file: "src/.agents/commands/workflow-triage.md",
     pattern: "Contract precedence:",
     description: "triage command precedence note",
   },
   {
-    file: "src/.agents/commands/workflow/triage.md",
+    file: "src/.agents/commands/workflow-triage.md",
     pattern: "independently runnable",
     description: "triage command explicitly standalone while work auto-runs triage",
   },
   {
-    file: "src/.agents/commands/workflow/work.md",
+    file: "src/.agents/commands/workflow-work.md",
     pattern: "Contract precedence:",
     description: "work command precedence note",
   },
   {
-    file: "src/.agents/commands/workflow/plan.md",
+    file: "src/.agents/commands/workflow-plan.md",
     pattern: "Start `/workflow:work`",
     description: "plan command default next-step routes to work",
   },
   {
-    file: "src/.agents/commands/workflow/work.md",
+    file: "src/.agents/commands/workflow-work.md",
     pattern: "HARD GATE - WORKTREE FIRST",
     description: "worktree hard-gate wording in work command",
   },
   {
-    file: "src/.agents/commands/workflow/work.md",
+    file: "src/.agents/commands/workflow-work.md",
     pattern: "required prompt/create gate",
     description: "mandatory worktree decision prompt/create gate in work command",
   },
   {
-    file: "src/.agents/commands/workflow/work.md",
+    file: "src/.agents/commands/workflow-work.md",
     pattern: "Do not infer or assume an answer when the user has not answered.",
     description: "worktree decision cannot be silently assumed",
   },
   {
-    file: "src/.agents/commands/workflow/work.md",
+    file: "src/.agents/commands/workflow-work.md",
     pattern:
       "No file writes, implementation commands, test/lint/typecheck commands, or dependency-install commands may run before this gate passes.",
     description: "pre-gate write/command prohibition in work command",
   },
   {
-    file: "src/.agents/commands/workflow/work.md",
+    file: "src/.agents/commands/workflow-work.md",
     pattern: "workflow_complete: false (pending /workflow:review current)",
     description: "implementation-complete pending-review status in work command",
   },
   {
-    file: "src/.agents/commands/workflow/work.md",
+    file: "src/.agents/commands/workflow-work.md",
     pattern: "Standards Compliance Gate (REQUIRED for code/config changes)",
     description: "required standards gate in work command",
   },
   {
-    file: "src/.agents/commands/workflow/work.md",
+    file: "src/.agents/commands/workflow-work.md",
     pattern: "This gate cannot run until the isolation/worktree gate is passed and recorded (`gate_status: passed`).",
     description: "standards gate ordering with worktree gate",
   },
   {
-    file: "src/.agents/commands/workflow/review.md",
+    file: "src/.agents/commands/workflow-review.md",
     pattern: "Contract precedence:",
     description: "review command precedence note",
   },
   {
-    file: "src/.agents/commands/workflow/review.md",
+    file: "src/.agents/commands/workflow-review.md",
     pattern: "Independent Reviewer Pass (REQUIRED)",
     description: "required independent reviewer pass in review command",
   },
   {
-    file: "src/.agents/commands/workflow/review.md",
+    file: "src/.agents/commands/workflow-review.md",
     pattern: "review_independence_mode: independent|degraded",
     description: "explicit review independence mode in review command",
   },
   {
-    file: "src/.agents/commands/workflow/review.md",
+    file: "src/.agents/commands/workflow-review.md",
     pattern: "what was skipped and why",
     description: "review skipped-pass disclosure requirement",
   },
   {
-    file: "src/.agents/commands/workflow/review.md",
+    file: "src/.agents/commands/workflow-review.md",
     pattern: "standards_compliance: pass|pass-with-notes|fail",
     description: "review standards compliance output field",
   },
   {
-    file: "src/.agents/commands/workflow/review.md",
+    file: "src/.agents/commands/workflow-review.md",
     pattern: "standards `MUST` violations => blocking finding and review recommendation `fail`",
     description: "review must-violation fail criteria",
   },
@@ -162,22 +162,22 @@ const requiredChecks = [
 
 const forbiddenChecks = [
   {
-    file: "src/.agents/commands/workflow/work.md",
+    file: "src/.agents/commands/workflow-work.md",
     pattern: "## When to Use Reviewer Agents",
     description: "legacy optional reviewer section in work command",
   },
   {
-    file: "src/.agents/commands/workflow/work.md",
+    file: "src/.agents/commands/workflow-work.md",
     pattern: "**Don't use by default.**",
     description: "legacy skip-by-default reviewer wording in work command",
   },
   {
-    file: "src/.agents/commands/workflow/work.md",
+    file: "src/.agents/commands/workflow-work.md",
     pattern: "skip specialist reviewers by default",
     description: "legacy skip-by-default specialist reviewer wording",
   },
   {
-    file: "src/.agents/commands/workflow/work.md",
+    file: "src/.agents/commands/workflow-work.md",
     pattern: "Follow project coding standards (see AGENTS.md)",
     description: "legacy advisory-only coding standards wording in work command",
   },

@@ -27,3 +27,6 @@ coverage/
 # Editor/IDE
 .vscode/
 .idea/
+
+# Cursor (local plans, install-created .cursor/skills)
+.cursor/

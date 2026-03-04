@@ -9,8 +9,11 @@ description: General coding practices, implementation styles, and patterns for t
 
 These rules are mandatory for code/config implementation work. They are pass/fail gates, not advisory guidance.
 
+**Declarative over imperative:** Prefer declarative solutions by requirement. Describe *what* should hold (state, transitions, invariants) and let the runtime or framework determine *how*; avoid imperative step-by-step control that mutates shared state in place.
+
 ### MUST
 
+- **MUST prefer declarative over imperative:** Orchestration and data flow MUST be expressed declaratively (state/events/transitions, pure transforms) rather than imperative sequences (mutating variables, step-by-step handlers). When both are feasible, choose the declarative option.
 - **MUST keep orchestration declarative** in containers/controllers: describe state transitions and event flow explicitly instead of imperative step-by-step control logic.
 - **MUST use immutable transforms** for domain and controller data operations (`input -> output`), returning new values instead of mutating existing objects/arrays.
 - **MUST keep domain logic in pure entity functions** (no side effects, no hidden mutable module state, no IO in entity transforms/predicates).
@@ -22,6 +25,7 @@ These rules are mandatory for code/config implementation work. They are pass/fai
 
 ### MUST NOT
 
+- **MUST NOT choose imperative over declarative** when a declarative solution is feasible (e.g. state machine + events over manual flags and step counters; pure transforms over in-place mutation).
 - **MUST NOT implement mutation-heavy imperative handlers** that modify shared state in-place across multiple steps.
 - **MUST NOT use hidden mutable accumulators** (`let` variables mutated through control flow) when a pure transform is feasible.
 - **MUST NOT mix business decision logic into containers/presentation** when it belongs in domain entities/controllers.
@@ -34,6 +38,7 @@ Use this format when reporting standards compliance in execution or review evide
 
 ```markdown
 standards_compliance:
+- declarative_over_imperative: pass|fail (evidence: file:line)  # Declarative solutions required; no imperative choice when declarative feasible
 - declarative_flow: pass|fail (evidence: file:line)
 - immutable_transforms: pass|fail (evidence: file:line)
 - maintainability_boundaries: pass|fail (evidence: file:line)
