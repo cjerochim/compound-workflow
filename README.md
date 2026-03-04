@@ -42,6 +42,8 @@ If your package manager didn’t run postinstall, run once:
 npx compound-workflow install
 ```
 
+Restart Cursor after install; enable third-party plugins in Settings if skills/commands don't appear.
+
 **4. After updating the package**
 
 To get the latest commands and wiring (e.g. after `npm update compound-workflow` or a new release), run install again so your project’s `opencode.json` is refreshed:

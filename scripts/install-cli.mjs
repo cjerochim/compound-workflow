@@ -6,6 +6,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
@@ -15,25 +16,30 @@ function usage(exitCode = 0) {
   const msg = `
 Usage:
   (automatic) npm install compound-workflow   # runs install via postinstall; no npx needed
-  (manual)    npx compound-workflow install [--root <projectDir>] [--dry-run] [--no-config]
+  (manual)    npx compound-workflow install [--root <projectDir>] [--dry-run] [--no-config] [--no-register-cursor] [--register-cursor]
 
 Install writes opencode.json (from package), merges AGENTS.md, creates standard
 docs/todos directories, and prompts for Repo Config Block (unless --no-config).
+When Cursor is detected (~/.cursor), registers the plugin so skills/commands appear.
 
-  --root <dir>  Project directory (default: cwd)
-  --dry-run     Print planned changes only
-  --no-config   Skip Repo Config Block reminder
+  --root <dir>            Project directory (default: cwd)
+  --dry-run               Print planned changes only
+  --no-config             Skip Repo Config Block reminder
+  --no-register-cursor    Do not register plugin with Cursor (skip apply to ~/.claude/)
+  --register-cursor       Force registration with Cursor even if ~/.cursor not found
 `;
   (exitCode === 0 ? console.log : console.error)(msg.trimStart());
   process.exit(exitCode);
 }
 
 function parseArgs(argv) {
-  const out = { root: process.cwd(), dryRun: false, noConfig: false };
+  const out = { root: process.cwd(), dryRun: false, noConfig: false, noRegisterCursor: false, registerCursor: false };
   for (let i = 2; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--dry-run") out.dryRun = true;
     else if (arg === "--no-config") out.noConfig = true;
+    else if (arg === "--no-register-cursor") out.noRegisterCursor = true;
+    else if (arg === "--register-cursor") out.registerCursor = true;
     else if (arg === "--root") {
       const value = argv[i + 1];
       if (!value) usage(1);
@@ -331,15 +337,80 @@ function writePluginManifests(targetRoot, dryRun, isSelfInstall) {
   const cursorDir = path.join(targetRoot, ".cursor-plugin");
   const claudeDir = path.join(targetRoot, ".claude-plugin");
 
+  const installPathAbs = realpathSafe(targetRoot);
+  const registrationDescriptor = {
+    pluginId: "compound-workflow@local",
+    scope: "user",
+    installPath: installPathAbs,
+  };
+
   if (dryRun) {
-    console.log("[dry-run] Would write .cursor-plugin/plugin.json and .claude-plugin/plugin.json");
+    console.log("[dry-run] Would write .cursor-plugin/plugin.json, .claude-plugin/plugin.json, .cursor-plugin/registration.json");
     return;
   }
   fs.mkdirSync(cursorDir, { recursive: true });
   fs.mkdirSync(claudeDir, { recursive: true });
   fs.writeFileSync(path.join(cursorDir, "plugin.json"), JSON.stringify(cursorOut, null, 2) + "\n", "utf8");
   fs.writeFileSync(path.join(claudeDir, "plugin.json"), JSON.stringify(claudeOut, null, 2) + "\n", "utf8");
-  console.log("Wrote: .cursor-plugin/plugin.json, .claude-plugin/plugin.json");
+  fs.writeFileSync(path.join(cursorDir, "registration.json"), JSON.stringify(registrationDescriptor, null, 2) + "\n", "utf8");
+  console.log("Wrote: .cursor-plugin/plugin.json, .claude-plugin/plugin.json, .cursor-plugin/registration.json");
+}
+
+function cursorDetected() {
+  return fs.existsSync(path.join(os.homedir(), ".cursor"));
+}
+
+function applyCursorRegistration(targetRoot, dryRun, noRegisterCursor, forceRegister) {
+  if (dryRun) return;
+  if (noRegisterCursor && !forceRegister) return;
+  const shouldApply = forceRegister || (cursorDetected() && !noRegisterCursor);
+  if (!shouldApply) {
+    console.log("[cursor] Cursor not detected; skipped plugin registration. Use --register-cursor to force.");
+    return;
+  }
+
+  const registrationPath = path.join(targetRoot, ".cursor-plugin", "registration.json");
+  if (!fs.existsSync(registrationPath)) return;
+  let descriptor;
+  try {
+    descriptor = readJsonMaybe(registrationPath);
+  } catch {
+    return;
+  }
+  if (!descriptor?.pluginId || !descriptor?.installPath) return;
+
+  const claudePluginsDir = path.join(os.homedir(), ".claude", "plugins");
+  const installedPath = path.join(claudePluginsDir, "installed_plugins.json");
+  const settingsPath = path.join(os.homedir(), ".claude", "settings.json");
+
+  let installed = {};
+  if (fs.existsSync(installedPath)) {
+    try {
+      installed = readJsonMaybe(installedPath) ?? {};
+    } catch {
+      installed = {};
+    }
+  }
+  const plugins = ensureObject(installed.plugins);
+  plugins[descriptor.pluginId] = [{ scope: descriptor.scope || "user", installPath: descriptor.installPath }];
+  installed.plugins = plugins;
+
+  let settings = {};
+  if (fs.existsSync(settingsPath)) {
+    try {
+      settings = readJsonMaybe(settingsPath) ?? {};
+    } catch {
+      settings = {};
+    }
+  }
+  settings.enabledPlugins = ensureObject(settings.enabledPlugins);
+  settings.enabledPlugins[descriptor.pluginId] = true;
+
+  fs.mkdirSync(claudePluginsDir, { recursive: true });
+  fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+  fs.writeFileSync(installedPath, JSON.stringify(installed, null, 2) + "\n", "utf8");
+  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf8");
+  console.log("Registered compound-workflow with Cursor. Restart Cursor; enable 'Include third-party Plugins, Skills, and other configs' in Settings if needed.");
 }
 
 function reportOpenCodeIntegration(targetRoot, dryRun) {
@@ -406,6 +477,7 @@ function main() {
 
   writeOpenCodeJson(targetRoot, args.dryRun, isSelfInstall);
   writePluginManifests(targetRoot, args.dryRun, isSelfInstall);
+  applyCursorRegistration(targetRoot, args.dryRun, args.noRegisterCursor, args.registerCursor);
   reportOpenCodeIntegration(targetRoot, args.dryRun);
   writeAgentsMd(targetRoot, args.dryRun);
   ensureDirs(targetRoot, args.dryRun);

@@ -2,7 +2,7 @@
 name: install
 invocation: install
 description: Install compound-workflow in this project (native mode): writes opencode.json, merges AGENTS.md, and creates docs/todo dirs.
-argument-hint: "[--dry-run] [--root <path>] [--no-config]"
+argument-hint: "[--dry-run] [--root <path>] [--no-config] [--no-register-cursor] [--register-cursor]"
 ---
 
 # /install
@@ -32,8 +32,14 @@ npx compound-workflow install --no-config
 - `--dry-run`: Print planned changes only; no writes.
 - `--root <path>`: Target project directory (default: current directory).
 - `--no-config`: Skip Repo Config Block reminder; still writes opencode.json, AGENTS.md, and dirs.
+- `--no-register-cursor`: Do not register the plugin with Cursor (skip writing to ~/.claude/).
+- `--register-cursor`: Force registration with Cursor even if Cursor is not detected in the default location.
 
 After running, suggest `opencode debug config` in the project to verify OpenCode resolution.
+
+## Cursor
+
+One command installs and registers the plugin with Cursor when Cursor is detected (`~/.cursor` exists). Restart Cursor after install; if skills or commands do not appear, enable "Include third-party Plugins, Skills, and other configs" in Cursor Settings > Features. Use `--no-register-cursor` to skip registration (e.g. in CI).
 
 ## What Install does
 

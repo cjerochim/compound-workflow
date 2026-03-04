@@ -46,7 +46,7 @@ function copyMinimalPackageIntoNodeModules(projectRoot) {
 function runInstall(projectRoot) {
   return spawnSync(
     process.execPath,
-    [installCli, "install", "--root", projectRoot, "--no-config"],
+    [installCli, "install", "--root", projectRoot, "--no-config", "--no-register-cursor"],
     { cwd: repoRoot, encoding: "utf8" }
   );
 }
@@ -54,7 +54,7 @@ function runInstall(projectRoot) {
 /** Run install from consumer project so package root is node_modules/compound-workflow. */
 function runInstallFromConsumerProject(projectRoot) {
   const pkgCli = path.join(projectRoot, "node_modules", "compound-workflow", "scripts", "install-cli.mjs");
-  return spawnSync(process.execPath, [pkgCli, "install", "--root", projectRoot, "--no-config"], {
+  return spawnSync(process.execPath, [pkgCli, "install", "--root", projectRoot, "--no-config", "--no-register-cursor"], {
     cwd: projectRoot,
     encoding: "utf8",
   });
@@ -95,6 +95,9 @@ test("install writes native OpenCode mappings and does not create runtime mirror
     );
     const cursorPlugin = JSON.parse(fs.readFileSync(path.join(projectRoot, ".cursor-plugin", "plugin.json"), "utf8"));
     assert.equal(cursorPlugin.commands, "node_modules/compound-workflow/src/.agents/commands", "project-root plugin manifest should point at node_modules");
+    const registration = JSON.parse(fs.readFileSync(path.join(projectRoot, ".cursor-plugin", "registration.json"), "utf8"));
+    assert.equal(registration.pluginId, "compound-workflow@local", "registration descriptor should have pluginId");
+    assert.ok(registration.installPath, "registration descriptor should have installPath");
   } finally {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }
