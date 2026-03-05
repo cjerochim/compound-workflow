@@ -450,26 +450,16 @@ function cursorDetected() {
 
 function applyCursorRegistration(targetRoot, dryRun, noRegisterCursor, forceRegister) {
   if (dryRun) return;
-  if (noRegisterCursor && !forceRegister) return;
-  const shouldApply = forceRegister || (cursorDetected() && !noRegisterCursor);
-  if (!shouldApply) {
-    console.log("[cursor] Cursor not detected; skipped plugin registration. Use --register-cursor to force.");
-    return;
-  }
-
-  const registrationPath = path.join(targetRoot, ".cursor-plugin", "registration.json");
-  if (!fs.existsSync(registrationPath)) return;
-  let descriptor;
-  try {
-    descriptor = readJsonMaybe(registrationPath);
-  } catch {
-    return;
-  }
-  if (!descriptor?.pluginId || !descriptor?.installPath) return;
 
   const claudePluginsDir = path.join(os.homedir(), ".claude", "plugins");
   const installedPath = path.join(claudePluginsDir, "installed_plugins.json");
   const settingsPath = path.join(os.homedir(), ".claude", "settings.json");
+
+  const pluginDescriptor = {
+    pluginId: "compound-workflow@local",
+    scope: "user",
+    installPath: realpathSafe(targetRoot),
+  };
 
   let installed = {};
   if (fs.existsSync(installedPath)) {
@@ -480,7 +470,7 @@ function applyCursorRegistration(targetRoot, dryRun, noRegisterCursor, forceRegi
     }
   }
   const plugins = ensureObject(installed.plugins);
-  plugins[descriptor.pluginId] = [{ scope: descriptor.scope || "user", installPath: descriptor.installPath }];
+  plugins[pluginDescriptor.pluginId] = [{ scope: pluginDescriptor.scope || "user", installPath: pluginDescriptor.installPath }];
   installed.plugins = plugins;
 
   let settings = {};
@@ -492,12 +482,23 @@ function applyCursorRegistration(targetRoot, dryRun, noRegisterCursor, forceRegi
     }
   }
   settings.enabledPlugins = ensureObject(settings.enabledPlugins);
-  settings.enabledPlugins[descriptor.pluginId] = true;
+  settings.enabledPlugins[pluginDescriptor.pluginId] = true;
 
   fs.mkdirSync(claudePluginsDir, { recursive: true });
   fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
   fs.writeFileSync(installedPath, JSON.stringify(installed, null, 2) + "\n", "utf8");
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf8");
+  console.log("Registered compound-workflow with Claude Code. Restart Claude Code; enable 'Include third-party Plugins, Skills, and other configs' in Settings if needed.");
+
+  if (noRegisterCursor && !forceRegister) return;
+  const shouldApply = forceRegister || (cursorDetected() && !noRegisterCursor);
+  if (!shouldApply) {
+    console.log("[cursor] Cursor not detected; skipped Cursor plugin registration. Use --register-cursor to force.");
+    return;
+  }
+
+  const registrationPath = path.join(targetRoot, ".cursor-plugin", "registration.json");
+  if (!fs.existsSync(registrationPath)) return;
   console.log("Registered compound-workflow with Cursor. Restart Cursor; enable 'Include third-party Plugins, Skills, and other configs' in Settings if needed.");
 }
 
