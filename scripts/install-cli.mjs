@@ -448,17 +448,23 @@ function cursorDetected() {
   return fs.existsSync(path.join(os.homedir(), ".cursor"));
 }
 
-function applyCursorRegistration(targetRoot, dryRun, noRegisterCursor, forceRegister) {
+function applyCursorRegistration(targetRoot, dryRun, noRegisterCursor, forceRegister, isSelfInstall) {
   if (dryRun) return;
 
   const claudePluginsDir = path.join(os.homedir(), ".claude", "plugins");
   const installedPath = path.join(claudePluginsDir, "installed_plugins.json");
   const settingsPath = path.join(os.homedir(), ".claude", "settings.json");
 
+  // installPath must point to the package root so Claude Code resolves
+  // commands/agents/skills paths in .claude-plugin/plugin.json relative to it.
+  const pluginInstallPath = isSelfInstall
+    ? realpathSafe(PACKAGE_ROOT)
+    : realpathSafe(path.join(targetRoot, "node_modules", "compound-workflow"));
+
   const pluginDescriptor = {
     pluginId: "compound-workflow@local",
     scope: "user",
-    installPath: realpathSafe(targetRoot),
+    installPath: pluginInstallPath,
   };
 
   let installed = {};
@@ -567,7 +573,7 @@ function main() {
   writeOpenCodeJson(targetRoot, args.dryRun, isSelfInstall);
   writePluginManifests(targetRoot, args.dryRun, isSelfInstall);
   syncCursorSkills(targetRoot, args.dryRun, isSelfInstall);
-  applyCursorRegistration(targetRoot, args.dryRun, args.noRegisterCursor, args.registerCursor);
+  applyCursorRegistration(targetRoot, args.dryRun, args.noRegisterCursor, args.registerCursor, isSelfInstall);
   reportOpenCodeIntegration(targetRoot, args.dryRun);
   writeAgentsMd(targetRoot, args.dryRun);
   ensureDirs(targetRoot, args.dryRun);

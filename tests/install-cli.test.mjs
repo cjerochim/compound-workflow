@@ -243,6 +243,40 @@ test("install from consumer project (package in node_modules) reads manifest and
   }
 });
 
+test("install registers Claude plugin with installPath pointing to package root in node_modules", () => {
+  const projectRoot = createTempProject();
+  copyMinimalPackageIntoNodeModules(projectRoot);
+
+  const claudeInstalledPath = path.join(os.homedir(), ".claude", "plugins", "installed_plugins.json");
+  const before = fs.existsSync(claudeInstalledPath)
+    ? JSON.parse(fs.readFileSync(claudeInstalledPath, "utf8"))
+    : { plugins: {} };
+
+  try {
+    const result = runInstallFromConsumerProject(projectRoot);
+    assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
+
+    assert.ok(fs.existsSync(claudeInstalledPath), "installed_plugins.json should exist after install");
+    const after = JSON.parse(fs.readFileSync(claudeInstalledPath, "utf8"));
+    const entry = after?.plugins?.["compound-workflow@local"]?.[0];
+    assert.ok(entry, "compound-workflow@local should be registered");
+    const expectedInstallPath = fs.realpathSync(
+      path.join(projectRoot, "node_modules", "compound-workflow")
+    );
+    assert.equal(
+      entry.installPath,
+      expectedInstallPath,
+      "installPath must point to package root in node_modules, not consumer project root"
+    );
+  } finally {
+    // Restore installed_plugins.json to pre-test state
+    if (fs.existsSync(claudeInstalledPath)) {
+      fs.writeFileSync(claudeInstalledPath, JSON.stringify(before, null, 2) + "\n", "utf8");
+    }
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
 test("install syncs package skills into .cursor/skills as symlinks for Cursor discovery", () => {
   const projectRoot = createTempProject();
   copyMinimalPackageIntoNodeModules(projectRoot);

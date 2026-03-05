@@ -29,37 +29,37 @@
     "workflow:brainstorm": {
       "description": "Explore requirements and approaches through collaborative dialogue before planning implementation",
       "agent": "build",
-      "template": "@AGENTS.md\n@src/.agents/commands/workflow/brainstorm.md\nArguments: $ARGUMENTS\n"
+      "template": "@AGENTS.md\n@src/.agents/commands/workflow-brainstorm.md\nArguments: $ARGUMENTS\n"
     },
     "workflow:compound": {
       "description": "Document a durable learning (solved problem or implementation insight) into docs/solutions/ to compound institutional knowledge",
       "agent": "build",
-      "template": "@AGENTS.md\n@src/.agents/commands/workflow/compound.md\nArguments: $ARGUMENTS\n"
+      "template": "@AGENTS.md\n@src/.agents/commands/workflow-compound.md\nArguments: $ARGUMENTS\n"
     },
     "workflow:plan": {
       "description": "Transform feature descriptions into well-structured project plans using an explicit fidelity and confidence model",
       "agent": "build",
-      "template": "@AGENTS.md\n@src/.agents/commands/workflow/plan.md\nArguments: $ARGUMENTS\n"
+      "template": "@AGENTS.md\n@src/.agents/commands/workflow-plan.md\nArguments: $ARGUMENTS\n"
     },
     "workflow:review": {
       "description": "Review a PR/branch/diff with structured findings. Does not implement fixes unless explicitly requested.",
       "agent": "build",
-      "template": "@AGENTS.md\n@src/.agents/commands/workflow/review.md\nArguments: $ARGUMENTS\n"
+      "template": "@AGENTS.md\n@src/.agents/commands/workflow-review.md\nArguments: $ARGUMENTS\n"
     },
     "workflow:tech-review": {
       "description": "Run technical review on a plan (technical correctness before build). Optional plan path or latest in docs/plans/.",
       "agent": "build",
-      "template": "@AGENTS.md\n@src/.agents/commands/workflow/tech-review.md\nArguments: $ARGUMENTS\n"
+      "template": "@AGENTS.md\n@src/.agents/commands/workflow-tech-review.md\nArguments: $ARGUMENTS\n"
     },
     "workflow:triage": {
       "description": "Manual triage command to prioritize todo files into an executable ready queue (priority, dependencies, recommended action)",
       "agent": "build",
-      "template": "@AGENTS.md\n@src/.agents/commands/workflow/triage.md\nArguments: $ARGUMENTS\n"
+      "template": "@AGENTS.md\n@src/.agents/commands/workflow-triage.md\nArguments: $ARGUMENTS\n"
     },
     "workflow:work": {
       "description": "Execute a plan file systematically (implementation + verification) without auto-shipping",
       "agent": "build",
-      "template": "@AGENTS.md\n@src/.agents/commands/workflow/work.md\nArguments: $ARGUMENTS\n"
+      "template": "@AGENTS.md\n@src/.agents/commands/workflow-work.md\nArguments: $ARGUMENTS\n"
     }
   },
   "agent": {

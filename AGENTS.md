@@ -147,6 +147,8 @@ If you want commands to read these values deterministically, add a small YAML bl
 - References: `.agents/references/**`
 - Agents: `.agents/agents/**/*.md`
 
+**Single source of truth (declarative):** Commands and agents are discovered from the registry and `generate-platform-artifacts`; skills are discovered by scanning `skills/` for `*/SKILL.md`. Add or remove files/dirs, then run install—no other registration. See install-cli header comment for the full pipeline.
+
 ## Implemented Components (Current Scope)
 
 - Commands: `workflow:brainstorm`, `workflow:plan`, `workflow:triage`, `workflow:work`, `workflow:review`, `workflow:tech-review`, `workflow:compound` (under `.agents/commands/` as `workflow-*.md`), plus `test-browser`, `metrics`, `assess`, `install` (root commands)
