@@ -342,6 +342,26 @@ test("install writes independent .claude/settings.json for two different project
   }
 });
 
+test("install writes .claude-plugin/marketplace.json in consumer project for Claude Code 2.1+", () => {
+  const projectRoot = createTempProject();
+  copyMinimalPackageIntoNodeModules(projectRoot);
+
+  try {
+    const result = runInstallFromConsumerProject(projectRoot);
+    assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
+
+    const marketplacePath = path.join(projectRoot, ".claude-plugin", "marketplace.json");
+    assert.ok(fs.existsSync(marketplacePath), ".claude-plugin/marketplace.json should exist in consumer project");
+    const marketplace = JSON.parse(fs.readFileSync(marketplacePath, "utf8"));
+    assert.equal(marketplace.name, "compound-workflow-local", "marketplace name");
+    assert.ok(Array.isArray(marketplace.plugins) && marketplace.plugins.length === 1, "one plugin entry");
+    assert.equal(marketplace.plugins[0].name, "compound-workflow", "plugin name");
+    assert.equal(marketplace.plugins[0].source, "./node_modules/compound-workflow", "plugin source");
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
 test("install syncs package skills into .cursor/skills as symlinks for Cursor discovery", () => {
   const projectRoot = createTempProject();
   copyMinimalPackageIntoNodeModules(projectRoot);

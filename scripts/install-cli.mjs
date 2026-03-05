@@ -359,7 +359,7 @@ function writePluginManifests(targetRoot, dryRun, isSelfInstall) {
   };
 
   if (dryRun) {
-    console.log("[dry-run] Would write .cursor-plugin/plugin.json, .claude-plugin/plugin.json, .cursor-plugin/registration.json");
+    console.log("[dry-run] Would write .cursor-plugin/plugin.json, .claude-plugin/plugin.json, .cursor-plugin/registration.json" + (isSelfInstall ? "" : ", .claude-plugin/marketplace.json"));
     return;
   }
   fs.mkdirSync(cursorDir, { recursive: true });
@@ -367,7 +367,24 @@ function writePluginManifests(targetRoot, dryRun, isSelfInstall) {
   fs.writeFileSync(path.join(cursorDir, "plugin.json"), JSON.stringify(cursorOut, null, 2) + "\n", "utf8");
   fs.writeFileSync(path.join(claudeDir, "plugin.json"), JSON.stringify(claudeOut, null, 2) + "\n", "utf8");
   fs.writeFileSync(path.join(cursorDir, "registration.json"), JSON.stringify(registrationDescriptor, null, 2) + "\n", "utf8");
-  console.log("Wrote: .cursor-plugin/plugin.json, .claude-plugin/plugin.json, .cursor-plugin/registration.json");
+
+  // Claude Code 2.1.x+ no longer loads from installed_plugins.json; it requires marketplace flow.
+  // Write a project-level marketplace so user can: /plugin marketplace add . then /plugin install compound-workflow@compound-workflow-local
+  if (!isSelfInstall) {
+    const marketplaceManifest = {
+      name: "compound-workflow-local",
+      owner: { name: "Compound Workflow" },
+      plugins: [
+        {
+          name: "compound-workflow",
+          source: "./node_modules/compound-workflow",
+          description: claudeOut.description || "Clarify → plan → execute → verify → capture workflow.",
+        },
+      ],
+    };
+    fs.writeFileSync(path.join(claudeDir, "marketplace.json"), JSON.stringify(marketplaceManifest, null, 2) + "\n", "utf8");
+  }
+  console.log("Wrote: .cursor-plugin/plugin.json, .claude-plugin/plugin.json, .cursor-plugin/registration.json" + (isSelfInstall ? "" : ", .claude-plugin/marketplace.json"));
 }
 
 /**
@@ -542,7 +559,11 @@ function applyCursorRegistration(targetRoot, dryRun, noRegisterCursor, forceRegi
     fs.writeFileSync(projectSettingsPath, JSON.stringify(projectSettings, null, 2) + "\n", "utf8");
   }
 
-  console.log("Registered compound-workflow with Claude Code. Restart Claude Code; enable 'Include third-party Plugins, Skills, and other configs' in Settings if needed.");
+  console.log("Registered compound-workflow with Claude Code.");
+  if (!isSelfInstall) {
+    console.log("  Claude Code 2.1+: run in this project: /plugin marketplace add . then /plugin install compound-workflow@compound-workflow-local");
+  }
+  console.log("  Restart Claude Code; enable 'Include third-party Plugins, Skills, and other configs' in Settings if needed.");
 
   if (noRegisterCursor && !forceRegister) return;
   const shouldApply = forceRegister || (cursorDetected() && !noRegisterCursor);
