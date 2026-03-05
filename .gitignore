@@ -28,5 +28,6 @@ coverage/
 .vscode/
 .idea/
 
-# Cursor (local plans, install-created .cursor/skills)
+# Cursor (local plans, install-created .cursor/skills; local plugin registration)
 .cursor/
+.cursor-plugin/registration.json

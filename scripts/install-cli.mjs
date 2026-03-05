@@ -328,6 +328,11 @@ function ensureDirs(targetRoot, dryRun) {
   }
 }
 
+/**
+ * Writes .cursor-plugin/plugin.json and .claude-plugin/plugin.json at targetRoot.
+ * Paths (commands, agents, skills) in the written manifests are relative to project root
+ * (parent of .cursor-plugin / .claude-plugin) so Cursor/Claude resolve assets correctly.
+ */
 function writePluginManifests(targetRoot, dryRun, isSelfInstall) {
   const pathsBase = isSelfInstall ? "./src/.agents" : "./node_modules/compound-workflow/src/.agents";
   const pathOverrides = {
@@ -346,23 +351,15 @@ function writePluginManifests(targetRoot, dryRun, isSelfInstall) {
   const cursorDir = path.join(targetRoot, ".cursor-plugin");
   const claudeDir = path.join(targetRoot, ".claude-plugin");
 
-  const installPathAbs = realpathSafe(targetRoot);
-  const registrationDescriptor = {
-    pluginId: "compound-workflow@local",
-    scope: "user",
-    installPath: installPathAbs,
-  };
-
   if (dryRun) {
-    console.log("[dry-run] Would write .cursor-plugin/plugin.json, .claude-plugin/plugin.json, .cursor-plugin/registration.json");
+    console.log("[dry-run] Would write .cursor-plugin/plugin.json, .claude-plugin/plugin.json");
     return;
   }
   fs.mkdirSync(cursorDir, { recursive: true });
   fs.mkdirSync(claudeDir, { recursive: true });
   fs.writeFileSync(path.join(cursorDir, "plugin.json"), JSON.stringify(cursorOut, null, 2) + "\n", "utf8");
   fs.writeFileSync(path.join(claudeDir, "plugin.json"), JSON.stringify(claudeOut, null, 2) + "\n", "utf8");
-  fs.writeFileSync(path.join(cursorDir, "registration.json"), JSON.stringify(registrationDescriptor, null, 2) + "\n", "utf8");
-  console.log("Wrote: .cursor-plugin/plugin.json, .claude-plugin/plugin.json, .cursor-plugin/registration.json");
+  console.log("Wrote: .cursor-plugin/plugin.json, .claude-plugin/plugin.json");
 }
 
 /**
@@ -449,68 +446,17 @@ function cursorDetected() {
 }
 
 function applyCursorRegistration(targetRoot, dryRun, noRegisterCursor, forceRegister, isSelfInstall) {
-  const claudePluginsDir = path.join(os.homedir(), ".claude", "plugins");
-  const installedPath = path.join(claudePluginsDir, "installed_plugins.json");
   const settingsPath = path.join(os.homedir(), ".claude", "settings.json");
 
-  const pluginVersion = (() => {
-    try {
-      const pkgPath = path.join(PACKAGE_ROOT, "package.json");
-      return JSON.parse(fs.readFileSync(pkgPath, "utf8")).version || "0.0.0";
-    } catch {
-      return "0.0.0";
-    }
-  })();
+  const LEGACY_PLUGIN_ID = "compound-workflow@local";
+  const pluginId = "compound-workflow@compound-workflow";
 
-  // For self-install (dev), use the package root with user scope.
-  // For consumer projects, use the project root with project scope so each
-  // project gets its own entry and installs don't overwrite each other.
-  const targetRootReal = realpathSafe(isSelfInstall ? PACKAGE_ROOT : targetRoot);
-  const pluginId = "compound-workflow@local";
-  const scope = isSelfInstall ? "user" : "project";
-
-  let installed = {};
-  if (fs.existsSync(installedPath)) {
-    try {
-      installed = readJsonMaybe(installedPath) ?? {};
-    } catch {
-      installed = {};
-    }
-  }
-  const plugins = ensureObject(installed.plugins);
-  const existingEntries = Array.isArray(plugins[pluginId]) ? plugins[pluginId] : [];
-
-  // Remove legacy scope:"user" entries when switching to project-scope
-  const cleanedEntries = scope === "project"
-    ? existingEntries.filter((e) => e.scope !== "user")
-    : existingEntries;
-
-  // Prune stale entries whose installPath no longer has a plugin manifest on disk
-  const pruned = cleanedEntries.filter((e) => {
-    const manifest = path.join(e.installPath || "", ".claude-plugin", "plugin.json");
-    return fs.existsSync(manifest);
-  });
-
-  // Find existing entry for this project (or user-scope entry for self-install)
-  const matchIndex = pruned.findIndex((e) =>
-    scope === "user" ? e.scope === "user" : e.scope === "project" && e.projectPath === targetRootReal
-  );
-
-  const existingEntry = matchIndex >= 0 ? pruned[matchIndex] : {};
-  const now = new Date().toISOString();
-  const newEntry = {
-    scope,
-    ...(scope === "project" ? { projectPath: targetRootReal } : {}),
-    installPath: targetRootReal,
-    version: pluginVersion,
-    installedAt: existingEntry.installedAt || now,
-    lastUpdated: now,
-  };
-
-  plugins[pluginId] = matchIndex >= 0
-    ? pruned.map((e, i) => (i === matchIndex ? newEntry : e))
-    : [...pruned, newEntry];
-  installed.plugins = plugins;
+  // Marketplace source path:
+  // - Self-install (dev): absolute path to package root
+  // - Consumer projects: relative path from project root to package
+  const marketplacePath = isSelfInstall
+    ? realpathSafe(PACKAGE_ROOT)
+    : "./node_modules/compound-workflow";
 
   let settings = {};
   if (fs.existsSync(settingsPath)) {
@@ -520,31 +466,50 @@ function applyCursorRegistration(targetRoot, dryRun, noRegisterCursor, forceRegi
       settings = {};
     }
   }
-  // User-level settings (backward compat)
+  // Clean up legacy @local entry and register with correct plugin ID
   settings.enabledPlugins = ensureObject(settings.enabledPlugins);
+  delete settings.enabledPlugins[LEGACY_PLUGIN_ID];
   settings.enabledPlugins[pluginId] = true;
 
   if (dryRun) {
-    console.log("[dry-run] Would register Claude plugin:", JSON.stringify(newEntry, null, 2));
+    console.log("[dry-run] Would register Claude plugin via extraKnownMarketplaces with id:", pluginId);
     return;
   }
 
-  fs.mkdirSync(claudePluginsDir, { recursive: true });
   fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
-  fs.writeFileSync(installedPath, JSON.stringify(installed, null, 2) + "\n", "utf8");
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf8");
 
-  // Project-level settings required for scope:"project" to activate
+  // Project-level settings: register local marketplace and enable plugin
   if (!isSelfInstall) {
     const projectSettingsPath = path.join(targetRoot, ".claude", "settings.json");
     let projectSettings = {};
     if (fs.existsSync(projectSettingsPath)) {
       try { projectSettings = readJsonMaybe(projectSettingsPath) ?? {}; } catch { projectSettings = {}; }
     }
+    // Clean up legacy @local entry
     projectSettings.enabledPlugins = ensureObject(projectSettings.enabledPlugins);
+    delete projectSettings.enabledPlugins[LEGACY_PLUGIN_ID];
     projectSettings.enabledPlugins[pluginId] = true;
+    // Register the package as a local marketplace so Claude Code resolves compound-workflow@compound-workflow
+    projectSettings.extraKnownMarketplaces = ensureObject(projectSettings.extraKnownMarketplaces);
+    projectSettings.extraKnownMarketplaces["compound-workflow"] = {
+      source: {
+        source: "local",
+        path: marketplacePath,
+      },
+    };
     fs.mkdirSync(path.join(targetRoot, ".claude"), { recursive: true });
     fs.writeFileSync(projectSettingsPath, JSON.stringify(projectSettings, null, 2) + "\n", "utf8");
+  } else {
+    // Self-install: register marketplace at user level with absolute path
+    settings.extraKnownMarketplaces = ensureObject(settings.extraKnownMarketplaces);
+    settings.extraKnownMarketplaces["compound-workflow"] = {
+      source: {
+        source: "local",
+        path: marketplacePath,
+      },
+    };
+    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf8");
   }
 
   console.log("Registered compound-workflow with Claude Code. Restart Claude Code; enable 'Include third-party Plugins, Skills, and other configs' in Settings if needed.");
@@ -556,8 +521,8 @@ function applyCursorRegistration(targetRoot, dryRun, noRegisterCursor, forceRegi
     return;
   }
 
-  const registrationPath = path.join(targetRoot, ".cursor-plugin", "registration.json");
-  if (!fs.existsSync(registrationPath)) return;
+  const cursorPluginPath = path.join(targetRoot, ".cursor-plugin", "plugin.json");
+  if (!fs.existsSync(cursorPluginPath)) return;
   console.log("Registered compound-workflow with Cursor. Restart Cursor; enable 'Include third-party Plugins, Skills, and other configs' in Settings if needed.");
 }
 
