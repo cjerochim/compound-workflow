@@ -243,7 +243,7 @@ test("install from consumer project (package in node_modules) reads manifest and
   }
 });
 
-test("install registers Claude plugin with installPath pointing to package root in node_modules", () => {
+test("install registers Claude plugin with project scope and installPath pointing to project root", () => {
   const projectRoot = createTempProject();
   copyMinimalPackageIntoNodeModules(projectRoot);
 
@@ -260,13 +260,23 @@ test("install registers Claude plugin with installPath pointing to package root 
     const after = JSON.parse(fs.readFileSync(claudeInstalledPath, "utf8"));
     const entry = after?.plugins?.["compound-workflow@local"]?.[0];
     assert.ok(entry, "compound-workflow@local should be registered");
-    const expectedInstallPath = fs.realpathSync(
-      path.join(projectRoot, "node_modules", "compound-workflow")
-    );
+
+    const expectedProjectRoot = fs.realpathSync(projectRoot);
+    assert.equal(entry.scope, "project", "scope must be 'project' for consumer project installs");
+    assert.equal(entry.projectPath, expectedProjectRoot, "projectPath must point to the consumer project root");
+    assert.equal(entry.installPath, expectedProjectRoot, "installPath must point to the consumer project root");
+    assert.ok(entry.version, "version must be present");
+    assert.ok(entry.installedAt, "installedAt must be present");
+    assert.ok(entry.lastUpdated, "lastUpdated must be present");
+
+    // Project-level settings must enable the plugin
+    const projectSettingsPath = path.join(projectRoot, ".claude", "settings.json");
+    assert.ok(fs.existsSync(projectSettingsPath), ".claude/settings.json should exist in project root");
+    const projectSettings = JSON.parse(fs.readFileSync(projectSettingsPath, "utf8"));
     assert.equal(
-      entry.installPath,
-      expectedInstallPath,
-      "installPath must point to package root in node_modules, not consumer project root"
+      projectSettings?.enabledPlugins?.["compound-workflow@local"],
+      true,
+      "project settings must enable compound-workflow@local"
     );
   } finally {
     // Restore installed_plugins.json to pre-test state
@@ -274,6 +284,39 @@ test("install registers Claude plugin with installPath pointing to package root 
       fs.writeFileSync(claudeInstalledPath, JSON.stringify(before, null, 2) + "\n", "utf8");
     }
     fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("install appends separate entries for two different projects", () => {
+  const projectA = createTempProject();
+  const projectB = createTempProject();
+  copyMinimalPackageIntoNodeModules(projectA);
+  copyMinimalPackageIntoNodeModules(projectB);
+
+  const claudeInstalledPath = path.join(os.homedir(), ".claude", "plugins", "installed_plugins.json");
+  const before = fs.existsSync(claudeInstalledPath)
+    ? JSON.parse(fs.readFileSync(claudeInstalledPath, "utf8"))
+    : { plugins: {} };
+
+  try {
+    const resultA = runInstallFromConsumerProject(projectA);
+    assert.equal(resultA.status, 0, `installer failed for project A: ${resultA.stderr}\n${resultA.stdout}`);
+
+    const resultB = runInstallFromConsumerProject(projectB);
+    assert.equal(resultB.status, 0, `installer failed for project B: ${resultB.stderr}\n${resultB.stdout}`);
+
+    const after = JSON.parse(fs.readFileSync(claudeInstalledPath, "utf8"));
+    const entries = after?.plugins?.["compound-workflow@local"];
+    assert.ok(Array.isArray(entries), "entries should be an array");
+    assert.equal(entries.length, 2, "should have 2 separate project entries");
+
+    const paths = entries.map((e) => e.projectPath);
+    assert.ok(paths.includes(fs.realpathSync(projectA)), "entries should include projectA path");
+    assert.ok(paths.includes(fs.realpathSync(projectB)), "entries should include projectB path");
+  } finally {
+    fs.writeFileSync(claudeInstalledPath, JSON.stringify(before, null, 2) + "\n", "utf8");
+    fs.rmSync(projectA, { recursive: true, force: true });
+    fs.rmSync(projectB, { recursive: true, force: true });
   }
 });
 

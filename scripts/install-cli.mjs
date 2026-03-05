@@ -449,23 +449,25 @@ function cursorDetected() {
 }
 
 function applyCursorRegistration(targetRoot, dryRun, noRegisterCursor, forceRegister, isSelfInstall) {
-  if (dryRun) return;
-
   const claudePluginsDir = path.join(os.homedir(), ".claude", "plugins");
   const installedPath = path.join(claudePluginsDir, "installed_plugins.json");
   const settingsPath = path.join(os.homedir(), ".claude", "settings.json");
 
-  // installPath must point to the package root so Claude Code resolves
-  // commands/agents/skills paths in .claude-plugin/plugin.json relative to it.
-  const pluginInstallPath = isSelfInstall
-    ? realpathSafe(PACKAGE_ROOT)
-    : realpathSafe(path.join(targetRoot, "node_modules", "compound-workflow"));
+  const pluginVersion = (() => {
+    try {
+      const pkgPath = path.join(PACKAGE_ROOT, "package.json");
+      return JSON.parse(fs.readFileSync(pkgPath, "utf8")).version || "0.0.0";
+    } catch {
+      return "0.0.0";
+    }
+  })();
 
-  const pluginDescriptor = {
-    pluginId: "compound-workflow@local",
-    scope: "user",
-    installPath: pluginInstallPath,
-  };
+  // For self-install (dev), use the package root with user scope.
+  // For consumer projects, use the project root with project scope so each
+  // project gets its own entry and installs don't overwrite each other.
+  const targetRootReal = realpathSafe(isSelfInstall ? PACKAGE_ROOT : targetRoot);
+  const pluginId = "compound-workflow@local";
+  const scope = isSelfInstall ? "user" : "project";
 
   let installed = {};
   if (fs.existsSync(installedPath)) {
@@ -476,7 +478,38 @@ function applyCursorRegistration(targetRoot, dryRun, noRegisterCursor, forceRegi
     }
   }
   const plugins = ensureObject(installed.plugins);
-  plugins[pluginDescriptor.pluginId] = [{ scope: pluginDescriptor.scope || "user", installPath: pluginDescriptor.installPath }];
+  const existingEntries = Array.isArray(plugins[pluginId]) ? plugins[pluginId] : [];
+
+  // Remove legacy scope:"user" entries when switching to project-scope
+  const cleanedEntries = scope === "project"
+    ? existingEntries.filter((e) => e.scope !== "user")
+    : existingEntries;
+
+  // Prune stale entries whose installPath no longer has a plugin manifest on disk
+  const pruned = cleanedEntries.filter((e) => {
+    const manifest = path.join(e.installPath || "", ".claude-plugin", "plugin.json");
+    return fs.existsSync(manifest);
+  });
+
+  // Find existing entry for this project (or user-scope entry for self-install)
+  const matchIndex = pruned.findIndex((e) =>
+    scope === "user" ? e.scope === "user" : e.scope === "project" && e.projectPath === targetRootReal
+  );
+
+  const existingEntry = matchIndex >= 0 ? pruned[matchIndex] : {};
+  const now = new Date().toISOString();
+  const newEntry = {
+    scope,
+    ...(scope === "project" ? { projectPath: targetRootReal } : {}),
+    installPath: targetRootReal,
+    version: pluginVersion,
+    installedAt: existingEntry.installedAt || now,
+    lastUpdated: now,
+  };
+
+  plugins[pluginId] = matchIndex >= 0
+    ? pruned.map((e, i) => (i === matchIndex ? newEntry : e))
+    : [...pruned, newEntry];
   installed.plugins = plugins;
 
   let settings = {};
@@ -487,13 +520,33 @@ function applyCursorRegistration(targetRoot, dryRun, noRegisterCursor, forceRegi
       settings = {};
     }
   }
+  // User-level settings (backward compat)
   settings.enabledPlugins = ensureObject(settings.enabledPlugins);
-  settings.enabledPlugins[pluginDescriptor.pluginId] = true;
+  settings.enabledPlugins[pluginId] = true;
+
+  if (dryRun) {
+    console.log("[dry-run] Would register Claude plugin:", JSON.stringify(newEntry, null, 2));
+    return;
+  }
 
   fs.mkdirSync(claudePluginsDir, { recursive: true });
   fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
   fs.writeFileSync(installedPath, JSON.stringify(installed, null, 2) + "\n", "utf8");
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf8");
+
+  // Project-level settings required for scope:"project" to activate
+  if (!isSelfInstall) {
+    const projectSettingsPath = path.join(targetRoot, ".claude", "settings.json");
+    let projectSettings = {};
+    if (fs.existsSync(projectSettingsPath)) {
+      try { projectSettings = readJsonMaybe(projectSettingsPath) ?? {}; } catch { projectSettings = {}; }
+    }
+    projectSettings.enabledPlugins = ensureObject(projectSettings.enabledPlugins);
+    projectSettings.enabledPlugins[pluginId] = true;
+    fs.mkdirSync(path.join(targetRoot, ".claude"), { recursive: true });
+    fs.writeFileSync(projectSettingsPath, JSON.stringify(projectSettings, null, 2) + "\n", "utf8");
+  }
+
   console.log("Registered compound-workflow with Claude Code. Restart Claude Code; enable 'Include third-party Plugins, Skills, and other configs' in Settings if needed.");
 
   if (noRegisterCursor && !forceRegister) return;
