@@ -351,15 +351,23 @@ function writePluginManifests(targetRoot, dryRun, isSelfInstall) {
   const cursorDir = path.join(targetRoot, ".cursor-plugin");
   const claudeDir = path.join(targetRoot, ".claude-plugin");
 
+  const installPathAbs = realpathSafe(targetRoot);
+  const registrationDescriptor = {
+    pluginId: "compound-workflow@local",
+    scope: "user",
+    installPath: installPathAbs,
+  };
+
   if (dryRun) {
-    console.log("[dry-run] Would write .cursor-plugin/plugin.json, .claude-plugin/plugin.json");
+    console.log("[dry-run] Would write .cursor-plugin/plugin.json, .claude-plugin/plugin.json, .cursor-plugin/registration.json");
     return;
   }
   fs.mkdirSync(cursorDir, { recursive: true });
   fs.mkdirSync(claudeDir, { recursive: true });
   fs.writeFileSync(path.join(cursorDir, "plugin.json"), JSON.stringify(cursorOut, null, 2) + "\n", "utf8");
   fs.writeFileSync(path.join(claudeDir, "plugin.json"), JSON.stringify(claudeOut, null, 2) + "\n", "utf8");
-  console.log("Wrote: .cursor-plugin/plugin.json, .claude-plugin/plugin.json");
+  fs.writeFileSync(path.join(cursorDir, "registration.json"), JSON.stringify(registrationDescriptor, null, 2) + "\n", "utf8");
+  console.log("Wrote: .cursor-plugin/plugin.json, .claude-plugin/plugin.json, .cursor-plugin/registration.json");
 }
 
 /**
@@ -446,17 +454,57 @@ function cursorDetected() {
 }
 
 function applyCursorRegistration(targetRoot, dryRun, noRegisterCursor, forceRegister, isSelfInstall) {
+  const claudePluginsDir = path.join(os.homedir(), ".claude", "plugins");
+  const installedPath = path.join(claudePluginsDir, "installed_plugins.json");
   const settingsPath = path.join(os.homedir(), ".claude", "settings.json");
 
-  const LEGACY_PLUGIN_ID = "compound-workflow@local";
-  const pluginId = "compound-workflow@compound-workflow";
+  const pluginVersion = (() => {
+    try {
+      const pkgPath = path.join(PACKAGE_ROOT, "package.json");
+      return JSON.parse(fs.readFileSync(pkgPath, "utf8")).version || "0.0.0";
+    } catch {
+      return "0.0.0";
+    }
+  })();
 
-  // Marketplace source path:
-  // - Self-install (dev): absolute path to package root
-  // - Consumer projects: relative path from project root to package
-  const marketplacePath = isSelfInstall
-    ? realpathSafe(PACKAGE_ROOT)
-    : "./node_modules/compound-workflow";
+  const targetRootReal = realpathSafe(isSelfInstall ? PACKAGE_ROOT : targetRoot);
+  const pluginId = "compound-workflow@local";
+  const scope = isSelfInstall ? "user" : "project";
+
+  let installed = {};
+  if (fs.existsSync(installedPath)) {
+    try {
+      installed = readJsonMaybe(installedPath) ?? {};
+    } catch {
+      installed = {};
+    }
+  }
+  const plugins = ensureObject(installed.plugins);
+  const existingEntries = Array.isArray(plugins[pluginId]) ? plugins[pluginId] : [];
+  const cleanedEntries = scope === "project"
+    ? existingEntries.filter((e) => e.scope !== "user")
+    : existingEntries;
+  const pruned = cleanedEntries.filter((e) => {
+    const manifest = path.join(e.installPath || "", ".claude-plugin", "plugin.json");
+    return fs.existsSync(manifest);
+  });
+  const matchIndex = pruned.findIndex((e) =>
+    scope === "user" ? e.scope === "user" : e.scope === "project" && e.projectPath === targetRootReal
+  );
+  const existingEntry = matchIndex >= 0 ? pruned[matchIndex] : {};
+  const now = new Date().toISOString();
+  const newEntry = {
+    scope,
+    ...(scope === "project" ? { projectPath: targetRootReal } : {}),
+    installPath: targetRootReal,
+    version: pluginVersion,
+    installedAt: existingEntry.installedAt || now,
+    lastUpdated: now,
+  };
+  plugins[pluginId] = matchIndex >= 0
+    ? pruned.map((e, i) => (i === matchIndex ? newEntry : e))
+    : [...pruned, newEntry];
+  installed.plugins = plugins;
 
   let settings = {};
   if (fs.existsSync(settingsPath)) {
@@ -466,50 +514,32 @@ function applyCursorRegistration(targetRoot, dryRun, noRegisterCursor, forceRegi
       settings = {};
     }
   }
-  // Clean up legacy @local entry and register with correct plugin ID
   settings.enabledPlugins = ensureObject(settings.enabledPlugins);
-  delete settings.enabledPlugins[LEGACY_PLUGIN_ID];
   settings.enabledPlugins[pluginId] = true;
 
   if (dryRun) {
-    console.log("[dry-run] Would register Claude plugin via extraKnownMarketplaces with id:", pluginId);
+    console.log("[dry-run] Would register Claude plugin:", JSON.stringify(newEntry, null, 2));
     return;
   }
 
+  fs.mkdirSync(claudePluginsDir, { recursive: true });
   fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+  fs.writeFileSync(installedPath, JSON.stringify(installed, null, 2) + "\n", "utf8");
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf8");
 
-  // Project-level settings: register local marketplace and enable plugin
   if (!isSelfInstall) {
     const projectSettingsPath = path.join(targetRoot, ".claude", "settings.json");
     let projectSettings = {};
     if (fs.existsSync(projectSettingsPath)) {
       try { projectSettings = readJsonMaybe(projectSettingsPath) ?? {}; } catch { projectSettings = {}; }
     }
-    // Clean up legacy @local entry
     projectSettings.enabledPlugins = ensureObject(projectSettings.enabledPlugins);
-    delete projectSettings.enabledPlugins[LEGACY_PLUGIN_ID];
     projectSettings.enabledPlugins[pluginId] = true;
-    // Register the package as a local marketplace so Claude Code resolves compound-workflow@compound-workflow
-    projectSettings.extraKnownMarketplaces = ensureObject(projectSettings.extraKnownMarketplaces);
-    projectSettings.extraKnownMarketplaces["compound-workflow"] = {
-      source: {
-        source: "local",
-        path: marketplacePath,
-      },
-    };
+    if (projectSettings.extraKnownMarketplaces?.["compound-workflow"]) {
+      delete projectSettings.extraKnownMarketplaces["compound-workflow"];
+    }
     fs.mkdirSync(path.join(targetRoot, ".claude"), { recursive: true });
     fs.writeFileSync(projectSettingsPath, JSON.stringify(projectSettings, null, 2) + "\n", "utf8");
-  } else {
-    // Self-install: register marketplace at user level with absolute path
-    settings.extraKnownMarketplaces = ensureObject(settings.extraKnownMarketplaces);
-    settings.extraKnownMarketplaces["compound-workflow"] = {
-      source: {
-        source: "local",
-        path: marketplacePath,
-      },
-    };
-    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf8");
   }
 
   console.log("Registered compound-workflow with Claude Code. Restart Claude Code; enable 'Include third-party Plugins, Skills, and other configs' in Settings if needed.");
@@ -520,9 +550,8 @@ function applyCursorRegistration(targetRoot, dryRun, noRegisterCursor, forceRegi
     console.log("[cursor] Cursor not detected; skipped Cursor plugin registration. Use --register-cursor to force.");
     return;
   }
-
-  const cursorPluginPath = path.join(targetRoot, ".cursor-plugin", "plugin.json");
-  if (!fs.existsSync(cursorPluginPath)) return;
+  const registrationPath = path.join(targetRoot, ".cursor-plugin", "registration.json");
+  if (!fs.existsSync(registrationPath)) return;
   console.log("Registered compound-workflow with Cursor. Restart Cursor; enable 'Include third-party Plugins, Skills, and other configs' in Settings if needed.");
 }
 

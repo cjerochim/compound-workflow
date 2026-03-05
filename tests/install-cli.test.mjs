@@ -116,7 +116,7 @@ test("install writes native OpenCode mappings and does not create runtime mirror
     );
     const cursorPlugin = JSON.parse(fs.readFileSync(path.join(projectRoot, ".cursor-plugin", "plugin.json"), "utf8"));
     assert.equal(cursorPlugin.commands, "./node_modules/compound-workflow/src/.agents/commands", "project-root plugin manifest should point at node_modules");
-    assert.equal(fs.existsSync(path.join(projectRoot, ".cursor-plugin", "registration.json")), false, "registration.json should not be written (deprecated)");
+    assert.ok(fs.existsSync(path.join(projectRoot, ".cursor-plugin", "registration.json")), "registration.json should be written for Cursor discovery");
   } finally {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }
@@ -253,7 +253,7 @@ test("install from consumer project (package in node_modules) reads manifest and
   }
 });
 
-test("install registers Claude plugin via extraKnownMarketplaces in project settings", () => {
+test("install registers Claude plugin via installed_plugins.json and enabledPlugins (compound-workflow@local)", () => {
   const projectRoot = createTempProject();
   copyMinimalPackageIntoNodeModules(projectRoot);
 
@@ -261,37 +261,64 @@ test("install registers Claude plugin via extraKnownMarketplaces in project sett
     const result = runInstallFromConsumerProject(projectRoot);
     assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
 
-    // Project-level settings must register local marketplace and enable plugin with correct ID
     const projectSettingsPath = path.join(projectRoot, ".claude", "settings.json");
     assert.ok(fs.existsSync(projectSettingsPath), ".claude/settings.json should exist in project root");
     const projectSettings = JSON.parse(fs.readFileSync(projectSettingsPath, "utf8"));
 
     assert.equal(
-      projectSettings?.enabledPlugins?.["compound-workflow@compound-workflow"],
-      true,
-      "project settings must enable compound-workflow@compound-workflow"
-    );
-    assert.equal(
       projectSettings?.enabledPlugins?.["compound-workflow@local"],
+      true,
+      "project settings must enable compound-workflow@local"
+    );
+    assert.equal(
+      projectSettings?.extraKnownMarketplaces?.["compound-workflow"],
       undefined,
-      "project settings must not contain legacy compound-workflow@local"
+      "install must not write compound-workflow to extraKnownMarketplaces (invalid schema)"
     );
-    assert.equal(
-      projectSettings?.extraKnownMarketplaces?.["compound-workflow"]?.source?.source,
-      "local",
-      "extraKnownMarketplaces must have local source for compound-workflow"
-    );
-    assert.equal(
-      projectSettings?.extraKnownMarketplaces?.["compound-workflow"]?.source?.path,
-      "./node_modules/compound-workflow",
-      "extraKnownMarketplaces path must point to node_modules/compound-workflow"
-    );
+
+    const installedPath = path.join(os.homedir(), ".claude", "plugins", "installed_plugins.json");
+    assert.ok(fs.existsSync(installedPath), "installed_plugins.json should exist");
+    const installed = JSON.parse(fs.readFileSync(installedPath, "utf8"));
+    const entries = installed?.plugins?.["compound-workflow@local"];
+    assert.ok(Array.isArray(entries) && entries.length > 0, "compound-workflow@local should have at least one entry");
+    assert.equal(entries.some((e) => e.scope === "project" && e.projectPath), true, "should have project-scope entry");
   } finally {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }
 });
 
-test("install writes independent extraKnownMarketplaces for two different projects", () => {
+test("install strips invalid compound-workflow extraKnownMarketplaces from existing .claude/settings.json", () => {
+  const projectRoot = createTempProject();
+  copyMinimalPackageIntoNodeModules(projectRoot);
+  const claudeDir = path.join(projectRoot, ".claude");
+  const settingsPath = path.join(claudeDir, "settings.json");
+  fs.mkdirSync(claudeDir, { recursive: true });
+  fs.writeFileSync(
+    settingsPath,
+    JSON.stringify(
+      {
+        extraKnownMarketplaces: {
+          "compound-workflow": { source: { source: "local", path: "./node_modules/compound-workflow" } },
+        },
+      },
+      null,
+      2
+    ) + "\n",
+    "utf8"
+  );
+
+  try {
+    const result = runInstallFromConsumerProject(projectRoot);
+    assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
+    const projectSettings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+    assert.equal(projectSettings?.extraKnownMarketplaces?.["compound-workflow"], undefined, "install must remove invalid compound-workflow extraKnownMarketplaces entry");
+    assert.equal(projectSettings?.enabledPlugins?.["compound-workflow@local"], true, "enabledPlugins must be set (compound-workflow@local)");
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("install writes independent .claude/settings.json for two different projects", () => {
   const projectA = createTempProject();
   const projectB = createTempProject();
   copyMinimalPackageIntoNodeModules(projectA);
@@ -304,14 +331,11 @@ test("install writes independent extraKnownMarketplaces for two different projec
     const resultB = runInstallFromConsumerProject(projectB);
     assert.equal(resultB.status, 0, `installer failed for project B: ${resultB.stderr}\n${resultB.stdout}`);
 
-    // Each project should have its own independent .claude/settings.json with marketplace registration
     const settingsA = JSON.parse(fs.readFileSync(path.join(projectA, ".claude", "settings.json"), "utf8"));
     const settingsB = JSON.parse(fs.readFileSync(path.join(projectB, ".claude", "settings.json"), "utf8"));
 
-    assert.equal(settingsA?.extraKnownMarketplaces?.["compound-workflow"]?.source?.source, "local", "project A should have local marketplace");
-    assert.equal(settingsB?.extraKnownMarketplaces?.["compound-workflow"]?.source?.source, "local", "project B should have local marketplace");
-    assert.equal(settingsA?.enabledPlugins?.["compound-workflow@compound-workflow"], true, "project A must enable plugin");
-    assert.equal(settingsB?.enabledPlugins?.["compound-workflow@compound-workflow"], true, "project B must enable plugin");
+    assert.equal(settingsA?.enabledPlugins?.["compound-workflow@local"], true, "project A must enable plugin");
+    assert.equal(settingsB?.enabledPlugins?.["compound-workflow@local"], true, "project B must enable plugin");
   } finally {
     fs.rmSync(projectA, { recursive: true, force: true });
     fs.rmSync(projectB, { recursive: true, force: true });
