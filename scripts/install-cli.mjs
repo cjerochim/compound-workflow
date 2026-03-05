@@ -329,7 +329,7 @@ function ensureDirs(targetRoot, dryRun) {
 }
 
 function writePluginManifests(targetRoot, dryRun, isSelfInstall) {
-  const pathsBase = isSelfInstall ? "src/.agents" : "node_modules/compound-workflow/src/.agents";
+  const pathsBase = isSelfInstall ? "./src/.agents" : "./node_modules/compound-workflow/src/.agents";
   const pathOverrides = {
     commands: `${pathsBase}/commands`,
     agents: `${pathsBase}/agents`,
