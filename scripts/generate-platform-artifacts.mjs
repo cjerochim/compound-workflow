@@ -161,7 +161,7 @@ function main() {
     license: pkg.license,
     repository: repositoryUrl,
     commands: "./src/.agents/commands",
-    agents: "./src/.agents/agents",
+    agents: ["./src/.agents/agents"],
     skills: "./src/.agents/skills",
   };
 

@@ -16,6 +16,8 @@
   "license": "MIT",
   "repository": "https://github.com/cjerochim/compound-workflow",
   "commands": "./src/.agents/commands",
-  "agents": "./src/.agents/agents",
+  "agents": [
+    "./src/.agents/agents"
+  ],
   "skills": "./src/.agents/skills"
 }

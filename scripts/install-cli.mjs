@@ -347,7 +347,8 @@ function writePluginManifests(targetRoot, dryRun, isSelfInstall) {
   if (!cursorManifest || !claudeManifest) return;
 
   const cursorOut = { ...cursorManifest, ...pathOverrides };
-  const claudeOut = { ...claudeManifest, ...pathOverrides };
+  // Claude Code validator requires agents as array; Cursor uses string (unchanged).
+  const claudeOut = { ...claudeManifest, ...pathOverrides, agents: [`${pathsBase}/agents`] };
   const cursorDir = path.join(targetRoot, ".cursor-plugin");
   const claudeDir = path.join(targetRoot, ".claude-plugin");
 
