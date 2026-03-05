@@ -552,16 +552,21 @@ function applyCursorRegistration(targetRoot, dryRun, noRegisterCursor, forceRegi
     }
     projectSettings.enabledPlugins = ensureObject(projectSettings.enabledPlugins);
     projectSettings.enabledPlugins[pluginId] = true;
+    // Remove invalid "local" entry if present; then register local marketplace via "file" so it appears without slash commands
     if (projectSettings.extraKnownMarketplaces?.["compound-workflow"]) {
       delete projectSettings.extraKnownMarketplaces["compound-workflow"];
     }
+    projectSettings.extraKnownMarketplaces = ensureObject(projectSettings.extraKnownMarketplaces);
+    projectSettings.extraKnownMarketplaces["compound-workflow-local"] = {
+      source: { source: "file", path: ".claude-plugin/marketplace.json" },
+    };
     fs.mkdirSync(path.join(targetRoot, ".claude"), { recursive: true });
     fs.writeFileSync(projectSettingsPath, JSON.stringify(projectSettings, null, 2) + "\n", "utf8");
   }
 
   console.log("Registered compound-workflow with Claude Code.");
   if (!isSelfInstall) {
-    console.log("  Claude Code 2.1+: run in this project: /plugin marketplace add . then /plugin install compound-workflow@compound-workflow-local");
+    console.log("  Claude Code 2.1+: open /plugin, go to Discover; install 'compound-workflow' from marketplace 'compound-workflow-local', or run: claude --plugin-dir ./node_modules/compound-workflow");
   }
   console.log("  Restart Claude Code; enable 'Include third-party Plugins, Skills, and other configs' in Settings if needed.");
 

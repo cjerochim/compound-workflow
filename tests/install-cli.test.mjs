@@ -273,7 +273,12 @@ test("install registers Claude plugin via installed_plugins.json and enabledPlug
     assert.equal(
       projectSettings?.extraKnownMarketplaces?.["compound-workflow"],
       undefined,
-      "install must not write compound-workflow to extraKnownMarketplaces (invalid schema)"
+      "install must not write legacy compound-workflow entry (invalid local schema)"
+    );
+    assert.deepEqual(
+      projectSettings?.extraKnownMarketplaces?.["compound-workflow-local"],
+      { source: { source: "file", path: ".claude-plugin/marketplace.json" } },
+      "install must register compound-workflow-local marketplace via file source"
     );
 
     const installedPath = path.join(os.homedir(), ".claude", "plugins", "installed_plugins.json");
@@ -311,7 +316,8 @@ test("install strips invalid compound-workflow extraKnownMarketplaces from exist
     const result = runInstallFromConsumerProject(projectRoot);
     assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
     const projectSettings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
-    assert.equal(projectSettings?.extraKnownMarketplaces?.["compound-workflow"], undefined, "install must remove invalid compound-workflow extraKnownMarketplaces entry");
+    assert.equal(projectSettings?.extraKnownMarketplaces?.["compound-workflow"], undefined, "install must remove invalid compound-workflow entry");
+    assert.ok(projectSettings?.extraKnownMarketplaces?.["compound-workflow-local"]?.source?.source === "file", "install must add compound-workflow-local via file");
     assert.equal(projectSettings?.enabledPlugins?.["compound-workflow@local"], true, "enabledPlugins must be set (compound-workflow@local)");
   } finally {
     fs.rmSync(projectRoot, { recursive: true, force: true });
