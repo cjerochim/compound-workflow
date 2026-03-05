@@ -1,6 +1,6 @@
 {
   "name": "compound-workflow",
-  "version": "1.6.8",
+  "version": "1.6.9",
   "description": "Clarify -> plan -> execute -> verify -> capture workflow for Cursor",
   "author": {
     "name": "Compound Workflow"
