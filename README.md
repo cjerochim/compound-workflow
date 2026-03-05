@@ -1,4 +1,4 @@
-# Compound Workflow
+## Compound Workflow
 
 Compound Workflow is a portable, command-first system for shipping software with less ambiguity and stronger verification.
 It follows a simple cycle: **clarify -> plan -> execute -> verify -> capture**.
