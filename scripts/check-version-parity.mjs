@@ -19,12 +19,18 @@ const claudePlugin = JSON.parse(
 );
 
 const expected = pkg.version;
-if (cursorPlugin.version !== expected || claudePlugin.version !== expected) {
+
+// Claude Code's plugin.json is intentionally minimal (see scripts/generate-platform-artifacts.mjs)
+// and may not include a version field. When absent, treat it as not applicable.
+const claudeVersion = claudePlugin.version;
+const claudeOk = claudeVersion == null || claudeVersion === expected;
+
+if (cursorPlugin.version !== expected || !claudeOk) {
   console.error(
     "Version mismatch: package.json=%s, .cursor-plugin/plugin.json=%s, .claude-plugin/plugin.json=%s",
     expected,
     cursorPlugin.version,
-    claudePlugin.version
+    claudeVersion
   );
   process.exit(1);
 }
