@@ -31,3 +31,6 @@ coverage/
 # Cursor (local plans, install-created .cursor/skills; local plugin registration)
 .cursor/
 .cursor-plugin/registration.json
+
+# Claude Code (generated plugin file)
+.claude-plugin/plugin.json
