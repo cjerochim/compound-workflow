@@ -253,7 +253,7 @@ test("install from consumer project (package in node_modules) reads manifest and
   }
 });
 
-test("install registers Claude plugin via installed_plugins.json and enabledPlugins (compound-workflow@local)", () => {
+test("install registers Claude plugin via project settings and marketplace (not installed_plugins.json)", () => {
   const projectRoot = createTempProject();
   copyMinimalPackageIntoNodeModules(projectRoot);
 
@@ -281,12 +281,18 @@ test("install registers Claude plugin via installed_plugins.json and enabledPlug
       "install must register compound-workflow-local marketplace via file source"
     );
 
+    // For project installs, the script must NOT write to ~/.claude/plugins/installed_plugins.json.
+    // Claude Code manages that file itself via the marketplace flow; manual writes cause
+    // "unregistered local marketplace" startup errors (version resolves to "unknown/" in cache).
     const installedPath = path.join(os.homedir(), ".claude", "plugins", "installed_plugins.json");
-    assert.ok(fs.existsSync(installedPath), "installed_plugins.json should exist");
-    const installed = JSON.parse(fs.readFileSync(installedPath, "utf8"));
-    const entries = installed?.plugins?.["compound-workflow@local"];
-    assert.ok(Array.isArray(entries) && entries.length > 0, "compound-workflow@local should have at least one entry");
-    assert.equal(entries.some((e) => e.scope === "project" && e.projectPath), true, "should have project-scope entry");
+    if (fs.existsSync(installedPath)) {
+      const installed = JSON.parse(fs.readFileSync(installedPath, "utf8"));
+      const entries = installed?.plugins?.["compound-workflow@local"];
+      assert.ok(
+        !Array.isArray(entries) || !entries.some((e) => e.scope === "project"),
+        "install must NOT write a project-scope entry to user-level installed_plugins.json"
+      );
+    }
   } finally {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }

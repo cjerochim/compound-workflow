@@ -335,20 +335,26 @@ function ensureDirs(targetRoot, dryRun) {
  */
 function writePluginManifests(targetRoot, dryRun, isSelfInstall) {
   const pathsBase = isSelfInstall ? "./src/.agents" : "./node_modules/compound-workflow/src/.agents";
-  const pathOverrides = {
-    commands: `${pathsBase}/commands`,
-    agents: `${pathsBase}/agents`,
-    skills: `${pathsBase}/skills`,
-  };
   const cursorSrc = path.join(PACKAGE_ROOT, ".cursor-plugin", "plugin.json");
   const claudeSrc = path.join(PACKAGE_ROOT, ".claude-plugin", "plugin.json");
   const cursorManifest = readJsonMaybe(cursorSrc);
   const claudeManifest = readJsonMaybe(claudeSrc);
   if (!cursorManifest || !claudeManifest) return;
 
-  const cursorOut = { ...cursorManifest, ...pathOverrides };
-  // Claude Code validator requires agents as array; Cursor uses string (unchanged).
-  const claudeOut = { ...claudeManifest, ...pathOverrides, agents: [`${pathsBase}/agents`] };
+  // Cursor supports full manifest with commands/agents/skills path overrides.
+  const cursorOut = {
+    ...cursorManifest,
+    commands: `${pathsBase}/commands`,
+    agents: `${pathsBase}/agents`,
+    skills: `${pathsBase}/skills`,
+  };
+  // Claude Code only accepts name, description, author in plugin.json.
+  // Agents are discovered from the adjacent agents/ directory (flat .md files).
+  const claudeOut = {
+    name: claudeManifest.name,
+    description: claudeManifest.description,
+    author: claudeManifest.author,
+  };
   const cursorDir = path.join(targetRoot, ".cursor-plugin");
   const claudeDir = path.join(targetRoot, ".claude-plugin");
 
@@ -368,6 +374,37 @@ function writePluginManifests(targetRoot, dryRun, isSelfInstall) {
   fs.writeFileSync(path.join(cursorDir, "plugin.json"), JSON.stringify(cursorOut, null, 2) + "\n", "utf8");
   fs.writeFileSync(path.join(claudeDir, "plugin.json"), JSON.stringify(claudeOut, null, 2) + "\n", "utf8");
   fs.writeFileSync(path.join(cursorDir, "registration.json"), JSON.stringify(registrationDescriptor, null, 2) + "\n", "utf8");
+
+  // Sync flat agent symlinks into .claude-plugin/agents/ so Claude Code discovers them.
+  // Claude Code only scans the root of the agents/ directory (not subdirectories).
+  const claudeAgentsDir = path.join(claudeDir, "agents");
+  const packageAgentsDirAbs = isSelfInstall
+    ? path.join(PACKAGE_ROOT, "src", ".agents", "agents")
+    : path.join(targetRoot, "node_modules", "compound-workflow", "src", ".agents", "agents");
+  if (fs.existsSync(packageAgentsDirAbs)) {
+    fs.mkdirSync(claudeAgentsDir, { recursive: true });
+    const agentBasenames = new Set(GENERATED_MANIFEST.agents.map((a) => path.basename(a.rel)));
+    // Prune stale symlinks
+    try {
+      for (const entry of fs.readdirSync(claudeAgentsDir, { withFileTypes: true })) {
+        if (!agentBasenames.has(entry.name)) {
+          fs.rmSync(path.join(claudeAgentsDir, entry.name), { force: true });
+        }
+      }
+    } catch { /* ignore */ }
+    for (const agent of GENERATED_MANIFEST.agents) {
+      const linkPath = path.join(claudeAgentsDir, path.basename(agent.rel));
+      const targetPath = path.join(packageAgentsDirAbs, agent.rel);
+      try {
+        if (fs.lstatSync(linkPath)) fs.rmSync(linkPath, { force: true });
+      } catch { /* doesn't exist */ }
+      try {
+        fs.symlinkSync(targetPath, linkPath);
+      } catch (err) {
+        console.warn("[claude] Could not symlink agent", agent.id, err.message);
+      }
+    }
+  }
 
   // Claude Code 2.1.x+ no longer loads from installed_plugins.json; it requires marketplace flow.
   // Write a project-level marketplace so user can: /plugin marketplace add . then /plugin install compound-workflow@compound-workflow-local
@@ -485,87 +522,56 @@ function applyCursorRegistration(targetRoot, dryRun, noRegisterCursor, forceRegi
     }
   })();
 
-  const targetRootReal = realpathSafe(isSelfInstall ? PACKAGE_ROOT : targetRoot);
+  const projectRoot = isSelfInstall ? PACKAGE_ROOT : targetRoot;
   const pluginId = "compound-workflow@local";
-  const scope = isSelfInstall ? "user" : "project";
-
-  let installed = {};
-  if (fs.existsSync(installedPath)) {
-    try {
-      installed = readJsonMaybe(installedPath) ?? {};
-    } catch {
-      installed = {};
-    }
-  }
-  const plugins = ensureObject(installed.plugins);
-  const existingEntries = Array.isArray(plugins[pluginId]) ? plugins[pluginId] : [];
-  const cleanedEntries = scope === "project"
-    ? existingEntries.filter((e) => e.scope !== "user")
-    : existingEntries;
-  const pruned = cleanedEntries.filter((e) => {
-    const manifest = path.join(e.installPath || "", ".claude-plugin", "plugin.json");
-    return fs.existsSync(manifest);
-  });
-  const matchIndex = pruned.findIndex((e) =>
-    scope === "user" ? e.scope === "user" : e.scope === "project" && e.projectPath === targetRootReal
-  );
-  const existingEntry = matchIndex >= 0 ? pruned[matchIndex] : {};
-  const now = new Date().toISOString();
-  const newEntry = {
-    scope,
-    ...(scope === "project" ? { projectPath: targetRootReal } : {}),
-    installPath: targetRootReal,
-    version: pluginVersion,
-    installedAt: existingEntry.installedAt || now,
-    lastUpdated: now,
-  };
-  plugins[pluginId] = matchIndex >= 0
-    ? pruned.map((e, i) => (i === matchIndex ? newEntry : e))
-    : [...pruned, newEntry];
-  installed.plugins = plugins;
-
-  let settings = {};
-  if (fs.existsSync(settingsPath)) {
-    try {
-      settings = readJsonMaybe(settingsPath) ?? {};
-    } catch {
-      settings = {};
-    }
-  }
-  settings.enabledPlugins = ensureObject(settings.enabledPlugins);
-  settings.enabledPlugins[pluginId] = true;
 
   if (dryRun) {
-    console.log("[dry-run] Would register Claude plugin:", JSON.stringify(newEntry, null, 2));
+    console.log("[dry-run] Would register Claude plugin (project-scoped) at:", projectRoot);
     return;
   }
 
-  fs.mkdirSync(claudePluginsDir, { recursive: true });
-  fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
-  fs.writeFileSync(installedPath, JSON.stringify(installed, null, 2) + "\n", "utf8");
-  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf8");
+  // Registration is always project-scoped: write only to <project>/.claude/settings.json.
+  // Claude Code manages ~/.claude/plugins/installed_plugins.json itself via marketplace flow;
+  // writing to user-level files causes "unregistered local marketplace" errors on startup.
+  const projectSettingsPath = path.join(projectRoot, ".claude", "settings.json");
+  let projectSettings = {};
+  if (fs.existsSync(projectSettingsPath)) {
+    try { projectSettings = readJsonMaybe(projectSettingsPath) ?? {}; } catch { projectSettings = {}; }
+  }
+  projectSettings.enabledPlugins = ensureObject(projectSettings.enabledPlugins);
+  projectSettings.enabledPlugins[pluginId] = true;
+  // Remove stale/invalid marketplace keys left by earlier install methods
+  if (projectSettings.extraKnownMarketplaces?.["compound-workflow"]) {
+    delete projectSettings.extraKnownMarketplaces["compound-workflow"];
+  }
+  projectSettings.extraKnownMarketplaces = ensureObject(projectSettings.extraKnownMarketplaces);
+  projectSettings.extraKnownMarketplaces["compound-workflow-local"] = {
+    source: { source: "file", path: ".claude-plugin/marketplace.json" },
+  };
+  fs.mkdirSync(path.join(projectRoot, ".claude"), { recursive: true });
+  fs.writeFileSync(projectSettingsPath, JSON.stringify(projectSettings, null, 2) + "\n", "utf8");
 
-  if (!isSelfInstall) {
-    const projectSettingsPath = path.join(targetRoot, ".claude", "settings.json");
-    let projectSettings = {};
-    if (fs.existsSync(projectSettingsPath)) {
-      try { projectSettings = readJsonMaybe(projectSettingsPath) ?? {}; } catch { projectSettings = {}; }
-    }
-    projectSettings.enabledPlugins = ensureObject(projectSettings.enabledPlugins);
-    projectSettings.enabledPlugins[pluginId] = true;
-    // Remove invalid "local" entry if present; then register local marketplace via "file" so it appears without slash commands
-    if (projectSettings.extraKnownMarketplaces?.["compound-workflow"]) {
-      delete projectSettings.extraKnownMarketplaces["compound-workflow"];
-    }
-    projectSettings.extraKnownMarketplaces = ensureObject(projectSettings.extraKnownMarketplaces);
-    projectSettings.extraKnownMarketplaces["compound-workflow-local"] = {
-      source: { source: "file", path: ".claude-plugin/marketplace.json" },
-    };
-    fs.mkdirSync(path.join(targetRoot, ".claude"), { recursive: true });
-    fs.writeFileSync(projectSettingsPath, JSON.stringify(projectSettings, null, 2) + "\n", "utf8");
+  // Clean up any stale user-level enabledPlugins entries left by previous install versions.
+  // These cause "unregistered local marketplace" errors on every Claude Code startup.
+  if (fs.existsSync(settingsPath)) {
+    try {
+      let userSettings = readJsonMaybe(settingsPath) ?? {};
+      const staleIds = ["compound-workflow@local", "compound-workflow@compound-workflow-local"];
+      let changed = false;
+      for (const id of staleIds) {
+        if (userSettings?.enabledPlugins?.[id] !== undefined) {
+          delete userSettings.enabledPlugins[id];
+          changed = true;
+        }
+      }
+      if (changed) {
+        fs.writeFileSync(settingsPath, JSON.stringify(userSettings, null, 2) + "\n", "utf8");
+        console.log("Cleaned up stale compound-workflow entries from ~/.claude/settings.json");
+      }
+    } catch { /* ignore */ }
   }
 
-  console.log("Registered compound-workflow with Claude Code.");
+  console.log("Registered compound-workflow with Claude Code (project-scoped).");
   if (!isSelfInstall) {
     console.log("  Claude Code 2.1+: open /plugin, go to Discover; install 'compound-workflow' from marketplace 'compound-workflow-local', or run: claude --plugin-dir ./node_modules/compound-workflow");
   }

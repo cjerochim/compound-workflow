@@ -152,17 +152,12 @@ function main() {
   const agentRoot = roots.agents || "node_modules/compound-workflow/src/.agents/agents";
   const skillsPath = roots.skills || "node_modules/compound-workflow/src/.agents/skills";
 
+  // Claude Code only accepts name, description, author in plugin.json.
+  // Agents are discovered from the adjacent agents/ directory (must be flat .md files).
   const claudePlugin = {
     name: pkg.name,
-    version: pkg.version,
     description: "Clarify -> plan -> execute -> verify -> capture workflow: commands, skills, and agents for Claude Code",
     author: { name: "Compound Workflow" },
-    keywords: ["workflow", "planning", "agents", "skills", "commands", "claude"],
-    license: pkg.license,
-    repository: repositoryUrl,
-    commands: "./src/.agents/commands",
-    agents: ["./src/.agents/agents"],
-    skills: "./src/.agents/skills",
   };
 
   const cursorPlugin = {
@@ -190,6 +185,36 @@ function main() {
   writeJson(path.join(repoRoot, ".claude-plugin", "plugin.json"), claudePlugin, checkOnly, changed);
   writeJson(path.join(repoRoot, ".cursor-plugin", "plugin.json"), cursorPlugin, checkOnly, changed);
   writeJson(path.join(repoRoot, "src", "generated", "opencode.managed.json"), openCodeManaged, checkOnly, changed);
+
+  // Generate flat agent symlinks in .claude-plugin/agents/ so Claude Code discovers them.
+  // Claude Code only scans the root of the agents/ directory (not subdirectories).
+  const claudeAgentsDir = path.join(repoRoot, ".claude-plugin", "agents");
+  const agentsDirAbs = path.join(agentsRoot, "agents");
+  if (!checkOnly) {
+    fs.mkdirSync(claudeAgentsDir, { recursive: true });
+    // Prune stale symlinks no longer in the agent list
+    const agentBasenames = new Set(agents.map((a) => path.basename(a.rel)));
+    if (fs.existsSync(claudeAgentsDir)) {
+      for (const entry of fs.readdirSync(claudeAgentsDir, { withFileTypes: true })) {
+        if (!agentBasenames.has(entry.name)) {
+          fs.rmSync(path.join(claudeAgentsDir, entry.name), { force: true });
+        }
+      }
+    }
+    for (const agent of agents) {
+      const linkPath = path.join(claudeAgentsDir, path.basename(agent.rel));
+      const targetPath = path.relative(claudeAgentsDir, path.join(agentsDirAbs, agent.rel));
+      try {
+        if (fs.existsSync(linkPath) || fs.lstatSync(linkPath).isSymbolicLink()) {
+          fs.rmSync(linkPath, { force: true });
+        }
+      } catch { /* doesn't exist */ }
+      fs.symlinkSync(targetPath, linkPath);
+    }
+    if (agents.length) {
+      console.log(`Synced ${agents.length} agent symlinks to .claude-plugin/agents/`);
+    }
+  }
 
   if (checkOnly && changed.length) {
     console.error("Generated artifacts are stale:");
