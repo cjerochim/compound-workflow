@@ -361,6 +361,105 @@ The input must be a plan file path.
 
    Trigger: you cannot proceed safely due to ambiguity, missing info, failing approach, or environment/tooling issue.
 
+   **Stuck Guard (auto-research pre-step)**
+
+   When the Blocker Protocol triggers, evaluate whether the guard should fire:
+
+   **Trigger 1 — Unknown territory:** The agent explicitly cannot identify a clear next step after consulting available context and codebase patterns. Requires agent self-declaration (e.g. "required API behavior is not in context," "no codebase pattern exists for this operation").
+
+   **Trigger 2 — Repeated failures:** ≥2 distinct failed approaches on the same todo step, OR ≥3 total failures on the same todo regardless of step or approach variety. Failure = a test, lint, type, or runtime check produces an error the agent cannot resolve within one further attempt.
+
+   **Guard suppression:** The Stuck Guard MUST NOT fire for todos tagged `tags: [spike]`. If a Spike is inconclusive, surface through standard Spike completion flow.
+
+   **When guard fires (steps 1–10, mandatory order):**
+
+   1. Guard trigger detected (unknown_territory OR repeated_failure)
+   2. Announce to user: "Pausing to investigate..."
+   3. **Immediately** transition todo: `ready` → `pending + tags: [blocker]`
+   4. Add placeholder Work Log entry: `"Stuck Guard triggered. Investigation in progress. [stuck_type]. [timestamp]. Partial changes may exist — review working directory before resuming."`
+   5. Dispatch sub-agents in **parallel**:
+      - **Mandatory (always):** `Task repo-research-analyst(<context>)`, `Task learnings-researcher(<context>)`
+      - **Conditional (by signal, not discretion):**
+        - If failure mentions external library/package/API → add `Task framework-docs-researcher(<context>)`
+        - If stuck on approach/pattern/architecture choice → add `Task best-practices-researcher(<context>)`
+        - If modifying existing code (not creating new) → add `Task git-history-analyzer(<context>)`
+   6. Collect findings (single-pass; no recursive guard firing)
+   7. Synthesize enriched output (format below)
+   8. Update Work Log `Blocker Decision` section with full enriched output
+   9. Present decision prompt to user
+   10. After user decision: apply existing Blocker Protocol after-decision steps (convert to todos; triage re-approval before returning to `ready`)
+
+   **Context payload for each sub-agent:**
+   ```
+   {
+     todo_title: <title>,
+     todo_description: <problem statement>,
+     stuck_type: "unknown_territory" | "repeated_failure",
+     failure_description: <specific error/blocker>,
+     working_directory: <worktree path>
+   }
+   ```
+
+   **Fallback when Task dispatch unavailable:** Announce: "Research sub-agents unavailable — proceeding with agent-reasoned options only." Produce standard Blocker output (no enrichment). Do NOT silently present unresearched options as researched.
+
+   **Enriched output format (replaces standard Blocker output):**
+
+   ```markdown
+   ## Stuck Guard Triggered
+
+   **Detected:** [unknown_territory | repeated_failure]
+   **Investigating...** Launching: repo-research-analyst, learnings-researcher[, framework-docs-researcher][, best-practices-researcher][, git-history-analyzer]
+
+   ---
+
+   ## Research Findings
+
+   - **repo-research-analyst:** [2–5 sentence summary, or "no findings returned"]
+   - **learnings-researcher:** [2–5 sentence summary, or "no findings returned"]
+   - **framework-docs-researcher:** [2–5 sentence summary, or "not invoked" | "no findings returned"]
+   - **best-practices-researcher:** [2–5 sentence summary, or "not invoked" | "no findings returned"]
+   - **git-history-analyzer:** [2–5 sentence summary, or "not invoked" | "no findings returned"]
+
+   **Synthesis confidence:** `high` | `medium` | `low` (low when all agents return empty)
+
+   ---
+
+   ## Blocker Summary
+
+   [1–2 sentences describing what blocked execution]
+
+   ## Constraints Discovered
+
+   - [constraint 1]
+   - [constraint 2]
+
+   ## Options
+
+   **Option 1: [Name]** *(source: [agent name(s)] | agent-reasoned)*
+   - Pros: ...
+   - Cons: ...
+   - Risk: ...
+   - Effort: ...
+
+   **Option 2: [Name]** *(source: [agent name(s)] | agent-reasoned)*
+   - ...
+
+   **Option 3: [Name]** *(source: [agent name(s)] | agent-reasoned)*
+   - ...
+
+   ## Recommendation
+
+   [One option + 2–4 bullets citing research findings]
+
+   ---
+
+   *Which option should we take?*
+   ```
+
+   **When findings are empty:** Produce ≥3 options marked `*(agent-reasoned — research returned no findings)*`. Set synthesis confidence to `low`. Do not fabricate citations.
+
+   **When a Spike is recommended:** Use standard Spike Candidate format from Spike Protocol (Initial priority, Depends on, Unblocks, Timebox, Deliverable, Parallelizable metadata).
+
    Rules:
    - Pause implementation. Do not “push through” with guesses.
    - Timebox investigation to reach options (not a full rewrite).
