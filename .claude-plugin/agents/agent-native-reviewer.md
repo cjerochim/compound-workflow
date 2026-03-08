@@ -1,1 +1,1 @@
-/Users/cjerochim/Documents/DEVELOPMENT/compound-workflow/src/.agents/agents/review/agent-native-reviewer.md
+../../src/.agents/agents/review/agent-native-reviewer.md

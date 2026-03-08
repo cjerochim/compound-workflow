@@ -150,7 +150,7 @@ test("install writes native OpenCode mappings and does not create runtime mirror
       "install should not create .agents/compound-workflow-skills symlink"
     );
     const cursorPlugin = JSON.parse(fs.readFileSync(path.join(projectRoot, ".cursor-plugin", "plugin.json"), "utf8"));
-    assert.equal(cursorPlugin.commands, "./node_modules/compound-workflow/src/.agents/commands", "project-root plugin manifest should point at node_modules");
+    assert.equal(cursorPlugin.commands, "./.cursor/commands", "project-root plugin manifest should point at .cursor/commands for Cursor discovery");
     assert.ok(fs.existsSync(path.join(projectRoot, ".cursor-plugin", "registration.json")), "registration.json should be written for Cursor discovery");
   } finally {
     fs.rmSync(projectRoot, { recursive: true, force: true });

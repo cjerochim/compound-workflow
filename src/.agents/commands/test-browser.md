@@ -6,7 +6,7 @@ argument-hint: "[PR number, branch name, or 'current' for current branch]"
 
 # Browser Test Command
 
-<command_purpose>Run end-to-end browser tests on pages affected by a PR or branch changes using agent-browser CLI.</command_purpose>
+Run end-to-end browser tests on pages affected by a PR or branch changes using agent-browser CLI.
 
 ## CRITICAL: Use agent-browser CLI Only
 

@@ -7,8 +7,9 @@ argument-hint: "[feature idea or problem to explore]"
 
 # Brainstorm a Feature or Improvement
 
-**Note: The current year is 2026.** Use this when dating brainstorm
-documents.
+Explore requirements and approaches through collaborative dialogue before planning implementation.
+
+**Note: The current year is 2026.** Use this when dating brainstorm documents.
 
 Brainstorming helps answer **WHAT** to build through collaborative
 dialogue. It precedes `/workflow:plan`, which answers **HOW** to build

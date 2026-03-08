@@ -1,1 +1,1 @@
-/Users/cjerochim/Documents/DEVELOPMENT/compound-workflow/src/.agents/agents/review/planning-technical-reviewer.md
+../../src/.agents/agents/review/planning-technical-reviewer.md

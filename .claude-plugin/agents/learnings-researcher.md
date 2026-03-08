@@ -1,1 +1,1 @@
-/Users/cjerochim/Documents/DEVELOPMENT/compound-workflow/src/.agents/agents/research/learnings-researcher.md
+../../src/.agents/agents/research/learnings-researcher.md

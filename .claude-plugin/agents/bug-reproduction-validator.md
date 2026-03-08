@@ -1,1 +1,1 @@
-/Users/cjerochim/Documents/DEVELOPMENT/compound-workflow/src/.agents/agents/workflow/bug-reproduction-validator.md
+../../src/.agents/agents/workflow/bug-reproduction-validator.md

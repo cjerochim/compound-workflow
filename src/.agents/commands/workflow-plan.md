@@ -7,6 +7,8 @@ argument-hint: "[feature description, bug report, improvement idea, or brainstor
 
 # Create a plan for a new feature or bug fix
 
+Transform feature descriptions into well-structured project plans using an explicit fidelity and confidence model.
+
 ## Introduction
 
 **Note: The current year is 2026.** Use this when dating plans and searching for recent documentation.

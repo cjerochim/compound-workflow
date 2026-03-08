@@ -343,10 +343,12 @@ function writePluginManifests(targetRoot, dryRun, isSelfInstall) {
   if (!cursorManifest || !claudeManifest) return;
 
   // Cursor supports full manifest with commands/agents/skills path overrides.
+  // For commands/agents, use .cursor/ directories where symlinks are created
+  // so Cursor can discover them properly. Skills still use source path.
   const cursorOut = {
     ...cursorManifest,
-    commands: `${pathsBase}/commands`,
-    agents: `${pathsBase}/agents`,
+    commands: "./.cursor/commands",
+    agents: "./.cursor/agents",
     skills: `${pathsBase}/skills`,
   };
   // Claude Code only accepts name, description, author in plugin.json.

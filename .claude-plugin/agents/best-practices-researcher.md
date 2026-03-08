@@ -1,1 +1,1 @@
-/Users/cjerochim/Documents/DEVELOPMENT/compound-workflow/src/.agents/agents/research/best-practices-researcher.md
+../../src/.agents/agents/research/best-practices-researcher.md

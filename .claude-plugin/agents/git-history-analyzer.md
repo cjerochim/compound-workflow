@@ -1,1 +1,1 @@
-/Users/cjerochim/Documents/DEVELOPMENT/compound-workflow/src/.agents/agents/research/git-history-analyzer.md
+../../src/.agents/agents/research/git-history-analyzer.md
