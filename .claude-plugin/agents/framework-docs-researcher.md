@@ -1,1 +1,1 @@
-../../src/.agents/agents/research/framework-docs-researcher.md
+/Users/cjerochim/Documents/DEVELOPMENT/compound-workflow/src/.agents/agents/research/framework-docs-researcher.md

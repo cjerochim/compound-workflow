@@ -1,1 +1,1 @@
-../../src/.agents/agents/workflow/spec-flow-analyzer.md
+/Users/cjerochim/Documents/DEVELOPMENT/compound-workflow/src/.agents/agents/workflow/spec-flow-analyzer.md

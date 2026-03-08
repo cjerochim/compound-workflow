@@ -172,7 +172,7 @@ worktree_bootstrap_notes:
 ## Implemented Components (Current Scope)
 
 - Commands: `workflow:brainstorm`, `workflow:plan`, `workflow:triage`, `workflow:work`, `workflow:review`, `workflow:tech-review`, `workflow:compound` (under `.agents/commands/` as `workflow-*.md`), plus `test-browser`, `metrics`, `assess`, `install` (root commands)
-- Skills: `brainstorming`, `document-review`, `technical-review`, `compound-docs` (alias: `compound_doc`), `capture-skill`, `file-todos`, `agent-browser`, `git-worktree`, `process-metrics`, `react-ddd-mvc-frontend`, `xstate-actor-orchestration`, `standards`, `pii-protection-prisma`, `financial-workflow-integrity`, `audit-traceability`, `data-foundations`
+- Skills: `brainstorming`, `document-review`, `technical-review`, `compound-docs` (alias: `compound_doc`), `capture-skill`, `file-todos`, `agent-browser`, `git-worktree`, `process-metrics`, `react-ddd-mvc-frontend`, `xstate-actor-orchestration`, `standards`, `pii-protection-prisma`, `financial-workflow-integrity`, `audit-traceability`, `data-foundations`, `presentation-composability`
 - Agents:
   - `repo-research-analyst`
   - `learnings-researcher`
@@ -237,6 +237,7 @@ Maintenance:
 | `react-ddd-mvc-frontend` | You need React frontend architecture guidance (DDD + MVC hybrid) during planning or review to enforce feature structure, layer boundaries, composable pure components, container/controller responsibilities, and maintainable patterns. |
 | `xstate-actor-orchestration` | You are evaluating complexity and need explicit state orchestration: React container-as-orchestrator for UI flows, or actor/state-machine orchestration for backend/internal workflows (especially multi-step async branching, retries/timeouts/cancellation, receptionist/child-actor coordination, or boolean-flag sprawl). |
 | `standards` | You need Altai coding standards for implementation and refactoring, including domain entity patterns, XState conventions, type usage, and feature code organization. |
+| `presentation-composability` | You are creating or refactoring presentation components in tapesv3 and need folder-per-component structure with barrel exports and styles separation. |
 
 ### Reference standards (guardrails)
 

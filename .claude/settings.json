@@ -1,0 +1,13 @@
+{
+  "enabledPlugins": {
+    "compound-workflow@local": true
+  },
+  "extraKnownMarketplaces": {
+    "compound-workflow-local": {
+      "source": {
+        "source": "file",
+        "path": ".claude-plugin/marketplace.json"
+      }
+    }
+  }
+}

@@ -1,1 +1,1 @@
-../../src/.agents/agents/research/repo-research-analyst.md
+/Users/cjerochim/Documents/DEVELOPMENT/compound-workflow/src/.agents/agents/research/repo-research-analyst.md
