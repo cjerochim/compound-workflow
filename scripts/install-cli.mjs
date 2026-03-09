@@ -34,7 +34,7 @@ When Cursor is detected (~/.cursor), registers the plugin so skills/commands app
   --root <dir>            Project directory (default: cwd)
   --dry-run               Print planned changes only
   --no-config             Skip Repo Config Block reminder
-  --no-register-cursor    Do not register plugin with Cursor (skip apply to ~/.claude/)
+  --no-register-cursor    Do not register plugin with Cursor
   --register-cursor       Force registration with Cursor even if ~/.cursor not found
 `;
   (exitCode === 0 ? console.log : console.error)(msg.trimStart());
@@ -42,14 +42,13 @@ When Cursor is detected (~/.cursor), registers the plugin so skills/commands app
 }
 
 function parseArgs(argv) {
-  const out = { root: process.cwd(), dryRun: false, noConfig: false, noRegisterCursor: false, registerCursor: false, verify: false };
+  const out = { root: process.cwd(), dryRun: false, noConfig: false, noRegisterCursor: false, registerCursor: false };
   for (let i = 2; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--dry-run") out.dryRun = true;
     else if (arg === "--no-config") out.noConfig = true;
     else if (arg === "--no-register-cursor") out.noRegisterCursor = true;
     else if (arg === "--register-cursor") out.registerCursor = true;
-    else if (arg === "--verify") out.verify = true;
     else if (arg === "--root") {
       const value = argv[i + 1];
       if (!value) usage(1);
@@ -342,13 +341,12 @@ function writePluginManifests(targetRoot, dryRun, isSelfInstall) {
   const claudeManifest = readJsonMaybe(claudeSrc);
   if (!cursorManifest || !claudeManifest) return;
 
-  // Cursor supports full manifest with commands/agents/skills path overrides.
-  // For commands/agents, use .cursor/ directories where symlinks are created
-  // so Cursor can discover them properly. Skills still use source path.
+  // All Cursor paths point directly at the package source — no symlink indirection.
+  // This ensures frontmatter (descriptions) is parsed correctly by Cursor for all components.
   const cursorOut = {
     ...cursorManifest,
-    commands: "./.cursor/commands",
-    agents: "./.cursor/agents",
+    commands: `${pathsBase}/commands`,
+    agents: `${pathsBase}/agents`,
     skills: `${pathsBase}/skills`,
   };
   // Claude Code only accepts name, description, author in plugin.json.
@@ -428,411 +426,24 @@ function writePluginManifests(targetRoot, dryRun, isSelfInstall) {
   console.log("Wrote: .cursor-plugin/plugin.json, .claude-plugin/plugin.json, .cursor-plugin/registration.json" + (isSelfInstall ? "" : ", .claude-plugin/marketplace.json"));
 }
 
-/**
- * Cursor discovers skills only from .agents/skills, .cursor/skills, ~/.cursor/skills.
- * Populate .cursor/skills/ with symlinks to the package skills so Cursor finds them.
- */
-function syncCursorSkills(targetRoot, dryRun, isSelfInstall) {
-  const packageSkillsAbs = isSelfInstall
-    ? path.join(PACKAGE_ROOT, "src", ".agents", "skills")
-    : path.join(targetRoot, "node_modules", "compound-workflow", "src", ".agents", "skills");
-  if (!fs.existsSync(packageSkillsAbs)) return;
 
-  const cursorSkillsDir = path.join(targetRoot, ".cursor", "skills");
-  let entries;
-  try {
-    entries = fs.readdirSync(packageSkillsAbs, { withFileTypes: true });
-  } catch {
-    return;
-  }
-
-  const skillDirs = entries.filter((e) => e.isDirectory() && fs.existsSync(path.join(packageSkillsAbs, e.name, "SKILL.md"))).map((e) => e.name);
-  if (skillDirs.length === 0) return;
-
-  if (dryRun) {
-    console.log("[dry-run] Would symlink", skillDirs.length, "skills into .cursor/skills/");
-    return;
-  }
-
-  fs.mkdirSync(cursorSkillsDir, { recursive: true });
-  const packageSkillsReal = realpathSafe(packageSkillsAbs);
-  const skillSet = new Set(skillDirs);
-
-  // Prune: remove symlinks that point at our package but are no longer in the package
-  try {
-    for (const entry of fs.readdirSync(cursorSkillsDir, { withFileTypes: true })) {
-      if (!entry.isSymbolicLink()) continue;
-      const linkPath = path.join(cursorSkillsDir, entry.name);
-      try {
-        const resolved = realpathSafe(linkPath);
-        if (!resolved.startsWith(packageSkillsReal + path.sep) && resolved !== packageSkillsReal) continue;
-        const base = path.basename(resolved);
-        if (skillSet.has(base)) continue;
-        fs.rmSync(linkPath);
-      } catch {
-        /* ignore broken symlinks or permission errors */
-      }
-    }
-  } catch {
-    /* .cursor/skills not readable */
-  }
-
-  for (const name of skillDirs) {
-    const linkPath = path.join(cursorSkillsDir, name);
-    const targetPath = path.join(packageSkillsAbs, name);
-    try {
-      if (fs.existsSync(linkPath)) {
-        const stat = fs.lstatSync(linkPath);
-        if (!stat.isSymbolicLink()) continue;
-        try {
-          if (realpathSafe(linkPath) !== realpathSafe(targetPath)) continue;
-        } catch {
-          continue;
-        }
-        fs.rmSync(linkPath);
-      }
-      fs.symlinkSync(targetPath, linkPath, "dir");
-    } catch (err) {
-      if (err.code === "EPERM" && process.platform === "win32") {
-        try {
-          fs.symlinkSync(targetPath, linkPath, "junction");
-        } catch {
-          console.warn("[cursor] Could not symlink skill", name, err.message);
-        }
-      } else {
-        console.warn("[cursor] Could not symlink skill", name, err.message);
-      }
-    }
-  }
-  console.log("Synced", skillDirs.length, "skills to .cursor/skills/");
-}
-
-/**
- * Cursor discovers commands from .cursor/commands.
- * Populate .cursor/commands/ with symlinks to the package commands so Cursor finds them.
- */
-function syncCursorCommands(targetRoot, dryRun, isSelfInstall) {
-  const packageCommandsAbs = isSelfInstall
-    ? path.join(PACKAGE_ROOT, "src", ".agents", "commands")
-    : path.join(targetRoot, "node_modules", "compound-workflow", "src", ".agents", "commands");
-  if (!fs.existsSync(packageCommandsAbs)) return;
-
-  const cursorCommandsDir = path.join(targetRoot, ".cursor", "commands");
-  let entries;
-  try {
-    entries = fs.readdirSync(packageCommandsAbs, { withFileTypes: true });
-  } catch {
-    return;
-  }
-
-  // Filter .md files that are commands
-  const commandFiles = entries.filter((e) => e.isFile() && e.name.endsWith(".md")).map((e) => e.name);
-  if (commandFiles.length === 0) return;
-
-  if (dryRun) {
-    console.log("[dry-run] Would symlink", commandFiles.length, "commands into .cursor/commands/");
-    return;
-  }
-
-  fs.mkdirSync(cursorCommandsDir, { recursive: true });
-  const packageCommandsReal = realpathSafe(packageCommandsAbs);
-  const commandSet = new Set(commandFiles);
-
-  // Prune: remove symlinks that point at our package but are no longer in the package
-  try {
-    for (const entry of fs.readdirSync(cursorCommandsDir, { withFileTypes: true })) {
-      if (!entry.isSymbolicLink()) continue;
-      const linkPath = path.join(cursorCommandsDir, entry.name);
-      try {
-        const resolved = realpathSafe(linkPath);
-        if (!resolved.startsWith(packageCommandsReal + path.sep) && resolved !== packageCommandsReal) continue;
-        const base = path.basename(resolved);
-        if (commandSet.has(base)) continue;
-        fs.rmSync(linkPath);
-      } catch {
-        /* ignore broken symlinks or permission errors */
-      }
-    }
-  } catch {
-    /* .cursor/commands not readable */
-  }
-
-  for (const name of commandFiles) {
-    const linkPath = path.join(cursorCommandsDir, name);
-    const targetPath = path.join(packageCommandsAbs, name);
-    try {
-      if (fs.existsSync(linkPath)) {
-        const stat = fs.lstatSync(linkPath);
-        if (!stat.isSymbolicLink()) continue;
-        try {
-          if (realpathSafe(linkPath) !== realpathSafe(targetPath)) continue;
-        } catch {
-          continue;
-        }
-        fs.rmSync(linkPath);
-      }
-      fs.symlinkSync(targetPath, linkPath, "file");
-    } catch (err) {
-      console.warn("[cursor] Could not symlink command", name, err.message);
-    }
-  }
-  console.log("Synced", commandFiles.length, "commands to .cursor/commands/");
-}
-
-/**
- * Cursor discovers agents from .cursor/agents.
- * Populate .cursor/agents/ with symlinks to the package agents so Cursor finds them.
- * Preserves subdirectory structure (research/, workflow/, review/).
- */
-function syncCursorAgents(targetRoot, dryRun, isSelfInstall) {
-  const packageAgentsAbs = isSelfInstall
-    ? path.join(PACKAGE_ROOT, "src", ".agents", "agents")
-    : path.join(targetRoot, "node_modules", "compound-workflow", "src", ".agents", "agents");
-  if (!fs.existsSync(packageAgentsAbs)) return;
-
-  const cursorAgentsDir = path.join(targetRoot, ".cursor", "agents");
-
-  // Get all agent files from manifest (these include subdir paths like "research/repo-research-analyst.md")
-  const agentRels = GENERATED_MANIFEST.agents.map((a) => a.rel);
-  if (agentRels.length === 0) return;
-
-  if (dryRun) {
-    console.log("[dry-run] Would symlink", agentRels.length, "agents into .cursor/agents/");
-    return;
-  }
-
-  fs.mkdirSync(cursorAgentsDir, { recursive: true });
-  const packageAgentsReal = realpathSafe(packageAgentsAbs);
-  const agentSet = new Set(agentRels);
-
-  // Build set of valid subdirectories to preserve structure
-  const validSubdirs = new Set();
-  for (const rel of agentRels) {
-    const subdir = path.dirname(rel);
-    if (subdir !== ".") validSubdirs.add(subdir);
-  }
-
-  // Prune: remove symlinks that point at our package but are no longer in the manifest
-  try {
-    for (const entry of fs.readdirSync(cursorAgentsDir, { withFileTypes: true })) {
-      if (entry.isDirectory()) {
-        // Check if this subdir is still valid
-        if (!validSubdirs.has(entry.name)) {
-          // Remove the entire stale subdirectory
-          fs.rmSync(path.join(cursorAgentsDir, entry.name), { recursive: true, force: true });
-          continue;
-        }
-        // Prune stale symlinks within valid subdirectories
-        const subdirPath = path.join(cursorAgentsDir, entry.name);
-        for (const subEntry of fs.readdirSync(subdirPath, { withFileTypes: true })) {
-          if (!subEntry.isSymbolicLink()) continue;
-          const linkPath = path.join(subdirPath, subEntry.name);
-          try {
-            const resolved = realpathSafe(linkPath);
-            if (!resolved.startsWith(packageAgentsReal + path.sep) && resolved !== packageAgentsReal) continue;
-            const relFromPackage = path.relative(packageAgentsAbs, resolved);
-            if (agentSet.has(relFromPackage)) continue;
-            fs.rmSync(linkPath);
-          } catch {
-            /* ignore broken symlinks */
-          }
-        }
-      } else if (entry.isSymbolicLink()) {
-        // Handle flat symlinks (if any were created at root level)
-        const linkPath = path.join(cursorAgentsDir, entry.name);
-        try {
-          const resolved = realpathSafe(linkPath);
-          if (!resolved.startsWith(packageAgentsReal + path.sep) && resolved !== packageAgentsReal) continue;
-          const relFromPackage = path.relative(packageAgentsAbs, resolved);
-          if (agentSet.has(relFromPackage)) continue;
-          fs.rmSync(linkPath);
-        } catch {
-          /* ignore broken symlinks */
-        }
-      }
-    }
-  } catch {
-    /* .cursor/agents not readable */
-  }
-
-  // Create symlinks preserving subdirectory structure
-  for (const rel of agentRels) {
-    const targetPath = path.join(packageAgentsAbs, rel);
-    const linkPath = path.join(cursorAgentsDir, rel);
-
-    // Ensure subdirectory exists
-    const subdir = path.dirname(rel);
-    if (subdir !== ".") {
-      fs.mkdirSync(path.join(cursorAgentsDir, subdir), { recursive: true });
-    }
-
-    try {
-      if (fs.existsSync(linkPath)) {
-        const stat = fs.lstatSync(linkPath);
-        if (!stat.isSymbolicLink()) continue;
-        try {
-          if (realpathSafe(linkPath) !== realpathSafe(targetPath)) continue;
-        } catch {
-          continue;
-        }
-        fs.rmSync(linkPath);
-      }
-      fs.symlinkSync(targetPath, linkPath, "file");
-    } catch (err) {
-      console.warn("[cursor] Could not symlink agent", rel, err.message);
-    }
-  }
-  console.log("Synced", agentRels.length, "agents to .cursor/agents/");
-}
 
 function cursorDetected() {
   return fs.existsSync(path.join(os.homedir(), ".cursor"));
 }
 
-/**
- * Verifies plugin integrity by checking all symlinks in .cursor/ directories
- * match the expected state from GENERATED_MANIFEST.
- * Returns { ok: boolean, issues: string[] }
- */
-function verifyPluginIntegrity(targetRoot, isSelfInstall) {
-  const issues = [];
-  const packageRoot = isSelfInstall
-    ? PACKAGE_ROOT
-    : path.join(targetRoot, "node_modules", "compound-workflow");
-
-  // Verify skills
-  const cursorSkillsDir = path.join(targetRoot, ".cursor", "skills");
-  const packageSkillsDir = path.join(packageRoot, "src", ".agents", "skills");
-  if (fs.existsSync(packageSkillsDir)) {
-    const expectedSkills = new Set(
-      fs.readdirSync(packageSkillsDir, { withFileTypes: true })
-        .filter((e) => e.isDirectory() && fs.existsSync(path.join(packageSkillsDir, e.name, "SKILL.md")))
-        .map((e) => e.name)
-    );
-    if (fs.existsSync(cursorSkillsDir)) {
-      const actualSkills = fs.readdirSync(cursorSkillsDir, { withFileTypes: true })
-        .filter((e) => e.isSymbolicLink())
-        .map((e) => e.name);
-      for (const skill of expectedSkills) {
-        if (!actualSkills.includes(skill)) {
-          issues.push(`Missing skill symlink: .cursor/skills/${skill}`);
-        }
-      }
-      for (const skill of actualSkills) {
-        if (!expectedSkills.has(skill)) {
-          issues.push(`Stale skill symlink: .cursor/skills/${skill}`);
-        }
-      }
-    } else if (expectedSkills.size > 0) {
-      issues.push(`Missing .cursor/skills/ directory (${expectedSkills.size} expected)`);
-    }
-  }
-
-  // Verify commands
-  const cursorCommandsDir = path.join(targetRoot, ".cursor", "commands");
-  const packageCommandsDir = path.join(packageRoot, "src", ".agents", "commands");
-  if (fs.existsSync(packageCommandsDir)) {
-    const expectedCommands = new Set(
-      fs.readdirSync(packageCommandsDir, { withFileTypes: true })
-        .filter((e) => e.isFile() && e.name.endsWith(".md"))
-        .map((e) => e.name)
-    );
-    if (fs.existsSync(cursorCommandsDir)) {
-      const actualCommands = fs.readdirSync(cursorCommandsDir, { withFileTypes: true })
-        .filter((e) => e.isSymbolicLink())
-        .map((e) => e.name);
-      for (const cmd of expectedCommands) {
-        if (!actualCommands.includes(cmd)) {
-          issues.push(`Missing command symlink: .cursor/commands/${cmd}`);
-        }
-      }
-      for (const cmd of actualCommands) {
-        if (!expectedCommands.has(cmd)) {
-          issues.push(`Stale command symlink: .cursor/commands/${cmd}`);
-        }
-      }
-    } else if (expectedCommands.size > 0) {
-      issues.push(`Missing .cursor/commands/ directory (${expectedCommands.size} expected)`);
-    }
-  }
-
-  // Verify agents
-  const cursorAgentsDir = path.join(targetRoot, ".cursor", "agents");
-  const packageAgentsDir = path.join(packageRoot, "src", ".agents", "agents");
-  if (fs.existsSync(packageAgentsDir)) {
-    // Recursively get all .md files from package agents dir
-    const expectedAgents = [];
-    function collectAgents(dir, prefix = "") {
-      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-        const relPath = prefix ? `${prefix}/${entry.name}` : entry.name;
-        if (entry.isDirectory()) {
-          collectAgents(path.join(dir, entry.name), relPath);
-        } else if (entry.isFile() && entry.name.endsWith(".md")) {
-          expectedAgents.push(relPath);
-        }
-      }
-    }
-    collectAgents(packageAgentsDir);
-    const expectedSet = new Set(expectedAgents);
-
-    if (fs.existsSync(cursorAgentsDir)) {
-      const actualAgents = [];
-      function collectActualAgents(dir, prefix = "") {
-        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-          const relPath = prefix ? `${prefix}/${entry.name}` : entry.name;
-          if (entry.isDirectory()) {
-            collectActualAgents(path.join(dir, entry.name), relPath);
-          } else if (entry.isSymbolicLink()) {
-            actualAgents.push(relPath);
-          }
-        }
-      }
-      collectActualAgents(cursorAgentsDir);
-      const actualSet = new Set(actualAgents);
-
-      for (const agent of expectedAgents) {
-        if (!actualSet.has(agent)) {
-          issues.push(`Missing agent symlink: .cursor/agents/${agent}`);
-        }
-      }
-      for (const agent of actualAgents) {
-        if (!expectedSet.has(agent)) {
-          issues.push(`Stale agent symlink: .cursor/agents/${agent}`);
-        }
-      }
-    } else if (expectedAgents.length > 0) {
-      issues.push(`Missing .cursor/agents/ directory (${expectedAgents.length} expected)`);
-    }
-  }
-
-  return { ok: issues.length === 0, issues };
-}
 
 function applyCursorRegistration(targetRoot, dryRun, noRegisterCursor, forceRegister, isSelfInstall) {
-  const claudePluginsDir = path.join(os.homedir(), ".claude", "plugins");
-  const installedPath = path.join(claudePluginsDir, "installed_plugins.json");
-  const settingsPath = path.join(os.homedir(), ".claude", "settings.json");
-
-  const pluginVersion = (() => {
-    try {
-      const pkgPath = path.join(PACKAGE_ROOT, "package.json");
-      return JSON.parse(fs.readFileSync(pkgPath, "utf8")).version || "0.0.0";
-    } catch {
-      return "0.0.0";
-    }
-  })();
-
   const projectRoot = isSelfInstall ? PACKAGE_ROOT : targetRoot;
-  const pluginId = "compound-workflow@local";
+  const pluginId = "compound-workflow@compound-workflow-local";
 
   if (dryRun) {
     console.log("[dry-run] Would register Claude plugin (project-scoped) at:", projectRoot);
     return;
   }
 
-  // Registration is always project-scoped: write only to <project>/.claude/settings.json.
-  // Claude Code manages ~/.claude/plugins/installed_plugins.json itself via marketplace flow;
-  // writing to user-level files causes "unregistered local marketplace" errors on startup.
+  // Registration is strictly project-scoped: write only to <project>/.claude/settings.json.
+  // Never touch ~/.claude — Claude Code manages user-level plugin state itself.
   const projectSettingsPath = path.join(projectRoot, ".claude", "settings.json");
   let projectSettings = {};
   if (fs.existsSync(projectSettingsPath)) {
@@ -846,30 +457,10 @@ function applyCursorRegistration(targetRoot, dryRun, noRegisterCursor, forceRegi
   }
   projectSettings.extraKnownMarketplaces = ensureObject(projectSettings.extraKnownMarketplaces);
   projectSettings.extraKnownMarketplaces["compound-workflow-local"] = {
-    source: { source: "file", path: ".claude-plugin/marketplace.json" },
+    source: { source: "file", path: "." },
   };
   fs.mkdirSync(path.join(projectRoot, ".claude"), { recursive: true });
   fs.writeFileSync(projectSettingsPath, JSON.stringify(projectSettings, null, 2) + "\n", "utf8");
-
-  // Clean up any stale user-level enabledPlugins entries left by previous install versions.
-  // These cause "unregistered local marketplace" errors on every Claude Code startup.
-  if (fs.existsSync(settingsPath)) {
-    try {
-      let userSettings = readJsonMaybe(settingsPath) ?? {};
-      const staleIds = ["compound-workflow@local", "compound-workflow@compound-workflow-local"];
-      let changed = false;
-      for (const id of staleIds) {
-        if (userSettings?.enabledPlugins?.[id] !== undefined) {
-          delete userSettings.enabledPlugins[id];
-          changed = true;
-        }
-      }
-      if (changed) {
-        fs.writeFileSync(settingsPath, JSON.stringify(userSettings, null, 2) + "\n", "utf8");
-        console.log("Cleaned up stale compound-workflow entries from ~/.claude/settings.json");
-      }
-    } catch { /* ignore */ }
-  }
 
   console.log("Registered compound-workflow with Claude Code (project-scoped).");
   if (!isSelfInstall) {
@@ -909,31 +500,6 @@ function reportOpenCodeIntegration(targetRoot, dryRun) {
 function main() {
   const args = parseArgs(process.argv);
   const targetRoot = realpathSafe(args.root);
-
-  // Handle verification mode early (no manifest needed)
-  if (args.verify) {
-    console.log("Verifying plugin integrity...");
-    const isSelfInstall = realpathSafe(targetRoot) === realpathSafe(PACKAGE_ROOT);
-    // Try to read manifest for accurate verification, but continue without it
-    try {
-      GENERATED_MANIFEST = readGeneratedManifest();
-    } catch {
-      console.warn("Warning: Could not read generated manifest, using filesystem scan only");
-      GENERATED_MANIFEST = { commands: [], agents: [] };
-    }
-    const result = verifyPluginIntegrity(targetRoot, isSelfInstall);
-    if (result.ok) {
-      console.log("Plugin integrity: OK (all symlinks present and valid)");
-      process.exit(0);
-    } else {
-      console.error("Plugin integrity issues found:");
-      for (const issue of result.issues) {
-        console.error(`  - ${issue}`);
-      }
-      console.error("\nRun 'npx compound-workflow install' to fix.");
-      process.exit(1);
-    }
-  }
 
   const genScript = path.join(PACKAGE_ROOT, "scripts", "generate-platform-artifacts.mjs");
   if (fs.existsSync(genScript)) {
@@ -977,9 +543,6 @@ function main() {
 
   writeOpenCodeJson(targetRoot, args.dryRun, isSelfInstall);
   writePluginManifests(targetRoot, args.dryRun, isSelfInstall);
-  syncCursorSkills(targetRoot, args.dryRun, isSelfInstall);
-  syncCursorCommands(targetRoot, args.dryRun, isSelfInstall);
-  syncCursorAgents(targetRoot, args.dryRun, isSelfInstall);
   applyCursorRegistration(targetRoot, args.dryRun, args.noRegisterCursor, args.registerCursor, isSelfInstall);
   reportOpenCodeIntegration(targetRoot, args.dryRun);
   writeAgentsMd(targetRoot, args.dryRun);
