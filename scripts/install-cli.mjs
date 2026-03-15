@@ -9,8 +9,12 @@
  * - Commands: add/remove .md under src/.agents/commands/ (frontmatter: invocation, name, description).
  *   Registry (src/.agents/registry.json) + generate-platform-artifacts → opencode.managed.json → install.
  * - Agents: add/remove .md under src/.agents/agents/ (frontmatter: name, description). Same pipeline.
- * - Skills: add/remove dir src/.agents/skills/<name>/SKILL.md. OpenCode uses skills path; install syncs
- *   each skill into .cursor/skills/ (symlinks) so Cursor discovers them. Prune removes stale symlinks.
+ * - Skills: add/remove dir src/.agents/skills/<name>/SKILL.md. OpenCode uses skills path.
+ *
+ * PLATFORM STRATEGY:
+ * - Cursor: copies files into .cursor/skills/, .cursor/commands/, .cursor/agents/ for native discovery.
+ * - Claude Code: marketplace flow via .claude-plugin/ + project .claude/settings.json.
+ * - OpenCode: opencode.json with paths into package source.
  * Run install (or npm install compound-workflow) after any change; no other registration needed.
  */
 import fs from "node:fs";
@@ -25,30 +29,26 @@ function usage(exitCode = 0) {
   const msg = `
 Usage:
   (automatic) npm install compound-workflow   # runs install via postinstall; no npx needed
-  (manual)    npx compound-workflow install [--root <projectDir>] [--dry-run] [--no-config] [--no-register-cursor] [--register-cursor]
+  (manual)    npx compound-workflow install [--root <projectDir>] [--dry-run] [--no-config]
 
 Install writes opencode.json (from package), merges AGENTS.md, creates standard
-docs/todos directories, and prompts for Repo Config Block (unless --no-config).
-When Cursor is detected (~/.cursor), registers the plugin so skills/commands appear.
+docs/todos directories, copies skills/commands/agents into .cursor/ for Cursor,
+and registers the Claude Code plugin (project-scoped).
 
   --root <dir>            Project directory (default: cwd)
   --dry-run               Print planned changes only
   --no-config             Skip Repo Config Block reminder
-  --no-register-cursor    Do not register plugin with Cursor
-  --register-cursor       Force registration with Cursor even if ~/.cursor not found
 `;
   (exitCode === 0 ? console.log : console.error)(msg.trimStart());
   process.exit(exitCode);
 }
 
 function parseArgs(argv) {
-  const out = { root: process.cwd(), dryRun: false, noConfig: false, noRegisterCursor: false, registerCursor: false };
+  const out = { root: process.cwd(), dryRun: false, noConfig: false };
   for (let i = 2; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--dry-run") out.dryRun = true;
     else if (arg === "--no-config") out.noConfig = true;
-    else if (arg === "--no-register-cursor") out.noRegisterCursor = true;
-    else if (arg === "--register-cursor") out.registerCursor = true;
     else if (arg === "--root") {
       const value = argv[i + 1];
       if (!value) usage(1);
@@ -428,12 +428,160 @@ function writePluginManifests(targetRoot, dryRun, isSelfInstall) {
 
 
 
+function copyDirRecursive(srcDir, destDir) {
+  fs.mkdirSync(destDir, { recursive: true });
+  for (const entry of fs.readdirSync(srcDir, { withFileTypes: true })) {
+    const srcPath = path.join(srcDir, entry.name);
+    const destPath = path.join(destDir, entry.name);
+    if (entry.isDirectory()) {
+      copyDirRecursive(srcPath, destPath);
+    } else if (entry.isFile()) {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
+}
+
+/**
+ * Cursor discovers skills from .cursor/skills/ (each subdir with SKILL.md).
+ * Copy package skills so Cursor finds them with full frontmatter metadata.
+ */
+function copyCursorSkills(targetRoot, dryRun, isSelfInstall) {
+  const packageSkillsAbs = path.join(
+    isSelfInstall ? PACKAGE_ROOT : path.join(targetRoot, "node_modules", "compound-workflow"),
+    "src", ".agents", "skills"
+  );
+  if (!fs.existsSync(packageSkillsAbs)) return;
+
+  const cursorSkillsDir = path.join(targetRoot, ".cursor", "skills");
+  const skillDirs = fs.readdirSync(packageSkillsAbs, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && fs.existsSync(path.join(packageSkillsAbs, e.name, "SKILL.md")))
+    .map((e) => e.name);
+  if (skillDirs.length === 0) return;
+
+  if (dryRun) {
+    console.log("[dry-run] Would copy", skillDirs.length, "skills into .cursor/skills/");
+    return;
+  }
+
+  fs.mkdirSync(cursorSkillsDir, { recursive: true });
+  const skillSet = new Set(skillDirs);
+
+  // Prune stale entries that we manage (contain SKILL.md) but are no longer in the package
+  try {
+    for (const entry of fs.readdirSync(cursorSkillsDir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const skillMd = path.join(cursorSkillsDir, entry.name, "SKILL.md");
+      if (!fs.existsSync(skillMd)) continue;
+      if (!skillSet.has(entry.name)) {
+        fs.rmSync(path.join(cursorSkillsDir, entry.name), { recursive: true, force: true });
+      }
+    }
+  } catch { /* ignore */ }
+
+  for (const name of skillDirs) {
+    const dest = path.join(cursorSkillsDir, name);
+    fs.rmSync(dest, { recursive: true, force: true });
+    copyDirRecursive(path.join(packageSkillsAbs, name), dest);
+  }
+  console.log("Copied", skillDirs.length, "skills to .cursor/skills/");
+}
+
+/**
+ * Cursor discovers commands from .cursor/commands/ (.md files).
+ * Copy package commands so Cursor finds them with full frontmatter metadata.
+ */
+function copyCursorCommands(targetRoot, dryRun, isSelfInstall) {
+  const packageCommandsAbs = path.join(
+    isSelfInstall ? PACKAGE_ROOT : path.join(targetRoot, "node_modules", "compound-workflow"),
+    "src", ".agents", "commands"
+  );
+  if (!fs.existsSync(packageCommandsAbs)) return;
+
+  const cursorCommandsDir = path.join(targetRoot, ".cursor", "commands");
+  const commandFiles = fs.readdirSync(packageCommandsAbs, { withFileTypes: true })
+    .filter((e) => e.isFile() && e.name.endsWith(".md"))
+    .map((e) => e.name);
+  if (commandFiles.length === 0) return;
+
+  if (dryRun) {
+    console.log("[dry-run] Would copy", commandFiles.length, "commands into .cursor/commands/");
+    return;
+  }
+
+  fs.mkdirSync(cursorCommandsDir, { recursive: true });
+  const commandSet = new Set(commandFiles);
+
+  // Prune stale .md files and old symlinks that we previously managed
+  try {
+    for (const entry of fs.readdirSync(cursorCommandsDir, { withFileTypes: true })) {
+      if (!entry.name.endsWith(".md")) continue;
+      if (entry.isSymbolicLink() || !commandSet.has(entry.name)) {
+        fs.rmSync(path.join(cursorCommandsDir, entry.name), { force: true });
+      }
+    }
+  } catch { /* ignore */ }
+
+  for (const name of commandFiles) {
+    fs.copyFileSync(path.join(packageCommandsAbs, name), path.join(cursorCommandsDir, name));
+  }
+  console.log("Copied", commandFiles.length, "commands to .cursor/commands/");
+}
+
+/**
+ * Cursor discovers agents from .cursor/agents/ (.md files, supports subdirs).
+ * Copy package agents preserving subdirectory structure (research/, review/, workflow/).
+ */
+function copyCursorAgents(targetRoot, dryRun, isSelfInstall) {
+  const packageAgentsAbs = path.join(
+    isSelfInstall ? PACKAGE_ROOT : path.join(targetRoot, "node_modules", "compound-workflow"),
+    "src", ".agents", "agents"
+  );
+  if (!fs.existsSync(packageAgentsAbs)) return;
+
+  const cursorAgentsDir = path.join(targetRoot, ".cursor", "agents");
+  const agentRels = GENERATED_MANIFEST.agents.map((a) => a.rel);
+  if (agentRels.length === 0) return;
+
+  if (dryRun) {
+    console.log("[dry-run] Would copy", agentRels.length, "agents into .cursor/agents/");
+    return;
+  }
+
+  fs.mkdirSync(cursorAgentsDir, { recursive: true });
+
+  // Collect valid subdirectories from manifest
+  const validSubdirs = new Set();
+  for (const rel of agentRels) {
+    const subdir = path.dirname(rel);
+    if (subdir !== ".") validSubdirs.add(subdir);
+  }
+
+  // Prune stale subdirs and files
+  try {
+    for (const entry of fs.readdirSync(cursorAgentsDir, { withFileTypes: true })) {
+      if (entry.isDirectory() && !validSubdirs.has(entry.name)) {
+        fs.rmSync(path.join(cursorAgentsDir, entry.name), { recursive: true, force: true });
+      }
+    }
+  } catch { /* ignore */ }
+
+  for (const rel of agentRels) {
+    const destPath = path.join(cursorAgentsDir, rel);
+    fs.mkdirSync(path.dirname(destPath), { recursive: true });
+    fs.copyFileSync(path.join(packageAgentsAbs, rel), destPath);
+  }
+  console.log("Copied", agentRels.length, "agents to .cursor/agents/");
+}
+
 function cursorDetected() {
   return fs.existsSync(path.join(os.homedir(), ".cursor"));
 }
 
-
-function applyCursorRegistration(targetRoot, dryRun, noRegisterCursor, forceRegister, isSelfInstall) {
+/**
+ * Register compound-workflow with Claude Code (project-scoped only).
+ * Cursor discovery is handled separately via copyCursor* functions.
+ */
+function applyClaudeRegistration(targetRoot, dryRun, isSelfInstall) {
   const projectRoot = isSelfInstall ? PACKAGE_ROOT : targetRoot;
   const pluginId = "compound-workflow@compound-workflow-local";
 
@@ -442,8 +590,6 @@ function applyCursorRegistration(targetRoot, dryRun, noRegisterCursor, forceRegi
     return;
   }
 
-  // Registration is strictly project-scoped: write only to <project>/.claude/settings.json.
-  // Never touch ~/.claude — Claude Code manages user-level plugin state itself.
   const projectSettingsPath = path.join(projectRoot, ".claude", "settings.json");
   let projectSettings = {};
   if (fs.existsSync(projectSettingsPath)) {
@@ -451,7 +597,6 @@ function applyCursorRegistration(targetRoot, dryRun, noRegisterCursor, forceRegi
   }
   projectSettings.enabledPlugins = ensureObject(projectSettings.enabledPlugins);
   projectSettings.enabledPlugins[pluginId] = true;
-  // Remove stale/invalid marketplace keys left by earlier install methods
   if (projectSettings.extraKnownMarketplaces?.["compound-workflow"]) {
     delete projectSettings.extraKnownMarketplaces["compound-workflow"];
   }
@@ -467,16 +612,6 @@ function applyCursorRegistration(targetRoot, dryRun, noRegisterCursor, forceRegi
     console.log("  Claude Code 2.1+: open /plugin, go to Discover; install 'compound-workflow' from marketplace 'compound-workflow-local', or run: claude --plugin-dir ./node_modules/compound-workflow");
   }
   console.log("  Restart Claude Code; enable 'Include third-party Plugins, Skills, and other configs' in Settings if needed.");
-
-  if (noRegisterCursor && !forceRegister) return;
-  const shouldApply = forceRegister || (cursorDetected() && !noRegisterCursor);
-  if (!shouldApply) {
-    console.log("[cursor] Cursor not detected; skipped Cursor plugin registration. Use --register-cursor to force.");
-    return;
-  }
-  const registrationPath = path.join(targetRoot, ".cursor-plugin", "registration.json");
-  if (!fs.existsSync(registrationPath)) return;
-  console.log("Registered compound-workflow with Cursor. Restart Cursor; enable 'Include third-party Plugins, Skills, and other configs' in Settings if needed.");
 }
 
 function reportOpenCodeIntegration(targetRoot, dryRun) {
@@ -543,7 +678,10 @@ function main() {
 
   writeOpenCodeJson(targetRoot, args.dryRun, isSelfInstall);
   writePluginManifests(targetRoot, args.dryRun, isSelfInstall);
-  applyCursorRegistration(targetRoot, args.dryRun, args.noRegisterCursor, args.registerCursor, isSelfInstall);
+  applyClaudeRegistration(targetRoot, args.dryRun, isSelfInstall);
+  copyCursorSkills(targetRoot, args.dryRun, isSelfInstall);
+  copyCursorCommands(targetRoot, args.dryRun, isSelfInstall);
+  copyCursorAgents(targetRoot, args.dryRun, isSelfInstall);
   reportOpenCodeIntegration(targetRoot, args.dryRun);
   writeAgentsMd(targetRoot, args.dryRun);
   ensureDirs(targetRoot, args.dryRun);

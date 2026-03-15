@@ -16,12 +16,21 @@ function createTempProject() {
   return dir;
 }
 
+function copyDirRecursiveForTest(src, dest) {
+  fs.mkdirSync(dest, { recursive: true });
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    const s = path.join(src, entry.name);
+    const d = path.join(dest, entry.name);
+    if (entry.isDirectory()) copyDirRecursiveForTest(s, d);
+    else if (entry.isFile()) fs.copyFileSync(s, d);
+  }
+}
+
 /** Copy minimal package contents so install runs with package root = node_modules/compound-workflow (simulates npm install). */
 function copyMinimalPackageIntoNodeModules(projectRoot) {
   const pkgDir = path.join(projectRoot, "node_modules", "compound-workflow");
   fs.mkdirSync(path.join(pkgDir, "scripts"), { recursive: true });
   fs.mkdirSync(path.join(pkgDir, "src", "generated"), { recursive: true });
-  fs.mkdirSync(path.join(pkgDir, "src", ".agents"), { recursive: true });
   fs.copyFileSync(
     path.join(repoRoot, "scripts", "install-cli.mjs"),
     path.join(pkgDir, "scripts", "install-cli.mjs")
@@ -31,6 +40,10 @@ function copyMinimalPackageIntoNodeModules(projectRoot) {
     path.join(pkgDir, "src", "generated", "opencode.managed.json")
   );
   fs.copyFileSync(path.join(repoRoot, "src", "AGENTS.md"), path.join(pkgDir, "src", "AGENTS.md"));
+  copyDirRecursiveForTest(
+    path.join(repoRoot, "src", ".agents"),
+    path.join(pkgDir, "src", ".agents")
+  );
   fs.mkdirSync(path.join(pkgDir, ".cursor-plugin"), { recursive: true });
   fs.mkdirSync(path.join(pkgDir, ".claude-plugin"), { recursive: true });
   fs.copyFileSync(
@@ -47,7 +60,7 @@ function copyMinimalPackageIntoNodeModules(projectRoot) {
 function runInstall(projectRoot) {
   return spawnSync(
     process.execPath,
-    [installCli, "install", "--root", projectRoot, "--no-config", "--no-register-cursor"],
+    [installCli, "install", "--root", projectRoot, "--no-config"],
     { cwd: repoRoot, encoding: "utf8" }
   );
 }
@@ -55,7 +68,7 @@ function runInstall(projectRoot) {
 /** Run install from consumer project so package root is node_modules/compound-workflow. */
 function runInstallFromConsumerProject(projectRoot) {
   const pkgCli = path.join(projectRoot, "node_modules", "compound-workflow", "scripts", "install-cli.mjs");
-  return spawnSync(process.execPath, [pkgCli, "install", "--root", projectRoot, "--no-config", "--no-register-cursor"], {
+  return spawnSync(process.execPath, [pkgCli, "install", "--root", projectRoot, "--no-config"], {
     cwd: projectRoot,
     encoding: "utf8",
   });
@@ -114,17 +127,17 @@ test("install writes native OpenCode mappings and does not create runtime mirror
   }
 });
 
-test("install does not mutate existing .cursor assets", () => {
+test("install preserves non-managed .cursor assets (e.g. .mdc rules)", () => {
   const projectRoot = createTempProject();
 
   try {
-    const stale = path.join(projectRoot, ".cursor", "commands", "stale.mdc");
-    fs.mkdirSync(path.dirname(stale), { recursive: true });
-    fs.writeFileSync(stale, "stale", "utf8");
+    const userRule = path.join(projectRoot, ".cursor", "commands", "stale.mdc");
+    fs.mkdirSync(path.dirname(userRule), { recursive: true });
+    fs.writeFileSync(userRule, "stale", "utf8");
 
     const result = runInstall(projectRoot);
     assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
-    assert.equal(fs.readFileSync(stale, "utf8"), "stale", "install should not sync or replace .cursor files");
+    assert.equal(fs.readFileSync(userRule, "utf8"), "stale", "install should not remove non-.md files in .cursor/commands");
   } finally {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }
@@ -353,7 +366,7 @@ test("install writes .claude-plugin/marketplace.json in consumer project for Cla
   }
 });
 
-test("cursor plugin manifest points commands/agents/skills directly at package source (no symlinks)", () => {
+test("install copies skills, commands, and agents into .cursor/ for native Cursor discovery", () => {
   const projectRoot = createTempProject();
   copyMinimalPackageIntoNodeModules(projectRoot);
 
@@ -361,16 +374,17 @@ test("cursor plugin manifest points commands/agents/skills directly at package s
     const result = runInstallFromConsumerProject(projectRoot);
     assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
 
-    const cursorPlugin = JSON.parse(fs.readFileSync(path.join(projectRoot, ".cursor-plugin", "plugin.json"), "utf8"));
-    const base = "./node_modules/compound-workflow/src/.agents";
-    assert.equal(cursorPlugin.commands, `${base}/commands`, "commands should point directly at package source");
-    assert.equal(cursorPlugin.agents, `${base}/agents`, "agents should point directly at package source");
-    assert.equal(cursorPlugin.skills, `${base}/skills`, "skills should point directly at package source");
+    assert.ok(fs.existsSync(path.join(projectRoot, ".cursor", "skills")), ".cursor/skills should be created");
+    assert.ok(fs.existsSync(path.join(projectRoot, ".cursor", "commands")), ".cursor/commands should be created");
+    assert.ok(fs.existsSync(path.join(projectRoot, ".cursor", "agents")), ".cursor/agents should be created");
 
-    // No .cursor/commands, .cursor/agents, or .cursor/skills directories should be created
-    assert.equal(fs.existsSync(path.join(projectRoot, ".cursor", "commands")), false, ".cursor/commands should not be created");
-    assert.equal(fs.existsSync(path.join(projectRoot, ".cursor", "agents")), false, ".cursor/agents should not be created");
-    assert.equal(fs.existsSync(path.join(projectRoot, ".cursor", "skills")), false, ".cursor/skills should not be created");
+    // Verify files are real copies (not symlinks)
+    const commandFiles = fs.readdirSync(path.join(projectRoot, ".cursor", "commands"));
+    assert.ok(commandFiles.length > 0, "commands should be copied");
+    for (const f of commandFiles) {
+      const stat = fs.lstatSync(path.join(projectRoot, ".cursor", "commands", f));
+      assert.ok(stat.isFile() && !stat.isSymbolicLink(), `${f} should be a real file, not a symlink`);
+    }
   } finally {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }
