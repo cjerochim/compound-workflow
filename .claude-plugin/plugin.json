@@ -1,7 +1,0 @@
-{
-  "name": "compound-workflow",
-  "description": "Clarify -> plan -> execute -> verify -> capture workflow: commands, skills, and agents for Claude Code",
-  "author": {
-    "name": "Compound Workflow"
-  }
-}

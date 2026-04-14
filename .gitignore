@@ -28,7 +28,7 @@ coverage/
 .vscode/
 .idea/
 
-# Cursor / Claude (local plans, plugin registration, IDE config)
+# Cursor / Claude / Agents (local plans, install artifacts, IDE config)
 .cursor/
 .claude/
-.cursor-plugin/registration.json
+.agents/

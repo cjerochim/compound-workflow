@@ -1,6 +1,6 @@
 {
   "name": "compound-workflow",
-  "version": "1.7.3",
+  "version": "1.8.0",
   "description": "Clarify → plan → execute → verify → capture. One Install action for Cursor, Claude, and OpenCode.",
   "license": "MIT",
   "repository": {
@@ -12,15 +12,10 @@
   },
   "files": [
     "src",
-    "scripts",
-    ".cursor-plugin",
-    ".claude-plugin"
+    "scripts"
   ],
   "scripts": {
     "postinstall": "node scripts/postinstall.mjs",
-    "prepublishOnly": "npm run generate:artifacts",
-    "generate:artifacts": "node scripts/generate-platform-artifacts.mjs",
-    "check:artifacts": "node scripts/generate-platform-artifacts.mjs --check",
     "check:version-parity": "node scripts/check-version-parity.mjs",
     "check:pack-readme": "node scripts/check-pack-readme.mjs",
     "test:install": "node --test tests/install-cli.test.mjs"

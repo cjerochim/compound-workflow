@@ -1,1 +1,0 @@
-../../src/.agents/agents/research/framework-docs-researcher.md

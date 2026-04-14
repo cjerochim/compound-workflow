@@ -7,8 +7,6 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const installCli = path.join(repoRoot, "scripts", "install-cli.mjs");
-const generateArtifacts = path.join(repoRoot, "scripts", "generate-platform-artifacts.mjs");
 
 function createTempProject() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "compound-workflow-install-"));
@@ -26,194 +24,127 @@ function copyDirRecursiveForTest(src, dest) {
   }
 }
 
-/** Copy minimal package contents so install runs with package root = node_modules/compound-workflow (simulates npm install). */
+/** Copy minimal package contents into node_modules so install runs as a consumer project. */
 function copyMinimalPackageIntoNodeModules(projectRoot) {
   const pkgDir = path.join(projectRoot, "node_modules", "compound-workflow");
   fs.mkdirSync(path.join(pkgDir, "scripts"), { recursive: true });
-  fs.mkdirSync(path.join(pkgDir, "src", "generated"), { recursive: true });
+  fs.mkdirSync(path.join(pkgDir, "src"), { recursive: true });
   fs.copyFileSync(
     path.join(repoRoot, "scripts", "install-cli.mjs"),
     path.join(pkgDir, "scripts", "install-cli.mjs")
   );
-  fs.copyFileSync(
-    path.join(repoRoot, "src", "generated", "opencode.managed.json"),
-    path.join(pkgDir, "src", "generated", "opencode.managed.json")
-  );
   fs.copyFileSync(path.join(repoRoot, "src", "AGENTS.md"), path.join(pkgDir, "src", "AGENTS.md"));
-  copyDirRecursiveForTest(
-    path.join(repoRoot, "src", ".agents"),
-    path.join(pkgDir, "src", ".agents")
-  );
-  fs.mkdirSync(path.join(pkgDir, ".cursor-plugin"), { recursive: true });
-  fs.mkdirSync(path.join(pkgDir, ".claude-plugin"), { recursive: true });
-  fs.copyFileSync(
-    path.join(repoRoot, ".cursor-plugin", "plugin.json"),
-    path.join(pkgDir, ".cursor-plugin", "plugin.json")
-  );
-  fs.copyFileSync(
-    path.join(repoRoot, ".claude-plugin", "plugin.json"),
-    path.join(pkgDir, ".claude-plugin", "plugin.json")
-  );
-}
-
-
-function runInstall(projectRoot) {
-  return spawnSync(
-    process.execPath,
-    [installCli, "install", "--root", projectRoot, "--no-config"],
-    { cwd: repoRoot, encoding: "utf8" }
-  );
+  copyDirRecursiveForTest(path.join(repoRoot, "src", "agents"), path.join(pkgDir, "src", "agents"));
+  copyDirRecursiveForTest(path.join(repoRoot, "src", "skills"), path.join(pkgDir, "src", "skills"));
+  copyDirRecursiveForTest(path.join(repoRoot, "src", "commands"), path.join(pkgDir, "src", "commands"));
 }
 
 /** Run install from consumer project so package root is node_modules/compound-workflow. */
-function runInstallFromConsumerProject(projectRoot) {
+function runInstall(projectRoot) {
   const pkgCli = path.join(projectRoot, "node_modules", "compound-workflow", "scripts", "install-cli.mjs");
-  return spawnSync(process.execPath, [pkgCli, "install", "--root", projectRoot, "--no-config"], {
+  return spawnSync(process.execPath, [pkgCli, "install", "--root", projectRoot], {
     cwd: projectRoot,
     encoding: "utf8",
   });
 }
 
-test("repo is single-plugin: .claude-plugin has only plugin.json", () => {
-  assert.equal(
-    fs.existsSync(path.join(repoRoot, ".claude-plugin", "marketplace.json")),
-    false,
-    ".claude-plugin/marketplace.json must not exist (single-plugin repo)"
-  );
-  assert.ok(
-    fs.existsSync(path.join(repoRoot, ".claude-plugin", "plugin.json")),
-    ".claude-plugin/plugin.json must exist"
-  );
+function setup() {
+  const projectRoot = createTempProject();
+  copyMinimalPackageIntoNodeModules(projectRoot);
+  return projectRoot;
+}
+
+// ---------------------------------------------------------------------------
+
+test("install: agents copied flat to .claude/agents/", () => {
+  const projectRoot = setup();
+  try {
+    const result = runInstall(projectRoot);
+    assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
+
+    const claudeAgentsDir = path.join(projectRoot, ".claude", "agents");
+    assert.ok(fs.existsSync(claudeAgentsDir), ".claude/agents should exist");
+
+    const entries = fs.readdirSync(claudeAgentsDir, { withFileTypes: true });
+    assert.equal(entries.filter((e) => e.isDirectory()).length, 0, ".claude/agents should be flat (no subdirectories)");
+    assert.ok(entries.filter((e) => e.isFile() && e.name.endsWith(".md")).length > 0, ".claude/agents should contain .md files");
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
 });
 
-test("install writes native OpenCode mappings and does not create runtime mirror paths", () => {
-  const projectRoot = createTempProject();
+test("install: .cursor/agents/ preserves subdirectory structure", () => {
+  const projectRoot = setup();
+  try {
+    const result = runInstall(projectRoot);
+    assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
 
+    const cursorAgentsDir = path.join(projectRoot, ".cursor", "agents");
+    assert.ok(fs.existsSync(cursorAgentsDir), ".cursor/agents should exist");
+    const dirs = fs.readdirSync(cursorAgentsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
+    assert.ok(dirs.length > 0, ".cursor/agents should have subdirectories (research/review/workflow)");
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("install: .agents/ gets agents, skills, and commands", () => {
+  const projectRoot = setup();
+  try {
+    const result = runInstall(projectRoot);
+    assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
+
+    assert.ok(fs.existsSync(path.join(projectRoot, ".agents", "agents")), ".agents/agents should exist");
+    assert.ok(fs.existsSync(path.join(projectRoot, ".agents", "skills")), ".agents/skills should exist");
+    assert.ok(fs.existsSync(path.join(projectRoot, ".agents", "commands")), ".agents/commands should exist");
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("install: copied files are real files, not symlinks", () => {
+  const projectRoot = setup();
+  try {
+    const result = runInstall(projectRoot);
+    assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
+
+    for (const f of fs.readdirSync(path.join(projectRoot, ".claude", "agents"))) {
+      const stat = fs.lstatSync(path.join(projectRoot, ".claude", "agents", f));
+      assert.ok(!stat.isSymbolicLink(), `${f} in .claude/agents should be a real file`);
+    }
+    for (const f of fs.readdirSync(path.join(projectRoot, ".agents", "commands"))) {
+      const stat = fs.lstatSync(path.join(projectRoot, ".agents", "commands", f));
+      assert.ok(!stat.isSymbolicLink(), `${f} in .agents/commands should be a real file`);
+    }
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("install: opencode.json written with .agents/ paths", () => {
+  const projectRoot = setup();
   try {
     const result = runInstall(projectRoot);
     assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
 
     const opencode = JSON.parse(fs.readFileSync(path.join(projectRoot, "opencode.json"), "utf8"));
-    assert.match(
-      opencode.command["workflow:work"].template,
-      /@node_modules\/compound-workflow\/src\/.agents\/commands\/workflow-work\.md/,
-      "workflow command template should point at package command path"
-    );
-    assert.match(
-      opencode.agent["repo-research-analyst"].prompt,
-      /\{file:node_modules\/compound-workflow\/src\/.agents\/agents\/research\/repo-research-analyst\.md\}/,
-      "agent prompt should point at package agent path"
-    );
-    assert.ok(
-      opencode.skills.paths.includes("node_modules/compound-workflow/src/.agents/skills"),
-      "skills path should include package skills path"
-    );
+    assert.ok(opencode.skills.paths.includes(".agents/skills"), "skills.paths should include .agents/skills");
 
-    assert.equal(
-      fs.existsSync(path.join(projectRoot, ".agents", "compound-workflow")),
-      false,
-      "install should not create .agents/compound-workflow runtime mirror"
-    );
-    assert.equal(
-      fs.existsSync(path.join(projectRoot, ".agents", "compound-workflow-skills")),
-      false,
-      "install should not create .agents/compound-workflow-skills symlink"
-    );
-    const cursorPlugin = JSON.parse(fs.readFileSync(path.join(projectRoot, ".cursor-plugin", "plugin.json"), "utf8"));
-    assert.equal(cursorPlugin.commands, "./node_modules/compound-workflow/src/.agents/commands", "project-root plugin manifest should point at package commands for Cursor discovery");
-    assert.ok(fs.existsSync(path.join(projectRoot, ".cursor-plugin", "registration.json")), "registration.json should be written for Cursor discovery");
+    const workCmd = opencode.command["workflow:work"];
+    assert.ok(workCmd, "workflow:work command should exist in opencode.json");
+    assert.match(workCmd.template, /@\.agents\/commands\//, "command template should reference .agents/commands/");
+    assert.ok(opencode.command["workflow:tech-review"], "workflow:tech-review should be present");
+
+    const researchAgent = opencode.agent["repo-research-analyst"];
+    assert.ok(researchAgent, "repo-research-analyst agent should exist");
+    assert.match(researchAgent.prompt, /\.agents\/agents\//, "agent prompt should reference .agents/agents/");
   } finally {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }
-});
-
-test("install preserves non-managed .cursor assets (e.g. .mdc rules)", () => {
-  const projectRoot = createTempProject();
-
-  try {
-    const userRule = path.join(projectRoot, ".cursor", "commands", "stale.mdc");
-    fs.mkdirSync(path.dirname(userRule), { recursive: true });
-    fs.writeFileSync(userRule, "stale", "utf8");
-
-    const result = runInstall(projectRoot);
-    assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
-    assert.equal(fs.readFileSync(userRule, "utf8"), "stale", "install should not remove non-.md files in .cursor/commands");
-  } finally {
-    fs.rmSync(projectRoot, { recursive: true, force: true });
-  }
-});
-
-test("install prunes legacy managed paths and removes deprecated skill symlink path", () => {
-  const projectRoot = createTempProject();
-
-  try {
-    const opencodePath = path.join(projectRoot, "opencode.json");
-    fs.writeFileSync(
-      opencodePath,
-      JSON.stringify(
-        {
-          skills: {
-            paths: [
-              ".agents/compound-workflow-skills",
-              "custom/skills"
-            ]
-          },
-          command: {
-            setup: {
-              template: "@AGENTS.md\n@.agents/compound-workflow/commands/setup.md\nArguments: $ARGUMENTS\n"
-            }
-          },
-          agent: {
-            legacy: {
-              prompt: "{file:.agents/compound-workflow/agents/research/repo-research-analyst.md}"
-            }
-          }
-        },
-        null,
-        2
-      ) + "\n",
-      "utf8"
-    );
-
-    const result = runInstall(projectRoot);
-    assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
-
-    const opencode = JSON.parse(fs.readFileSync(opencodePath, "utf8"));
-    assert.equal(opencode.command.setup, undefined, "legacy managed setup command should be pruned");
-    assert.equal(opencode.agent.legacy, undefined, "legacy managed agent should be pruned");
-    assert.equal(
-      opencode.skills.paths.includes(".agents/compound-workflow-skills"),
-      false,
-      "legacy compound-workflow skills symlink path should be removed"
-    );
-    assert.ok(opencode.skills.paths.includes("custom/skills"), "custom skill paths should be preserved");
-  } finally {
-    fs.rmSync(projectRoot, { recursive: true, force: true });
-  }
-});
-
-test("generated manifest has required shape and includes all registry-driven commands", () => {
-  const result = spawnSync(process.execPath, [generateArtifacts], { cwd: repoRoot, encoding: "utf8" });
-  assert.equal(result.status, 0, `generate:artifacts failed: ${result.stderr}\n${result.stdout}`);
-
-  const manifestPath = path.join(repoRoot, "src", "generated", "opencode.managed.json");
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-
-  assert.ok(manifest.commandRoot, "manifest must have commandRoot");
-  assert.ok(manifest.agentRoot, "manifest must have agentRoot");
-  assert.ok(manifest.skillsPath, "manifest must have skillsPath");
-  assert.ok(Array.isArray(manifest.commands), "manifest must have commands array");
-  assert.ok(Array.isArray(manifest.agents), "manifest must have agents array");
-
-  const commandIds = manifest.commands.map((c) => c.id);
-  assert.ok(commandIds.includes("workflow:tech-review"), "manifest must include workflow:tech-review command");
-  assert.ok(commandIds.includes("workflow:work"), "manifest must include workflow:work command");
-  assert.ok(manifest.agents.some((a) => a.id === "planning-technical-reviewer"), "manifest must include planning-technical-reviewer agent");
 });
 
 test("install is deterministic: two runs produce identical opencode.json", () => {
-  const projectRoot = createTempProject();
-
+  const projectRoot = setup();
   try {
     const r1 = runInstall(projectRoot);
     assert.equal(r1.status, 0, `first install failed: ${r1.stderr}\n${r1.stdout}`);
@@ -229,162 +160,43 @@ test("install is deterministic: two runs produce identical opencode.json", () =>
   }
 });
 
-test("install from consumer project (package in node_modules) reads manifest and writes opencode.json", () => {
-  const projectRoot = createTempProject();
-  copyMinimalPackageIntoNodeModules(projectRoot);
-
+test("install preserves non-managed files in target dirs (e.g. .mdc rules)", () => {
+  const projectRoot = setup();
   try {
-    const result = runInstallFromConsumerProject(projectRoot);
+    const userRule = path.join(projectRoot, ".cursor", "commands", "stale.mdc");
+    fs.mkdirSync(path.dirname(userRule), { recursive: true });
+    fs.writeFileSync(userRule, "user-rule", "utf8");
+
+    const result = runInstall(projectRoot);
+    assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
+    assert.equal(fs.readFileSync(userRule, "utf8"), "user-rule", "install should not remove non-.md files");
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("install cleans old package-relative skill paths from opencode.json", () => {
+  const projectRoot = setup();
+  try {
+    fs.writeFileSync(
+      path.join(projectRoot, "opencode.json"),
+      JSON.stringify({
+        skills: { paths: ["node_modules/compound-workflow/src/.agents/skills", "custom/skills"] },
+      }, null, 2) + "\n",
+      "utf8"
+    );
+
+    const result = runInstall(projectRoot);
     assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
 
-    const opencodePath = path.join(projectRoot, "opencode.json");
-    assert.ok(fs.existsSync(opencodePath), "opencode.json should be written");
-    const opencode = JSON.parse(fs.readFileSync(opencodePath, "utf8"));
-    assert.match(
-      opencode.command["workflow:work"].template,
-      /@node_modules\/compound-workflow\/src\/.agents\/commands\/workflow-work\.md/,
-      "workflow command template should point at package command path"
-    );
-    assert.ok(
-      opencode.command["workflow:tech-review"],
-      "opencode must include workflow:tech-review command"
-    );
-    assert.ok(
+    const opencode = JSON.parse(fs.readFileSync(path.join(projectRoot, "opencode.json"), "utf8"));
+    assert.equal(
       opencode.skills.paths.includes("node_modules/compound-workflow/src/.agents/skills"),
-      "skills path should include package skills path"
+      false,
+      "old package-relative skill path should be removed"
     );
-  } finally {
-    fs.rmSync(projectRoot, { recursive: true, force: true });
-  }
-});
-
-test("install registers Claude plugin via project settings and marketplace (project-scoped only)", () => {
-  const projectRoot = createTempProject();
-  copyMinimalPackageIntoNodeModules(projectRoot);
-
-  try {
-    const result = runInstallFromConsumerProject(projectRoot);
-    assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
-
-    const projectSettingsPath = path.join(projectRoot, ".claude", "settings.json");
-    assert.ok(fs.existsSync(projectSettingsPath), ".claude/settings.json should exist in project root");
-    const projectSettings = JSON.parse(fs.readFileSync(projectSettingsPath, "utf8"));
-
-    assert.equal(
-      projectSettings?.enabledPlugins?.["compound-workflow@compound-workflow-local"],
-      true,
-      "project settings must enable compound-workflow@compound-workflow-local"
-    );
-    assert.equal(
-      projectSettings?.extraKnownMarketplaces?.["compound-workflow"],
-      undefined,
-      "install must not write legacy compound-workflow entry (invalid local schema)"
-    );
-    assert.deepEqual(
-      projectSettings?.extraKnownMarketplaces?.["compound-workflow-local"],
-      { source: { source: "file", path: "." } },
-      "install must register compound-workflow-local marketplace via file source pointing at project root"
-    );
-  } finally {
-    fs.rmSync(projectRoot, { recursive: true, force: true });
-  }
-});
-
-test("install strips invalid compound-workflow extraKnownMarketplaces from existing .claude/settings.json", () => {
-  const projectRoot = createTempProject();
-  copyMinimalPackageIntoNodeModules(projectRoot);
-  const claudeDir = path.join(projectRoot, ".claude");
-  const settingsPath = path.join(claudeDir, "settings.json");
-  fs.mkdirSync(claudeDir, { recursive: true });
-  fs.writeFileSync(
-    settingsPath,
-    JSON.stringify(
-      {
-        extraKnownMarketplaces: {
-          "compound-workflow": { source: { source: "local", path: "./node_modules/compound-workflow" } },
-        },
-      },
-      null,
-      2
-    ) + "\n",
-    "utf8"
-  );
-
-  try {
-    const result = runInstallFromConsumerProject(projectRoot);
-    assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
-    const projectSettings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
-    assert.equal(projectSettings?.extraKnownMarketplaces?.["compound-workflow"], undefined, "install must remove invalid compound-workflow entry");
-    assert.ok(projectSettings?.extraKnownMarketplaces?.["compound-workflow-local"]?.source?.source === "file", "install must add compound-workflow-local via file");
-    assert.equal(projectSettings?.enabledPlugins?.["compound-workflow@compound-workflow-local"], true, "enabledPlugins must be set (compound-workflow@compound-workflow-local)");
-  } finally {
-    fs.rmSync(projectRoot, { recursive: true, force: true });
-  }
-});
-
-test("install writes independent .claude/settings.json for two different projects", () => {
-  const projectA = createTempProject();
-  const projectB = createTempProject();
-  copyMinimalPackageIntoNodeModules(projectA);
-  copyMinimalPackageIntoNodeModules(projectB);
-
-  try {
-    const resultA = runInstallFromConsumerProject(projectA);
-    assert.equal(resultA.status, 0, `installer failed for project A: ${resultA.stderr}\n${resultA.stdout}`);
-
-    const resultB = runInstallFromConsumerProject(projectB);
-    assert.equal(resultB.status, 0, `installer failed for project B: ${resultB.stderr}\n${resultB.stdout}`);
-
-    const settingsA = JSON.parse(fs.readFileSync(path.join(projectA, ".claude", "settings.json"), "utf8"));
-    const settingsB = JSON.parse(fs.readFileSync(path.join(projectB, ".claude", "settings.json"), "utf8"));
-
-    assert.equal(settingsA?.enabledPlugins?.["compound-workflow@compound-workflow-local"], true, "project A must enable plugin");
-    assert.equal(settingsB?.enabledPlugins?.["compound-workflow@compound-workflow-local"], true, "project B must enable plugin");
-  } finally {
-    fs.rmSync(projectA, { recursive: true, force: true });
-    fs.rmSync(projectB, { recursive: true, force: true });
-  }
-});
-
-test("install writes .claude-plugin/marketplace.json in consumer project for Claude Code 2.1+", () => {
-  const projectRoot = createTempProject();
-  copyMinimalPackageIntoNodeModules(projectRoot);
-
-  try {
-    const result = runInstallFromConsumerProject(projectRoot);
-    assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
-
-    const marketplacePath = path.join(projectRoot, ".claude-plugin", "marketplace.json");
-    assert.ok(fs.existsSync(marketplacePath), ".claude-plugin/marketplace.json should exist in consumer project");
-    const marketplace = JSON.parse(fs.readFileSync(marketplacePath, "utf8"));
-    assert.equal(marketplace.name, "compound-workflow-local", "marketplace name");
-    assert.ok(Array.isArray(marketplace.plugins) && marketplace.plugins.length === 1, "one plugin entry");
-    assert.equal(marketplace.plugins[0].name, "compound-workflow", "plugin name");
-    assert.equal(marketplace.plugins[0].source, "./node_modules/compound-workflow", "plugin source");
-  } finally {
-    fs.rmSync(projectRoot, { recursive: true, force: true });
-  }
-});
-
-test("install copies skills, commands, and agents into .cursor/ for native Cursor discovery", () => {
-  const projectRoot = createTempProject();
-  copyMinimalPackageIntoNodeModules(projectRoot);
-
-  try {
-    const result = runInstallFromConsumerProject(projectRoot);
-    assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
-
-    assert.ok(fs.existsSync(path.join(projectRoot, ".cursor", "skills")), ".cursor/skills should be created");
-    assert.ok(fs.existsSync(path.join(projectRoot, ".cursor", "commands")), ".cursor/commands should be created");
-    assert.ok(fs.existsSync(path.join(projectRoot, ".cursor", "agents")), ".cursor/agents should be created");
-
-    // Verify files are real copies (not symlinks)
-    const commandFiles = fs.readdirSync(path.join(projectRoot, ".cursor", "commands"));
-    assert.ok(commandFiles.length > 0, "commands should be copied");
-    for (const f of commandFiles) {
-      const stat = fs.lstatSync(path.join(projectRoot, ".cursor", "commands", f));
-      assert.ok(stat.isFile() && !stat.isSymbolicLink(), `${f} should be a real file, not a symlink`);
-    }
+    assert.ok(opencode.skills.paths.includes(".agents/skills"), ".agents/skills should be present");
+    assert.ok(opencode.skills.paths.includes("custom/skills"), "custom/skills should be preserved");
   } finally {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }

@@ -2,195 +2,237 @@
 /**
  * compound-workflow install
  *
- * Native-only install: writes opencode.json from package metadata,
- * merges AGENTS.md, and ensures standard docs/todo directories.
+ * Copies agents, skills, and commands from the package into target platform dirs:
+ *   .claude/agents/   — flat agent .md files (Claude Code)
+ *   .cursor/agents/   — agents preserving subdirs (Cursor)
+ *   .cursor/skills/   — skill dirs (Cursor)
+ *   .cursor/commands/ — command .md files (Cursor)
+ *   .agents/agents/   — agents (OpenCode / general)
+ *   .agents/skills/   — skills (OpenCode / general)
+ *   .agents/commands/ — commands (OpenCode / general)
  *
- * DECLARATIVE SOURCE OF TRUTH (no manual wiring):
- * - Commands: add/remove .md under src/.agents/commands/ (frontmatter: invocation, name, description).
- *   Registry (src/.agents/registry.json) + generate-platform-artifacts → opencode.managed.json → install.
- * - Agents: add/remove .md under src/.agents/agents/ (frontmatter: name, description). Same pipeline.
- * - Skills: add/remove dir src/.agents/skills/<name>/SKILL.md. OpenCode uses skills path.
+ * Also writes opencode.json, AGENTS.md, and standard docs directories.
  *
- * PLATFORM STRATEGY:
- * - Cursor: copies files into .cursor/skills/, .cursor/commands/, .cursor/agents/ for native discovery.
- * - Claude Code: marketplace flow via .claude-plugin/ + project .claude/settings.json.
- * - OpenCode: opencode.json with paths into package source.
- * Run install (or npm install compound-workflow) after any change; no other registration needed.
+ * Usage:
+ *   (automatic) npm install compound-workflow   # runs via postinstall
+ *   (manual)    npx compound-workflow install [--root <projectDir>] [--dry-run]
  */
 import fs from "node:fs";
 import path from "node:path";
-import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-function usage(exitCode = 0) {
-  const msg = `
-Usage:
-  (automatic) npm install compound-workflow   # runs install via postinstall; no npx needed
-  (manual)    npx compound-workflow install [--root <projectDir>] [--dry-run] [--no-config]
-
-Install writes opencode.json (from package), merges AGENTS.md, creates standard
-docs/todos directories, copies skills/commands/agents into .cursor/ for Cursor,
-and registers the Claude Code plugin (project-scoped).
-
-  --root <dir>            Project directory (default: cwd)
-  --dry-run               Print planned changes only
-  --no-config             Skip Repo Config Block reminder
-`;
-  (exitCode === 0 ? console.log : console.error)(msg.trimStart());
-  process.exit(exitCode);
-}
-
-function parseArgs(argv) {
-  const out = { root: process.cwd(), dryRun: false, noConfig: false };
-  for (let i = 2; i < argv.length; i++) {
-    const arg = argv[i];
-    if (arg === "--dry-run") out.dryRun = true;
-    else if (arg === "--no-config") out.noConfig = true;
-    else if (arg === "--root") {
-      const value = argv[i + 1];
-      if (!value) usage(1);
-      out.root = value;
-      i++;
-    } else if (arg === "install") {
-      continue;
-    } else if (arg === "-h" || arg === "--help") usage(0);
-    else usage(1);
-  }
-  return out;
-}
+// ---------------------------------------------------------------------------
+// Utilities
+// ---------------------------------------------------------------------------
 
 function realpathSafe(p) {
-  try {
-    return fs.realpathSync(p);
-  } catch {
-    return path.resolve(p);
-  }
+  try { return fs.realpathSync(p); } catch { return path.resolve(p); }
 }
+
+const PACKAGE_ROOT = realpathSafe(path.join(__dirname, ".."));
 
 function hasCommand(cmd) {
   const checker = process.platform === "win32" ? "where" : "which";
-  const result = spawnSync(checker, [cmd], { stdio: "ignore" });
-  return result.status === 0;
+  return spawnSync(checker, [cmd], { stdio: "ignore" }).status === 0;
 }
 
 function stripJsonc(input) {
-  let out = "";
-  let i = 0;
-  let inStr = false;
-  let strQuote = "";
-  let escape = false;
-
+  let out = "", i = 0, inStr = false, strQuote = "", escape = false;
   while (i < input.length) {
-    const c = input[i];
-    const n = input[i + 1];
+    const c = input[i], n = input[i + 1];
     if (inStr) {
       out += c;
       if (escape) escape = false;
       else if (c === "\\") escape = true;
       else if (c === strQuote) inStr = false;
-      i++;
-      continue;
+      i++; continue;
     }
-
-    if (c === '"' || c === "'") {
-      inStr = true;
-      strQuote = c;
-      out += c;
-      i++;
-      continue;
-    }
-
-    if (c === "/" && n === "/") {
-      while (i < input.length && input[i] !== "\n") i++;
-      continue;
-    }
-
-    if (c === "/" && n === "*") {
-      i += 2;
-      while (i < input.length && !(input[i] === "*" && input[i + 1] === "/")) i++;
-      i += 2;
-      continue;
-    }
-
-    out += c;
-    i++;
+    if (c === '"' || c === "'") { inStr = true; strQuote = c; out += c; i++; continue; }
+    if (c === "/" && n === "/") { while (i < input.length && input[i] !== "\n") i++; continue; }
+    if (c === "/" && n === "*") { i += 2; while (i < input.length && !(input[i] === "*" && input[i + 1] === "/")) i++; i += 2; continue; }
+    out += c; i++;
   }
-
   return out;
 }
 
 function readJsonMaybe(fileAbs) {
   if (!fs.existsSync(fileAbs)) return null;
-  const raw = fs.readFileSync(fileAbs, "utf8");
-  return JSON.parse(stripJsonc(raw));
+  return JSON.parse(stripJsonc(fs.readFileSync(fileAbs, "utf8")));
 }
 
 function ensureObject(v) {
   return v && typeof v === "object" && !Array.isArray(v) ? v : {};
 }
 
-const PACKAGE_ROOT = realpathSafe(path.join(__dirname, ".."));
-const PACKAGE_AGENTS_ROOT = path.join(PACKAGE_ROOT, "src", ".agents");
-const GENERATED_MANIFEST_PATH = path.join(PACKAGE_ROOT, "src", "generated", "opencode.managed.json");
-
-function readGeneratedManifest() {
-  if (!fs.existsSync(GENERATED_MANIFEST_PATH)) {
-    throw new Error(
-      `Missing generated OpenCode manifest at ${GENERATED_MANIFEST_PATH}. Run: npm run generate:artifacts`
-    );
+function parseFrontmatter(md) {
+  if (!md.startsWith("---\n") && !md.startsWith("---\r\n")) return {};
+  const end = md.indexOf("\n---", 4);
+  if (end === -1) return {};
+  const block = md.slice(4, end + 1);
+  const out = {};
+  for (const line of block.split(/\r?\n/)) {
+    const match = line.match(/^([A-Za-z0-9_-]+):\s*(.*)\s*$/);
+    if (!match) continue;
+    out[match[1]] = (match[2] ?? "").replace(/^"(.*)"$/, "$1").replace(/^'(.*)'$/, "$1");
   }
-  const manifest = JSON.parse(fs.readFileSync(GENERATED_MANIFEST_PATH, "utf8"));
-  if (!manifest?.commandRoot || !manifest?.agentRoot || !manifest?.skillsPath) {
-    throw new Error("Invalid generated OpenCode manifest: missing root path fields.");
+  return out;
+}
+
+function walkFiles(dirAbs, ext) {
+  const out = [];
+  const stack = [dirAbs];
+  while (stack.length) {
+    const cur = stack.pop();
+    let entries;
+    try { entries = fs.readdirSync(cur, { withFileTypes: true }); } catch { continue; }
+    for (const e of entries) {
+      const p = path.join(cur, e.name);
+      if (e.isDirectory()) stack.push(p);
+      else if (e.isFile() && (!ext || p.endsWith(ext))) out.push(p);
+    }
   }
-  if (!Array.isArray(manifest?.commands) || !Array.isArray(manifest?.agents)) {
-    throw new Error("Invalid generated OpenCode manifest: commands/agents must be arrays.");
+  return out.sort();
+}
+
+function copyDirRecursive(srcDir, destDir) {
+  fs.mkdirSync(destDir, { recursive: true });
+  for (const entry of fs.readdirSync(srcDir, { withFileTypes: true })) {
+    const srcPath = path.join(srcDir, entry.name);
+    const destPath = path.join(destDir, entry.name);
+    if (entry.isDirectory()) {
+      copyDirRecursive(srcPath, destPath);
+    } else if (entry.isFile()) {
+      // Remove symlinks before copying so we write a real file, not through a broken link
+      try { if (fs.lstatSync(destPath).isSymbolicLink()) fs.rmSync(destPath, { force: true }); } catch { /* doesn't exist */ }
+      fs.copyFileSync(srcPath, destPath);
+    }
   }
-  return manifest;
 }
 
-let GENERATED_MANIFEST;
-let PACKAGE_COMMAND_ROOT;
-let PACKAGE_AGENT_ROOT;
-let PACKAGE_SKILL_ROOT;
+// ---------------------------------------------------------------------------
+// Copy operations
+// ---------------------------------------------------------------------------
 
-function getLegacyCommandRoots() {
-  return [".agents/compound-workflow/commands", PACKAGE_COMMAND_ROOT, "src/.agents/commands"];
-}
-function getLegacyAgentRoots() {
-  return [".agents/compound-workflow/agents", PACKAGE_AGENT_ROOT, "src/.agents/agents"];
-}
-
-function managedCommandPath(entry) {
-  const template = entry?.template;
-  if (typeof template !== "string") return null;
-  const match = template.match(/@([^\n\r]+)\nArguments: \$ARGUMENTS\n?$/m);
-  if (!match) return null;
-  return match[1].trim();
-}
-
-function managedAgentPath(entry) {
-  const prompt = entry?.prompt;
-  if (typeof prompt !== "string") return null;
-  const match = prompt.match(/^\{file:([^}]+)\}$/);
-  return match ? match[1].trim() : null;
-}
-
-function isManagedCommandPath(commandPath) {
-  return getLegacyCommandRoots().some((root) => commandPath.startsWith(`${root}/`));
+/**
+ * Copy all .md files from srcDir (recursively) into destDir (flat).
+ * Prunes .md files in destDir not in current source.
+ */
+function copyAgentsFlat(srcDir, destDir, dryRun, label) {
+  const files = walkFiles(srcDir, ".md");
+  const srcNames = new Set(files.map((f) => path.basename(f)));
+  if (dryRun) { console.log(`[dry-run] Would copy ${files.length} agents (flat) to ${label}`); return; }
+  fs.mkdirSync(destDir, { recursive: true });
+  try {
+    for (const e of fs.readdirSync(destDir, { withFileTypes: true })) {
+      if (e.name.endsWith(".md") && !srcNames.has(e.name)) fs.rmSync(path.join(destDir, e.name), { force: true });
+    }
+  } catch { /* ignore */ }
+  for (const f of files) {
+    const dest = path.join(destDir, path.basename(f));
+    try { if (fs.lstatSync(dest).isSymbolicLink()) fs.rmSync(dest, { force: true }); } catch { /* doesn't exist */ }
+    fs.copyFileSync(f, dest);
+  }
+  console.log(`Copied ${files.length} agents to ${label}`);
 }
 
-function isManagedAgentPath(agentPath) {
-  return getLegacyAgentRoots().some((root) => agentPath.startsWith(`${root}/`));
+/**
+ * Copy srcDir recursively to destDir, pruning top-level subdirs no longer in source.
+ */
+function copyAgentsRecursive(srcDir, destDir, dryRun, label) {
+  const files = walkFiles(srcDir, ".md");
+  if (dryRun) { console.log(`[dry-run] Would copy ${files.length} agents (recursive) to ${label}`); return; }
+  const validSubdirs = new Set();
+  for (const f of files) {
+    const sub = path.relative(srcDir, path.dirname(f));
+    if (sub && sub !== ".") validSubdirs.add(sub.split(path.sep)[0]);
+  }
+  fs.mkdirSync(destDir, { recursive: true });
+  try {
+    for (const e of fs.readdirSync(destDir, { withFileTypes: true })) {
+      if (e.isDirectory() && !validSubdirs.has(e.name)) fs.rmSync(path.join(destDir, e.name), { recursive: true, force: true });
+    }
+  } catch { /* ignore */ }
+  copyDirRecursive(srcDir, destDir);
+  console.log(`Copied ${files.length} agents to ${label}`);
 }
 
-function writeOpenCodeJson(targetRoot, dryRun, isSelfInstall) {
-  const commandRoot = isSelfInstall ? "src/.agents/commands" : PACKAGE_COMMAND_ROOT;
-  const agentRoot = isSelfInstall ? "src/.agents/agents" : PACKAGE_AGENT_ROOT;
-  const skillRoot = isSelfInstall ? "src/.agents/skills" : PACKAGE_SKILL_ROOT;
+/**
+ * Copy skill directories (each containing SKILL.md) to destDir.
+ * Prunes skill dirs in destDir no longer in source.
+ */
+function copySkills(srcDir, destDir, dryRun, label) {
+  if (!fs.existsSync(srcDir)) return;
+  const skillDirs = fs.readdirSync(srcDir, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && fs.existsSync(path.join(srcDir, e.name, "SKILL.md")))
+    .map((e) => e.name);
+  if (dryRun) { console.log(`[dry-run] Would copy ${skillDirs.length} skills to ${label}`); return; }
+  const skillSet = new Set(skillDirs);
+  fs.mkdirSync(destDir, { recursive: true });
+  try {
+    for (const e of fs.readdirSync(destDir, { withFileTypes: true })) {
+      if (e.isDirectory() && fs.existsSync(path.join(destDir, e.name, "SKILL.md")) && !skillSet.has(e.name))
+        fs.rmSync(path.join(destDir, e.name), { recursive: true, force: true });
+    }
+  } catch { /* ignore */ }
+  for (const name of skillDirs) {
+    const dest = path.join(destDir, name);
+    fs.rmSync(dest, { recursive: true, force: true });
+    copyDirRecursive(path.join(srcDir, name), dest);
+  }
+  console.log(`Copied ${skillDirs.length} skills to ${label}`);
+}
+
+/**
+ * Copy .md command files from srcDir to destDir (flat).
+ * Prunes .md files in destDir not in current source.
+ */
+function copyCommands(srcDir, destDir, dryRun, label) {
+  if (!fs.existsSync(srcDir)) return;
+  const files = fs.readdirSync(srcDir, { withFileTypes: true })
+    .filter((e) => e.isFile() && e.name.endsWith(".md"))
+    .map((e) => e.name);
+  if (dryRun) { console.log(`[dry-run] Would copy ${files.length} commands to ${label}`); return; }
+  const fileSet = new Set(files);
+  fs.mkdirSync(destDir, { recursive: true });
+  try {
+    for (const e of fs.readdirSync(destDir, { withFileTypes: true })) {
+      if (e.name.endsWith(".md") && !fileSet.has(e.name)) fs.rmSync(path.join(destDir, e.name), { force: true });
+    }
+  } catch { /* ignore */ }
+  for (const name of files) fs.copyFileSync(path.join(srcDir, name), path.join(destDir, name));
+  console.log(`Copied ${files.length} commands to ${label}`);
+}
+
+// ---------------------------------------------------------------------------
+// opencode.json
+// ---------------------------------------------------------------------------
+
+function writeOpenCodeJson(targetRoot, srcRoot, dryRun) {
+  const commandsDir = path.join(srcRoot, "commands");
+  const agentsDir = path.join(srcRoot, "agents");
+
+  const commands = [];
+  if (fs.existsSync(commandsDir)) {
+    for (const f of walkFiles(commandsDir, ".md")) {
+      const rel = path.relative(commandsDir, f).replaceAll(path.sep, "/");
+      const fm = parseFrontmatter(fs.readFileSync(f, "utf8"));
+      const id = fm.invocation || fm.name || path.basename(f, ".md");
+      commands.push({ id: id.trim(), description: (fm.description || id).trim(), rel });
+    }
+  }
+
+  const agents = [];
+  if (fs.existsSync(agentsDir)) {
+    for (const f of walkFiles(agentsDir, ".md")) {
+      const rel = path.relative(agentsDir, f).replaceAll(path.sep, "/");
+      const fm = parseFrontmatter(fs.readFileSync(f, "utf8"));
+      const id = fm.name || path.basename(f, ".md");
+      agents.push({ id: id.trim(), description: (fm.description || id).trim(), rel });
+    }
+  }
 
   const opencodeAbs = path.join(targetRoot, "opencode.json");
   const existing = readJsonMaybe(opencodeAbs) ?? {};
@@ -199,112 +241,76 @@ function writeOpenCodeJson(targetRoot, dryRun, isSelfInstall) {
   next.$schema = next.$schema || "https://opencode.ai/config.json";
   next.skills = ensureObject(next.skills);
   next.skills.paths = Array.isArray(next.skills.paths) ? next.skills.paths : [];
-
-  next.skills.paths = next.skills.paths.filter((p) => p !== ".agents/compound-workflow-skills");
-  if (!next.skills.paths.includes(skillRoot)) {
-    next.skills.paths.unshift(skillRoot);
-  }
+  // Remove old package-relative paths, ensure .agents/skills is present
+  next.skills.paths = next.skills.paths.filter((p) => !p.includes("compound-workflow") && !p.includes("src/.agents"));
+  if (!next.skills.paths.includes(".agents/skills")) next.skills.paths.unshift(".agents/skills");
 
   next.command = ensureObject(next.command);
   next.agent = ensureObject(next.agent);
 
-  const commands = GENERATED_MANIFEST.commands;
-  const agents = GENERATED_MANIFEST.agents;
-
-  for (const command of commands) {
-    next.command[command.id] = {
-      ...ensureObject(next.command[command.id]),
-      description: command.description,
+  for (const cmd of commands) {
+    next.command[cmd.id] = {
+      ...ensureObject(next.command[cmd.id]),
+      description: cmd.description,
       agent: "build",
-      template: `@AGENTS.md\n@${commandRoot}/${command.rel}\nArguments: $ARGUMENTS\n`,
+      template: `@AGENTS.md\n@.agents/commands/${cmd.rel}\nArguments: $ARGUMENTS\n`,
     };
   }
 
-  const managedCommandTargets = new Set(
-    commands.map((command) => `${commandRoot}/${command.rel}`)
-  );
-  for (const [id, entry] of Object.entries(next.command)) {
-    const commandPath = managedCommandPath(entry);
-    if (!commandPath || !isManagedCommandPath(commandPath)) continue;
-    if (!managedCommandTargets.has(commandPath)) delete next.command[id];
-  }
-
-  for (const agent of agents) {
-    next.agent[agent.id] = {
-      ...ensureObject(next.agent[agent.id]),
-      description: agent.description,
+  for (const ag of agents) {
+    next.agent[ag.id] = {
+      ...ensureObject(next.agent[ag.id]),
+      description: ag.description,
       mode: "subagent",
-      prompt: `{file:${agentRoot}/${agent.rel}}`,
-      permission: { ...ensureObject(next.agent[agent.id]?.permission), edit: "deny" },
+      prompt: `{file:.agents/agents/${ag.rel}}`,
+      permission: { ...ensureObject(next.agent[ag.id]?.permission), edit: "deny" },
     };
   }
 
-  const managedAgentTargets = new Set(
-    agents.map((agent) => `${agentRoot}/${agent.rel}`)
-  );
-  for (const [id, entry] of Object.entries(next.agent)) {
-    const agentPath = managedAgentPath(entry);
-    if (!agentPath || !isManagedAgentPath(agentPath)) continue;
-    if (!managedAgentTargets.has(agentPath)) delete next.agent[id];
-  }
-
-  const out = JSON.stringify(next, null, 2) + "\n";
-  if (dryRun) {
-    console.log("[dry-run] Would write opencode.json:", opencodeAbs);
-    return;
-  }
-
-  fs.writeFileSync(opencodeAbs, out, "utf8");
-  console.log("Wrote:", opencodeAbs);
+  if (dryRun) { console.log("[dry-run] Would write opencode.json"); return; }
+  fs.writeFileSync(opencodeAbs, JSON.stringify(next, null, 2) + "\n", "utf8");
+  console.log("Wrote: opencode.json");
 }
+
+// ---------------------------------------------------------------------------
+// AGENTS.md merge
+// ---------------------------------------------------------------------------
 
 function extractRepoConfigBlock(md) {
   const match = md.match(/(### Repo Config Block[^\n]*\n)?\s*```yaml\n([\s\S]*?)```/);
   if (!match) return { block: null, rest: md };
-  const full = match[0];
   const block = match[2].trim();
-  const rest = md.replace(full, "").replace(/\n{3,}/g, "\n\n").trim();
+  const rest = md.replace(match[0], "").replace(/\n{3,}/g, "\n\n").trim();
   return { block, rest };
 }
 
-function mergeAgentsMd(templateMd, existingMd) {
-  const { block: existingBlock } = existingMd
-    ? extractRepoConfigBlock(existingMd)
-    : { block: null };
+function writeAgentsMd(targetRoot, packageRoot, dryRun) {
+  const templatePath = path.join(packageRoot, "src", "AGENTS.md");
+  const targetPath = path.join(targetRoot, "AGENTS.md");
+  const templateMd = fs.readFileSync(templatePath, "utf8");
+  const existingMd = fs.existsSync(targetPath) ? fs.readFileSync(targetPath, "utf8") : null;
+
+  const { block: existingBlock } = existingMd ? extractRepoConfigBlock(existingMd) : { block: null };
   const { rest: templateRest } = extractRepoConfigBlock(templateMd);
 
   let out = templateRest;
   if (existingBlock) {
     const repoSection = `### Repo Config Block (Optional)\n\n\`\`\`yaml\n${existingBlock}\n\`\`\`\n`;
-
     if (!out.includes("### Repo Config Block")) {
-      out = out.replace(
-        "## Repo Configuration (Optional)",
-        `## Repo Configuration (Optional)\n\n${repoSection}`
-      );
+      out = out.replace("## Repo Configuration (Optional)", `## Repo Configuration (Optional)\n\n${repoSection}`);
     } else {
       out = out.replace(/### Repo Config Block[^\n]*\n\s*```yaml\n[\s\S]*?```/, repoSection);
     }
   }
 
-  return out;
+  if (dryRun) { console.log("[dry-run] Would write AGENTS.md"); return; }
+  fs.writeFileSync(targetPath, out, "utf8");
+  console.log("Wrote: AGENTS.md");
 }
 
-function writeAgentsMd(targetRoot, dryRun) {
-  const templatePath = path.join(PACKAGE_ROOT, "src", "AGENTS.md");
-  const targetPath = path.join(targetRoot, "AGENTS.md");
-  const templateMd = fs.readFileSync(templatePath, "utf8");
-  const existingMd = fs.existsSync(targetPath) ? fs.readFileSync(targetPath, "utf8") : null;
-  const merged = mergeAgentsMd(templateMd, existingMd);
-
-  if (dryRun) {
-    console.log("[dry-run] Would write AGENTS.md:", targetPath);
-    return;
-  }
-
-  fs.writeFileSync(targetPath, merged, "utf8");
-  console.log("Wrote:", targetPath);
-}
+// ---------------------------------------------------------------------------
+// Standard dirs
+// ---------------------------------------------------------------------------
 
 const DIRS = [
   "docs/brainstorms",
@@ -319,378 +325,90 @@ const DIRS = [
 function ensureDirs(targetRoot, dryRun) {
   for (const d of DIRS) {
     const abs = path.join(targetRoot, d);
-    if (dryRun && !fs.existsSync(abs)) {
-      console.log("[dry-run] Would create:", d);
-    } else if (!fs.existsSync(abs)) {
-      fs.mkdirSync(abs, { recursive: true });
-      console.log("Created:", d);
+    if (!fs.existsSync(abs)) {
+      if (dryRun) console.log("[dry-run] Would create:", d);
+      else { fs.mkdirSync(abs, { recursive: true }); console.log("Created:", d); }
     }
   }
 }
 
-/**
- * Writes .cursor-plugin/plugin.json and .claude-plugin/plugin.json at targetRoot.
- * Paths (commands, agents, skills) in the written manifests are relative to project root
- * (parent of .cursor-plugin / .claude-plugin) so Cursor/Claude resolve assets correctly.
- */
-function writePluginManifests(targetRoot, dryRun, isSelfInstall) {
-  const pathsBase = isSelfInstall ? "./src/.agents" : "./node_modules/compound-workflow/src/.agents";
-  const cursorSrc = path.join(PACKAGE_ROOT, ".cursor-plugin", "plugin.json");
-  const claudeSrc = path.join(PACKAGE_ROOT, ".claude-plugin", "plugin.json");
-  const cursorManifest = readJsonMaybe(cursorSrc);
-  const claudeManifest = readJsonMaybe(claudeSrc);
-  if (!cursorManifest || !claudeManifest) return;
+// ---------------------------------------------------------------------------
+// CLI args
+// ---------------------------------------------------------------------------
 
-  // All Cursor paths point directly at the package source — no symlink indirection.
-  // This ensures frontmatter (descriptions) is parsed correctly by Cursor for all components.
-  const cursorOut = {
-    ...cursorManifest,
-    commands: `${pathsBase}/commands`,
-    agents: `${pathsBase}/agents`,
-    skills: `${pathsBase}/skills`,
-  };
-  // Claude Code only accepts name, description, author in plugin.json.
-  // Agents are discovered from the adjacent agents/ directory (flat .md files).
-  const claudeOut = {
-    name: claudeManifest.name,
-    description: claudeManifest.description,
-    author: claudeManifest.author,
-  };
-  const cursorDir = path.join(targetRoot, ".cursor-plugin");
-  const claudeDir = path.join(targetRoot, ".claude-plugin");
+function usage(exitCode = 0) {
+  const msg = `
+Usage:
+  (automatic) npm install compound-workflow   # runs install via postinstall
+  (manual)    npx compound-workflow install [--root <projectDir>] [--dry-run]
 
-  const installPathAbs = realpathSafe(targetRoot);
-  const registrationDescriptor = {
-    pluginId: "compound-workflow@local",
-    scope: "user",
-    installPath: installPathAbs,
-  };
+Copies agents, skills, and commands into .claude/, .cursor/, and .agents/.
+Also writes opencode.json, AGENTS.md, and standard docs directories.
 
-  if (dryRun) {
-    console.log("[dry-run] Would write .cursor-plugin/plugin.json, .claude-plugin/plugin.json, .cursor-plugin/registration.json" + (isSelfInstall ? "" : ", .claude-plugin/marketplace.json"));
-    return;
-  }
-  fs.mkdirSync(cursorDir, { recursive: true });
-  fs.mkdirSync(claudeDir, { recursive: true });
-  fs.writeFileSync(path.join(cursorDir, "plugin.json"), JSON.stringify(cursorOut, null, 2) + "\n", "utf8");
-  fs.writeFileSync(path.join(claudeDir, "plugin.json"), JSON.stringify(claudeOut, null, 2) + "\n", "utf8");
-  fs.writeFileSync(path.join(cursorDir, "registration.json"), JSON.stringify(registrationDescriptor, null, 2) + "\n", "utf8");
-
-  // Sync flat agent symlinks into .claude-plugin/agents/ so Claude Code discovers them.
-  // Claude Code only scans the root of the agents/ directory (not subdirectories).
-  const claudeAgentsDir = path.join(claudeDir, "agents");
-  const packageAgentsDirAbs = isSelfInstall
-    ? path.join(PACKAGE_ROOT, "src", ".agents", "agents")
-    : path.join(targetRoot, "node_modules", "compound-workflow", "src", ".agents", "agents");
-  if (fs.existsSync(packageAgentsDirAbs)) {
-    fs.mkdirSync(claudeAgentsDir, { recursive: true });
-    const agentBasenames = new Set(GENERATED_MANIFEST.agents.map((a) => path.basename(a.rel)));
-    // Prune stale symlinks
-    try {
-      for (const entry of fs.readdirSync(claudeAgentsDir, { withFileTypes: true })) {
-        if (!agentBasenames.has(entry.name)) {
-          fs.rmSync(path.join(claudeAgentsDir, entry.name), { force: true });
-        }
-      }
-    } catch { /* ignore */ }
-    for (const agent of GENERATED_MANIFEST.agents) {
-      const linkPath = path.join(claudeAgentsDir, path.basename(agent.rel));
-      const targetPath = path.join(packageAgentsDirAbs, agent.rel);
-      try {
-        if (fs.lstatSync(linkPath)) fs.rmSync(linkPath, { force: true });
-      } catch { /* doesn't exist */ }
-      try {
-        fs.symlinkSync(targetPath, linkPath);
-      } catch (err) {
-        console.warn("[claude] Could not symlink agent", agent.id, err.message);
-      }
-    }
-  }
-
-  // Claude Code 2.1.x+ no longer loads from installed_plugins.json; it requires marketplace flow.
-  // Write a project-level marketplace so user can: /plugin marketplace add . then /plugin install compound-workflow@compound-workflow-local
-  if (!isSelfInstall) {
-    const marketplaceManifest = {
-      name: "compound-workflow-local",
-      owner: { name: "Compound Workflow" },
-      plugins: [
-        {
-          name: "compound-workflow",
-          source: "./node_modules/compound-workflow",
-          description: claudeOut.description || "Clarify → plan → execute → verify → capture workflow.",
-        },
-      ],
-    };
-    fs.writeFileSync(path.join(claudeDir, "marketplace.json"), JSON.stringify(marketplaceManifest, null, 2) + "\n", "utf8");
-  }
-  console.log("Wrote: .cursor-plugin/plugin.json, .claude-plugin/plugin.json, .cursor-plugin/registration.json" + (isSelfInstall ? "" : ", .claude-plugin/marketplace.json"));
+  --root <dir>    Project directory (default: cwd)
+  --dry-run       Print planned changes only
+`;
+  (exitCode === 0 ? console.log : console.error)(msg.trimStart());
+  process.exit(exitCode);
 }
 
-
-
-function copyDirRecursive(srcDir, destDir) {
-  fs.mkdirSync(destDir, { recursive: true });
-  for (const entry of fs.readdirSync(srcDir, { withFileTypes: true })) {
-    const srcPath = path.join(srcDir, entry.name);
-    const destPath = path.join(destDir, entry.name);
-    if (entry.isDirectory()) {
-      copyDirRecursive(srcPath, destPath);
-    } else if (entry.isFile()) {
-      fs.copyFileSync(srcPath, destPath);
-    }
+function parseArgs(argv) {
+  const out = { root: process.cwd(), dryRun: false };
+  for (let i = 2; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === "--dry-run") out.dryRun = true;
+    else if (arg === "--root") { const v = argv[++i]; if (!v) usage(1); out.root = v; }
+    else if (arg === "install") { /* subcommand, ignore */ }
+    else if (arg === "-h" || arg === "--help") usage(0);
+    else usage(1);
   }
+  return out;
 }
 
-/**
- * Cursor discovers skills from .cursor/skills/ (each subdir with SKILL.md).
- * Copy package skills so Cursor finds them with full frontmatter metadata.
- */
-function copyCursorSkills(targetRoot, dryRun, isSelfInstall) {
-  const packageSkillsAbs = path.join(
-    isSelfInstall ? PACKAGE_ROOT : path.join(targetRoot, "node_modules", "compound-workflow"),
-    "src", ".agents", "skills"
-  );
-  if (!fs.existsSync(packageSkillsAbs)) return;
-
-  const cursorSkillsDir = path.join(targetRoot, ".cursor", "skills");
-  const skillDirs = fs.readdirSync(packageSkillsAbs, { withFileTypes: true })
-    .filter((e) => e.isDirectory() && fs.existsSync(path.join(packageSkillsAbs, e.name, "SKILL.md")))
-    .map((e) => e.name);
-  if (skillDirs.length === 0) return;
-
-  if (dryRun) {
-    console.log("[dry-run] Would copy", skillDirs.length, "skills into .cursor/skills/");
-    return;
-  }
-
-  fs.mkdirSync(cursorSkillsDir, { recursive: true });
-  const skillSet = new Set(skillDirs);
-
-  // Prune stale entries that we manage (contain SKILL.md) but are no longer in the package
-  try {
-    for (const entry of fs.readdirSync(cursorSkillsDir, { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue;
-      const skillMd = path.join(cursorSkillsDir, entry.name, "SKILL.md");
-      if (!fs.existsSync(skillMd)) continue;
-      if (!skillSet.has(entry.name)) {
-        fs.rmSync(path.join(cursorSkillsDir, entry.name), { recursive: true, force: true });
-      }
-    }
-  } catch { /* ignore */ }
-
-  for (const name of skillDirs) {
-    const dest = path.join(cursorSkillsDir, name);
-    fs.rmSync(dest, { recursive: true, force: true });
-    copyDirRecursive(path.join(packageSkillsAbs, name), dest);
-  }
-  console.log("Copied", skillDirs.length, "skills to .cursor/skills/");
-}
-
-/**
- * Cursor discovers commands from .cursor/commands/ (.md files).
- * Copy package commands so Cursor finds them with full frontmatter metadata.
- */
-function copyCursorCommands(targetRoot, dryRun, isSelfInstall) {
-  const packageCommandsAbs = path.join(
-    isSelfInstall ? PACKAGE_ROOT : path.join(targetRoot, "node_modules", "compound-workflow"),
-    "src", ".agents", "commands"
-  );
-  if (!fs.existsSync(packageCommandsAbs)) return;
-
-  const cursorCommandsDir = path.join(targetRoot, ".cursor", "commands");
-  const commandFiles = fs.readdirSync(packageCommandsAbs, { withFileTypes: true })
-    .filter((e) => e.isFile() && e.name.endsWith(".md"))
-    .map((e) => e.name);
-  if (commandFiles.length === 0) return;
-
-  if (dryRun) {
-    console.log("[dry-run] Would copy", commandFiles.length, "commands into .cursor/commands/");
-    return;
-  }
-
-  fs.mkdirSync(cursorCommandsDir, { recursive: true });
-  const commandSet = new Set(commandFiles);
-
-  // Prune stale .md files and old symlinks that we previously managed
-  try {
-    for (const entry of fs.readdirSync(cursorCommandsDir, { withFileTypes: true })) {
-      if (!entry.name.endsWith(".md")) continue;
-      if (entry.isSymbolicLink() || !commandSet.has(entry.name)) {
-        fs.rmSync(path.join(cursorCommandsDir, entry.name), { force: true });
-      }
-    }
-  } catch { /* ignore */ }
-
-  for (const name of commandFiles) {
-    fs.copyFileSync(path.join(packageCommandsAbs, name), path.join(cursorCommandsDir, name));
-  }
-  console.log("Copied", commandFiles.length, "commands to .cursor/commands/");
-}
-
-/**
- * Cursor discovers agents from .cursor/agents/ (.md files, supports subdirs).
- * Copy package agents preserving subdirectory structure (research/, review/, workflow/).
- */
-function copyCursorAgents(targetRoot, dryRun, isSelfInstall) {
-  const packageAgentsAbs = path.join(
-    isSelfInstall ? PACKAGE_ROOT : path.join(targetRoot, "node_modules", "compound-workflow"),
-    "src", ".agents", "agents"
-  );
-  if (!fs.existsSync(packageAgentsAbs)) return;
-
-  const cursorAgentsDir = path.join(targetRoot, ".cursor", "agents");
-  const agentRels = GENERATED_MANIFEST.agents.map((a) => a.rel);
-  if (agentRels.length === 0) return;
-
-  if (dryRun) {
-    console.log("[dry-run] Would copy", agentRels.length, "agents into .cursor/agents/");
-    return;
-  }
-
-  fs.mkdirSync(cursorAgentsDir, { recursive: true });
-
-  // Collect valid subdirectories from manifest
-  const validSubdirs = new Set();
-  for (const rel of agentRels) {
-    const subdir = path.dirname(rel);
-    if (subdir !== ".") validSubdirs.add(subdir);
-  }
-
-  // Prune stale subdirs and files
-  try {
-    for (const entry of fs.readdirSync(cursorAgentsDir, { withFileTypes: true })) {
-      if (entry.isDirectory() && !validSubdirs.has(entry.name)) {
-        fs.rmSync(path.join(cursorAgentsDir, entry.name), { recursive: true, force: true });
-      }
-    }
-  } catch { /* ignore */ }
-
-  for (const rel of agentRels) {
-    const destPath = path.join(cursorAgentsDir, rel);
-    fs.mkdirSync(path.dirname(destPath), { recursive: true });
-    fs.copyFileSync(path.join(packageAgentsAbs, rel), destPath);
-  }
-  console.log("Copied", agentRels.length, "agents to .cursor/agents/");
-}
-
-function cursorDetected() {
-  return fs.existsSync(path.join(os.homedir(), ".cursor"));
-}
-
-/**
- * Register compound-workflow with Claude Code (project-scoped only).
- * Cursor discovery is handled separately via copyCursor* functions.
- */
-function applyClaudeRegistration(targetRoot, dryRun, isSelfInstall) {
-  const projectRoot = isSelfInstall ? PACKAGE_ROOT : targetRoot;
-  const pluginId = "compound-workflow@compound-workflow-local";
-
-  if (dryRun) {
-    console.log("[dry-run] Would register Claude plugin (project-scoped) at:", projectRoot);
-    return;
-  }
-
-  const projectSettingsPath = path.join(projectRoot, ".claude", "settings.json");
-  let projectSettings = {};
-  if (fs.existsSync(projectSettingsPath)) {
-    try { projectSettings = readJsonMaybe(projectSettingsPath) ?? {}; } catch { projectSettings = {}; }
-  }
-  projectSettings.enabledPlugins = ensureObject(projectSettings.enabledPlugins);
-  projectSettings.enabledPlugins[pluginId] = true;
-  if (projectSettings.extraKnownMarketplaces?.["compound-workflow"]) {
-    delete projectSettings.extraKnownMarketplaces["compound-workflow"];
-  }
-  projectSettings.extraKnownMarketplaces = ensureObject(projectSettings.extraKnownMarketplaces);
-  projectSettings.extraKnownMarketplaces["compound-workflow-local"] = {
-    source: { source: "file", path: "." },
-  };
-  fs.mkdirSync(path.join(projectRoot, ".claude"), { recursive: true });
-  fs.writeFileSync(projectSettingsPath, JSON.stringify(projectSettings, null, 2) + "\n", "utf8");
-
-  console.log("Registered compound-workflow with Claude Code (project-scoped).");
-  if (!isSelfInstall) {
-    console.log("  Claude Code 2.1+: open /plugin, go to Discover; install 'compound-workflow' from marketplace 'compound-workflow-local', or run: claude --plugin-dir ./node_modules/compound-workflow");
-  }
-  console.log("  Restart Claude Code; enable 'Include third-party Plugins, Skills, and other configs' in Settings if needed.");
-}
-
-function reportOpenCodeIntegration(targetRoot, dryRun) {
-  if (dryRun) {
-    console.log("[dry-run] OpenCode integration check skipped (state would be updated by install).");
-    return;
-  }
-
-  const opencodeAbs = path.join(targetRoot, "opencode.json");
-  const opencode = readJsonMaybe(opencodeAbs) ?? {};
-  const skillPaths = Array.isArray(opencode?.skills?.paths) ? opencode.skills.paths : [];
-  const hasSkillPath = skillPaths.includes(PACKAGE_SKILL_ROOT) || skillPaths.includes("src/.agents/skills");
-
-  console.log(
-    "OpenCode integration:",
-    hasSkillPath ? "ok" : "incomplete",
-    `(skills.path=${hasSkillPath ? "yes" : "no"})`
-  );
-}
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
 
 function main() {
   const args = parseArgs(process.argv);
   const targetRoot = realpathSafe(args.root);
+  const isSelfInstall = targetRoot === PACKAGE_ROOT;
 
-  const genScript = path.join(PACKAGE_ROOT, "scripts", "generate-platform-artifacts.mjs");
-  if (fs.existsSync(genScript)) {
-    console.log("[compound-workflow] Regenerating manifest from package source...");
-    const result = spawnSync(process.execPath, [genScript], {
-      cwd: PACKAGE_ROOT,
-      stdio: "pipe",
-      encoding: "utf8",
-    });
-    if (result.status !== 0) {
-      console.error("Failed to regenerate manifest:", result.stderr || result.error || "unknown");
-      process.exit(1);
-    }
-  }
+  const packageSrc = isSelfInstall
+    ? path.join(PACKAGE_ROOT, "src")
+    : path.join(targetRoot, "node_modules", "compound-workflow", "src");
 
-  try {
-    GENERATED_MANIFEST = readGeneratedManifest();
-    PACKAGE_COMMAND_ROOT = GENERATED_MANIFEST.commandRoot;
-    PACKAGE_AGENT_ROOT = GENERATED_MANIFEST.agentRoot;
-    PACKAGE_SKILL_ROOT = GENERATED_MANIFEST.skillsPath;
-  } catch (err) {
-    console.error("Error: OpenCode manifest not found. Run 'npm run generate:artifacts' in the package or reinstall compound-workflow.");
-    process.exit(2);
-  }
-
-  if (!fs.existsSync(PACKAGE_AGENTS_ROOT)) {
-    console.error("Error: package agents dir not found:", PACKAGE_AGENTS_ROOT);
-    process.exit(2);
-  }
-
-  const isSelfInstall = realpathSafe(targetRoot) === realpathSafe(PACKAGE_ROOT);
-  const pkgInTarget = path.join(targetRoot, "node_modules", "compound-workflow");
-  if (!isSelfInstall && !fs.existsSync(pkgInTarget) && !args.dryRun) {
+  if (!isSelfInstall && !fs.existsSync(packageSrc) && !args.dryRun) {
     console.error("Error: compound-workflow not found in project. Run: npm install compound-workflow");
     process.exit(2);
   }
 
-  console.log("Target root:", targetRoot);
-  console.log("Package root:", PACKAGE_ROOT);
-  console.log("OpenCode CLI detected:", hasCommand("opencode") ? "yes" : "no");
+  const srcAgents = path.join(packageSrc, "agents");
+  const srcSkills = path.join(packageSrc, "skills");
+  const srcCommands = path.join(packageSrc, "commands");
 
-  writeOpenCodeJson(targetRoot, args.dryRun, isSelfInstall);
-  writePluginManifests(targetRoot, args.dryRun, isSelfInstall);
-  applyClaudeRegistration(targetRoot, args.dryRun, isSelfInstall);
-  copyCursorSkills(targetRoot, args.dryRun, isSelfInstall);
-  copyCursorCommands(targetRoot, args.dryRun, isSelfInstall);
-  copyCursorAgents(targetRoot, args.dryRun, isSelfInstall);
-  reportOpenCodeIntegration(targetRoot, args.dryRun);
-  writeAgentsMd(targetRoot, args.dryRun);
+  console.log("Target:", targetRoot);
+  console.log("Package:", PACKAGE_ROOT);
+  console.log("OpenCode CLI:", hasCommand("opencode") ? "yes" : "no");
+
+  // .claude/agents/ — flat (Claude Code requires flat .md files)
+  copyAgentsFlat(srcAgents, path.join(targetRoot, ".claude", "agents"), args.dryRun, ".claude/agents/");
+
+  // .cursor/agents/, .cursor/skills/, .cursor/commands/
+  copyAgentsRecursive(srcAgents, path.join(targetRoot, ".cursor", "agents"), args.dryRun, ".cursor/agents/");
+  copySkills(srcSkills, path.join(targetRoot, ".cursor", "skills"), args.dryRun, ".cursor/skills/");
+  copyCommands(srcCommands, path.join(targetRoot, ".cursor", "commands"), args.dryRun, ".cursor/commands/");
+
+  // .agents/agents/, .agents/skills/, .agents/commands/ (OpenCode / general)
+  copyAgentsRecursive(srcAgents, path.join(targetRoot, ".agents", "agents"), args.dryRun, ".agents/agents/");
+  copySkills(srcSkills, path.join(targetRoot, ".agents", "skills"), args.dryRun, ".agents/skills/");
+  copyCommands(srcCommands, path.join(targetRoot, ".agents", "commands"), args.dryRun, ".agents/commands/");
+
+  writeOpenCodeJson(targetRoot, packageSrc, args.dryRun);
+  writeAgentsMd(targetRoot, PACKAGE_ROOT, args.dryRun);
   ensureDirs(targetRoot, args.dryRun);
 
-  if (!args.noConfig && !args.dryRun && process.stdin.isTTY) {
-    console.log("\nRepo Config: edit AGENTS.md to set default_branch, test_command, lint_command, dev_server_url.");
-  }
-
-  console.log("\nDone. Run opencode debug config to verify.");
+  console.log("\nDone.");
 }
 
 main();
