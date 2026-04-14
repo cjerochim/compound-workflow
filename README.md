@@ -1,111 +1,103 @@
-## Compound Workflow
+# Compound Workflow
 
-Compound Workflow is a portable, command-first system for shipping software with less ambiguity and stronger verification.
-It follows a simple cycle: **clarify -> plan -> execute -> verify -> capture**.
+A portable, command-first system for shipping software with less ambiguity and stronger verification.
 
-Use it when you want repeatable delivery without ad-hoc process drift.
+Inspired by [Compound Engineering](https://every.to/guides/compound-engineering) — the idea that small, consistent improvements compound over time into significantly better outcomes. Applied here: every piece of work follows the same cycle, every decision is captured, and every session makes the next one faster.
 
-Inspired by [Compound Engineering](https://every.to/guides/compound-engineering) (Every).
+---
 
-Best fit when you need:
+## What it does
 
-- Clear intent and acceptance criteria before coding
-- Structured execution with explicit review gates
-- A repeatable process that captures reusable learnings
+Compound Workflow gives your AI agent a structured process for turning a request into validated, documented output. Instead of ad-hoc conversations, you get a repeatable cycle:
 
-## Workflow
+**Clarify → Plan → Execute → Verify → Capture**
 
-The workflow turns a request into validated output and reusable team knowledge.
+Each step has an explicit gate. Work doesn't move forward until the previous step is done. Learnings are captured so the next similar problem takes minutes, not hours.
 
-```mermaid
-flowchart LR
-  A["brainstorm"] --> B["plan"] --> C["work (includes triage)"] --> D["review"] --> E["capture"] --> F["metrics"]
-```
+---
 
 ## Get Started
-
-**1. Install the package**
 
 ```bash
 npm install compound-workflow
 ```
 
-**2. Automatic setup**
+Postinstall runs automatically and sets up your repo: `AGENTS.md`, standard directories, and OpenCode wiring.
 
-The package’s `postinstall` script runs and configures your repo: `AGENTS.md`, standard directories, and OpenCode wiring. No separate npx step is needed.
-
-**3. If lifecycle scripts were skipped**
-
-If your package manager didn’t run postinstall, run once:
+If your package manager skipped the lifecycle script, or after updating the package:
 
 ```bash
 npx compound-workflow install
 ```
 
-Restart Cursor after install; enable third-party plugins in Settings if skills/commands don't appear.
+---
 
-**4. After updating the package**
+## The Workflow
 
-To get the latest commands and wiring (e.g. after `npm update compound-workflow` or a new release), run install again so your project’s `opencode.json` is refreshed:
-
-```bash
-npx compound-workflow install
+```
+brainstorm → plan → work → review → compound → metrics
 ```
 
-**What gets configured**
+### `/workflow:brainstorm`
+Clarify what to build before any planning starts. The agent asks structured questions, surfaces ambiguities, and produces a brief that confirms intent and constraints. Nothing gets designed until the "what" is agreed.
 
-- Workflow template in `AGENTS.md`
-- Standard workspace directories (plans, todos, docs)
-- `opencode.json` managed entries pointing at `node_modules/compound-workflow/src/.agents/*`
+### `/workflow:plan`
+Turn the brief into an executable plan. Declares fidelity level (Low / Medium / High), confidence, solution scope, and open questions. Cites local code references and prior solutions. No code is written here.
 
-## Breaking Change (2.0.0)
+### `/workflow:work`
+Execute the approved plan. The agent derives todo contracts, isolates work in a git worktree, applies the standards gate, runs triage, delegates to subagents, and collects verified output. Evidence is required before any todo moves to complete.
 
-2.0.0 removes all legacy compatibility pathways (`/setup`, `/sync`, runtime mirror copies, and Cursor sync fallbacks).
-See migration notes in [docs/migrations/2026-03-03-v2-native-cutover.md](docs/migrations/2026-03-03-v2-native-cutover.md).
+### `/workflow:review`
+Independent quality check before the work is considered done. Runs in a separate pass from the implementer. Emits a clear pass / fail with standards compliance noted. Required for code and config changes.
 
-## Critical Path
+### `/workflow:compound`
+Capture what was learned. Writes a structured solution doc to `docs/solutions/` with searchable YAML frontmatter. The first time you solve a problem takes research — document it and the next occurrence takes minutes.
 
-After install, use this default sequence:
+### `/metrics` and `/assess`
+Log session outcomes and spot trends. `/metrics` records a single session. `/assess` rolls up recent entries and proposes concrete improvements to commands, skills, or config.
 
-1. `/workflow:brainstorm` for requirements clarity
-2. `/workflow:plan` for implementation design
-3. `/workflow:work` to execute against the approved plan (includes automatic triage)
-4. `/workflow:review` to validate quality before completion
-5. `/workflow:compound` to capture reusable learnings
+---
 
-Optional:
+## Optional Commands
 
-- `/workflow:triage` for manual backlog curation before or during execution
-- `/metrics` and `/assess` for process improvement
+**`/workflow:triage`** — Manually curate and prioritise a backlog before execution. `/workflow:work` runs triage automatically, but this gives you explicit control when the queue is complex.
 
-## Commands (Quick Map)
+**`/workflow:tech-review`** — Technical correctness check on a plan before build. Use when the approach needs a second opinion before committing to implementation.
 
-Core flow: `/workflow:brainstorm` -> `/workflow:plan` -> `/workflow:work` -> `/workflow:review` -> `/workflow:compound` -> `/metrics` (optional `/assess` for rollups).
+**`/test-browser`** — Browser-level validation of affected routes. Useful for UI changes where automated tests aren't enough.
 
-| Command                | Purpose                                                                                                      | Related skills                                                                   | Related agents                                                                                                                                                                         |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/install`             | Configure workflow files and runtime wiring in the repo                                                      | install CLI (no workflow skill routing)                                          | none                                                                                                                                                                                   |
-| `/workflow:brainstorm` | Clarify what to build through structured discussion                                                          | `brainstorming` (primary), `document-review` (optional refinement)               | `repo-research-analyst`                                                                                                                                                                |
-| `/workflow:plan`       | Convert intent into an executable plan with fidelity/confidence                                              | state-orchestration skill when needed (for example `xstate-actor-orchestration`) | `repo-research-analyst`, `learnings-researcher`, `best-practices-researcher`, `framework-docs-researcher`, `git-history-analyzer`, `spec-flow-analyzer`, `planning-technical-reviewer` |
-| `/workflow:triage`     | Manual queue curation for complex/multi-item backlogs (optional; `/workflow:work` runs triage automatically) | `file-todos`                                                                     | none                                                                                                                                                                                   |
-| `/workflow:work`       | Execute plan/todos with quality gates and validation evidence                                                | `git-worktree`, `file-todos`, `standards`, state-orchestration skill when needed | `repo-research-analyst`, `learnings-researcher`, `best-practices-researcher`, `framework-docs-researcher`, `git-history-analyzer`                                                      |
-| `/workflow:review`     | Perform independent quality review before completion                                                         | `git-worktree` (for non-current targets), `standards`                            | `learnings-researcher`, `lint`, `bug-reproduction-validator`, `git-history-analyzer`, `framework-docs-researcher`, `agent-native-reviewer`                                             |
-| `/workflow:compound`   | Capture reusable implementation learnings in `docs/solutions/`                                               | `compound-docs` (primary), `document-review` (optional)                          | `learnings-researcher`, `best-practices-researcher`, `framework-docs-researcher`                                                                                                       |
-| `/metrics`             | Log session outcomes and improvement actions                                                                 | `process-metrics`, `file-todos` (optional for follow-ups)                        | none                                                                                                                                                                                   |
-| `/assess`              | Aggregate metrics trends and propose process improvements                                                    | `file-todos` (for approved follow-up actions)                                    | none                                                                                                                                                                                   |
-| `/test-browser`        | Validate affected routes with browser-level checks                                                           | `agent-browser`, `git-worktree` (optional branch isolation)                      | none                                                                                                                                                                                   |
+**`/install`** — Re-run setup. Safe to run again after updating the package or adding a new harness.
 
-Canonical command docs: [src/.agents/commands/](src/.agents/commands/)
+---
+
+## How it's structured
+
+Skills and agents are the internals. Commands are the public API — stable entry points that compose the right skills for each phase.
+
+| Layer | What it is |
+| --- | --- |
+| **Commands** (`src/commands/`) | What you invoke. Orchestrate the workflow steps. |
+| **Skills** (`src/skills/`) | Focused capabilities loaded by commands when needed. |
+| **Agents** (`src/agents/`) | Specialised subagents for research, review, and analysis. |
+| **AGENTS.md** | Project config: repo settings, harness list, skill index. |
+
+On install, files are copied into whichever harness directories are present in your project (`.agents/`, `.cursor/`, `.claude/`). No symlinks, no generated manifests.
+
+---
+
+## Guardrails
+
+- **Independent review policy:** code/config changes require `/workflow:review` before workflow completion. Docs-only changes are exempt.
+- **Standards baseline policy:** `/workflow:work` and `/workflow:review` both apply the standards baseline. Violations block completion.
+- **No ad-hoc artifacts** — output goes to `docs/plans`, `docs/solutions`, `todos`, or `docs/metrics`. Nothing else.
+
+If docs conflict: follow `docs/principles/workflow-baseline-principles.md`, then `AGENTS.md`, then command docs, then skill docs.
+
+---
 
 ## Learn More
 
-- Workflow principles: [docs/principles/workflow-baseline-principles.md](docs/principles/workflow-baseline-principles.md)
-- Project command and policy index: [src/AGENTS.md](src/AGENTS.md)
-- Command definitions: [src/.agents/commands/](src/.agents/commands/)
-
-If docs conflict: follow `docs/principles/workflow-baseline-principles.md`, then `src/AGENTS.md`, then command docs.
-
-Guardrails:
-
-- Independent review policy: code/config changes require `/workflow:review` before workflow completion (docs-only changes are exempt).
-- Standards baseline policy: code/config changes must pass the standards baseline gate in `/workflow:work` and `/workflow:review`.
+- [Workflow principles](docs/principles/workflow-baseline-principles.md)
+- [AGENTS.md](src/AGENTS.md) — command index, repo config, skill routing
+- [Commands](src/commands/) — full command specs
+- [Skills](src/skills/) — skill docs and templates
