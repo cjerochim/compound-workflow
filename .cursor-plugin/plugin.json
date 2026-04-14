@@ -1,0 +1,20 @@
+{
+  "name": "compound-workflow",
+  "version": "1.8.0",
+  "description": "Clarify -> plan -> execute -> verify -> capture workflow for Cursor",
+  "author": {
+    "name": "Compound Workflow"
+  },
+  "keywords": [
+    "workflow",
+    "cursor",
+    "agents",
+    "commands",
+    "skills"
+  ],
+  "license": "MIT",
+  "repository": "https://github.com/cjerochim/compound-workflow",
+  "commands": "./src/.agents/commands",
+  "agents": "./src/.agents/agents",
+  "skills": "./src/.agents/skills"
+}
