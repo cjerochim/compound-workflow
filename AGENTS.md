@@ -54,8 +54,8 @@ If workflow documents conflict, resolve them in this order:
 
 1. `docs/principles/workflow-baseline-principles.md`
 2. This file (`src/AGENTS.md`) non-negotiables and repo config
-3. Workflow command specs (`src/.agents/commands/workflow-*.md`)
-4. Skill docs (`src/.agents/skills/*/SKILL.md`)
+3. Workflow command specs (`src/commands/workflow-*.md`)
+4. Skill docs (`src/skills/*/SKILL.md`)
 
 ## Non-negotiables (Structure Integrity)
 
@@ -147,7 +147,7 @@ If you want commands to read these values deterministically, add a small YAML bl
 - References: `.agents/references/**`
 - Agents: `.agents/agents/**/*.md`
 
-**Single source of truth (declarative):** Commands and agents are discovered from the registry and `generate-platform-artifacts`; skills are discovered by scanning `skills/` for `*/SKILL.md`. Add or remove files/dirs, then run install—no other registration. See install-cli header comment for the full pipeline.
+**Single source of truth (disk-based):** Source files live flat in `src/agents/`, `src/skills/`, `src/commands/`. The installer (`scripts/install-cli.mjs`) copies them into whatever harness directories it detects on disk (`.claude/`, `.cursor/`, `.agents/`) — no registry, no generated manifests, no symlinks. Add or remove files under `src/`, then run install.
 
 ## Implemented Components (Current Scope)
 
@@ -188,7 +188,7 @@ Rules:
   - applies across multiple features (not one-off project trivia)
   - prevents a high-cost incident if followed
 - Overlap: each domain has a single "owner" skill; overlapping material MUST be added to the owner skill (as a new section) or demoted to a non-skill reference doc.
-- References location: non-skill references live in `.agents/references/` (this repo: `src/.agents/references/`) and are linked from `src/AGENTS.md` or the owning skill.
+- References location: non-skill references live in `.agents/references/` (this repo: `src/references/`) and are linked from `src/AGENTS.md` or the owning skill.
 
 Owner skills:
 
@@ -199,7 +199,7 @@ Owner skills:
 
 Maintenance:
 
-- If a reference standard becomes mostly examples/links, demote it into `.agents/references/` (this repo: `src/.agents/references/`) and keep the skill as the enforceable rules/checklists only.
+- If a reference standard becomes mostly examples/links, demote it into `.agents/references/` (this repo: `src/references/`) and keep the skill as the enforceable rules/checklists only.
 
 ### Workflow skills
 

@@ -16,7 +16,6 @@
   ],
   "scripts": {
     "postinstall": "node scripts/postinstall.mjs",
-    "check:version-parity": "node scripts/check-version-parity.mjs",
     "check:pack-readme": "node scripts/check-pack-readme.mjs",
     "test:install": "node --test tests/install-cli.test.mjs"
   },

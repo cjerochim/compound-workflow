@@ -31,9 +31,6 @@ try {
 
 const files = Array.isArray(report) && report[0]?.files ? report[0].files : [];
 const hasRootReadme = files.some((file) => /^readme(?:\.[^/]+)?$/i.test(file.path));
-const hasGeneratedManifest = files.some((file) => file.path === "src/generated/opencode.managed.json");
-const hasCursorPlugin = files.some((file) => file.path === ".cursor-plugin/plugin.json");
-const hasClaudePlugin = files.some((file) => file.path === ".claude-plugin/plugin.json");
 
 if (!hasRootReadme) {
   console.error("Package guard failed: root README is missing from the packed tarball.");
@@ -41,16 +38,4 @@ if (!hasRootReadme) {
   process.exit(1);
 }
 
-if (!hasGeneratedManifest) {
-  console.error("Package guard failed: src/generated/opencode.managed.json is missing from the packed tarball.");
-  console.error("Ensure 'src' is in package.json 'files' and the file is committed or generated before publish.");
-  process.exit(1);
-}
-
-if (!hasCursorPlugin || !hasClaudePlugin) {
-  console.error("Package guard failed: .cursor-plugin/plugin.json and .claude-plugin/plugin.json must be in the packed tarball.");
-  console.error("Ensure '.cursor-plugin' and '.claude-plugin' are in package.json 'files'.");
-  process.exit(1);
-}
-
-console.log("Package guard passed: root README, opencode.managed.json, and plugin manifests are present in npm pack output.");
+console.log("Package guard passed: root README is present in npm pack output.");
