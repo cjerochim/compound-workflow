@@ -70,25 +70,43 @@ From these, infer:
 | `format_command` | `scripts.format` in package.json; prettier config presence |
 | `dev_server_url` | vite config `server.port`; default `http://localhost:5173` for Vite, `http://localhost:3000` for others |
 | `worktree_install_command` | `package-lock.json` → `npm ci`; `yarn.lock` → `yarn install`; `pnpm-lock.yaml` → `pnpm install` |
+| `default_branch` | `git symbolic-ref refs/remotes/origin/HEAD` → strip `refs/remotes/origin/`; fallback `main` |
+| `project_tracker` | `.github/` exists → `github`; else `none` |
+| `worktree_dir` | default `.worktrees` |
+| `worktree_copy_files` | glob `.env*` in repo root, excluding `.env.example` and `.env.sample` |
 
-For each value, state whether it was detected or assumed.
+For each value, state whether it was detected or defaulted.
 
 ---
 
-## Phase 2: Prompt for Missing or Undetectable Values
+## Phase 2: Confirm the Proposed Config
 
-Ask for any values that could not be detected. Ask one at a time.
+Do not prompt field-by-field. Show the resolved config from Phase 1 as a single block and ask one question.
 
-Required:
+**Update mode:** start from the values already in `AGENTS.md`. Only overwrite with a Phase 1 detection when the existing value is empty or clearly stale (e.g. references a command that no longer exists in `package.json`). Flag overrides in the proposed block so the user can see what changed.
 
-- `default_branch` — cannot be reliably detected; ask (suggest `main`)
-- `project_tracker` — ask: `github`, `linear`, or none
-- `dev_server_url` — confirm detected value or ask
-- `worktree_dir` — suggest `.worktrees`
-- `worktree_copy_files` — ask which env/config files should be copied into new worktrees (e.g. `.env.local`)
-- `harnesses` — show detected list from Phase 1; confirm or correct
+Output format:
 
-**Update mode only:** Show the current values and ask: "These values are already configured — confirm, update, or skip each?"
+```
+Proposed AGENTS.md config:
+
+  default_branch: <value>            [detected|default|existing]
+  project_tracker: <value>           [detected|default|existing]
+  dev_server_url: <value>            [detected|default|existing]
+  test_command: <value>              [detected|existing]
+  test_fast_command: <value>         [detected|existing|omit]
+  lint_command: <value>              [detected|existing|omit]
+  typecheck_command: <value>         [detected|existing|omit]
+  format_command: <value>            [detected|existing|omit]
+  worktree_dir: <value>              [default|existing]
+  worktree_install_command: <value>  [detected|existing]
+  worktree_copy_files: [<files>]     [detected|existing]
+  harnesses: [<dirs>]                [detected]
+
+Accept, or reply with `<key>: <value>` lines to override. Blank line accepts.
+```
+
+One round-trip. If the user accepts, proceed to Phase 3. If they override fields, apply the overrides and proceed — do not re-confirm.
 
 ---
 

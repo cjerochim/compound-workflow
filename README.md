@@ -68,6 +68,8 @@ Log session outcomes and spot trends. `/metrics` records a single session. `/ass
 
 **`/test-browser`** — Browser-level validation of affected routes. Useful for UI changes where automated tests aren't enough.
 
+**`/setup-agents`** — Tailor `AGENTS.md` to this project. Detects your stack and installed harnesses, curates the Skill Index, and prompts for anything it can't infer. Re-run whenever harnesses or skills change.
+
 **`/install`** — Re-run setup. Safe to run again after updating the package or adding a new harness.
 
 ---
