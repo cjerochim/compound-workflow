@@ -24,11 +24,12 @@ This skill is a config generator, not a survey. The developer interaction budget
 
 **Hard constraints — violating any of these is a skill failure:**
 
-- **One prompt total.** Do not emit numbered question lists (`1. … 2. … 3. …`). Do not split prompts across multiple messages. Phase 2 is the only user interaction.
-- **Never ask about skills.** Skill inclusion is not a decision — every skill in `$skills_dir` is included automatically. Do not ask "keep all four guardrails?", "which skills to include?", or anything equivalent.
-- **Never ask meta questions.** Do not surface observations like "project-specific skills appear elsewhere — flag as a gap?" or "strip extra sections?". If the template forbids something, silently conform; if it's out of scope, ignore it.
-- **Never present "ambiguous — need your call" sections.** Ambiguity is resolved by the deterministic rules below, then surfaced in the proposed config block for the user to override if they disagree. Pick a value. Do not ask.
-- **Never re-confirm.** After the user replies to the Phase 2 prompt (accept or overrides), write the file. No second confirmation pass.
+- **At most two prompts per run.** (1) Phase 1b alignment prompt — only if harness skill sets differ. (2) Phase 2 config block — always. No other questions.
+- **No numbered question lists.** Never emit `1. … 2. … 3. …` walls. Never split a single decision across multiple messages.
+- **Never ask about skill inclusion.** Every skill in any discovered skills directory is included in the Skill Index automatically. Do not ask "keep all four guardrails?" or "which skills to include?".
+- **Never ask meta questions.** No "project-specific skills appear elsewhere — flag as a gap?", no "strip extra sections?", no commentary on memory vs. code mismatches. If the template forbids something, silently conform.
+- **Never present "ambiguous — need your call" sections.** Ambiguity is resolved by the deterministic rules below and surfaced in the Phase 2 block for the user to override. Pick a value.
+- **Never re-confirm.** After the user replies to Phase 2, write the file. No second confirmation pass.
 
 **Ambiguity resolution (apply without asking):**
 
@@ -56,18 +57,15 @@ Announce the mode before proceeding.
 
 Check which directories exist at the project root. Do not assume any are present — record only what is actually found on disk.
 
-Known harness patterns to check: directories named `.agents`, `.claude`, `.cursor`. Check all three; others may exist.
+Known harness patterns: `.agents`, `.claude`, `.cursor`. Check all three; others may exist.
 
-For each found harness, note where its skills live:
-- `<harness>/skills/` — if that subdirectory exists
-- `.claude/` has no skills directory (agents only, in `.claude/agents/`)
+For each found harness, check `<harness>/skills/`. Record:
 
-Record detected harnesses as `$harnesses` (ordered list of directories found). This will be written to AGENTS.md.
+- `$harnesses` — ordered list of harness directories found
+- `$skills_dirs` — map of `<harness>` → `<harness>/skills/` for every harness that has a skills subdirectory
 
-If **no harness directories exist**, stop and tell the user:
+If **no harness directories exist**, stop:
 > No harness directories found. Run `npx compound-workflow install` first, then re-run this skill.
-
-Use the **first found skills directory** across `$harnesses` as the canonical source for skill discovery in Phase 3. Record this as `$skills_dir`.
 
 > **Note:** `harnesses` in AGENTS.md Repo Config may become stale if harness directories are added or removed. Re-run `/setup-agents` to refresh it.
 
@@ -99,6 +97,37 @@ From these, infer:
 | `worktree_copy_files` | glob `.env*` in repo root, excluding `.env.example` and `.env.sample` |
 
 For each value, state whether it was detected or defaulted.
+
+---
+
+## Phase 1b: Discover Skills Across Harnesses
+
+For every entry in `$skills_dirs`, list subdirectories and read each `SKILL.md` frontmatter (`name`, `description`).
+
+Build `$skill_matrix`: `<skill name>` → `{harnesses where present, source description}`. The **Skill Index** in AGENTS.md is the union of all skill names across all harnesses.
+
+**If every harness with a skills directory has the same skill set:** proceed silently to Phase 2. No prompt, no table output.
+
+**If harnesses diverge** (a skill is in one harness but missing from another), emit the comparison table and one prompt:
+
+```
+Skill presence across harnesses:
+
+| Skill | <harness 1> | <harness 2> | ... |
+| --- | --- | --- |
+| <name> | ✓ | ✗ | ... |
+| <name> | ✓ | ✓ | ... |
+
+Skills differ across harnesses. Align them? Aligning copies each skill's files into every harness so all locations have the same set.
+
+Reply `align` to sync, `skip` to leave them as-is.
+```
+
+**If `align`:** for each skill, pick the harness where it lives as the source and copy its directory into every other harness's skills directory (create the directory if missing). Note what was copied in the final summary.
+
+**If `skip`:** proceed with the union as the Skill Index; record in the summary that harnesses remain out of sync.
+
+Either way, proceed to Phase 2 after this single prompt.
 
 ---
 
@@ -143,9 +172,11 @@ On reply: apply overrides (if any), proceed to Phase 3 and Phase 4. Do not re-co
 
 ## Phase 3: Build the Skill Index
 
-List all directories under `$skills_dir` (resolved in Phase 1). For each one, read `SKILL.md` frontmatter to get `name` and `description`. These are the only skills that may appear in the Skill Index — never reference a skill not present on disk.
+Use `$skill_matrix` from Phase 1b. The Skill Index is the union of skill names across all harnesses. For each skill, use the `description` from that skill's `SKILL.md` frontmatter.
 
-**Include every discovered skill automatically. No user prompt.** The installed skill set is the source of truth. If the user wants to exclude a skill, they remove it from `$skills_dir` — this skill does not curate.
+Never reference a skill not present on disk. Never invent a description.
+
+**Include every discovered skill automatically. No user prompt.** If the user wants to exclude a skill, they remove it from the skills directories — this skill does not curate.
 
 **Update mode:** diff against the existing Skill Index silently and write the refreshed list. Do not surface the diff as a question.
 
@@ -197,6 +228,17 @@ Continuous improvement:
 
 - `/metrics` — log + assess a session
 - `/assess` — aggregate metrics and propose improvements
+
+## Orchestration Model
+
+The main agent stays lean. Context lives where it's needed, not at the top.
+
+- **Plan** selects the minimal skill set for the work and names each selection explicitly. Unused skills never load.
+- **Work** allocates tasks to subagents and passes only what each task needs: the problem statement, relevant file refs, success criteria. Not conversation history, not unrelated context.
+- **Subagents** run in isolation, return evidence and results. The main agent orchestrates, records outcomes, and moves to the next task.
+- **Skills load on demand.** Commands pull a skill into context only when a gate or step requires it — not as a precautionary baseline.
+
+Context budget rule: if a task can be done with less context, pass less. If a subagent can handle it, delegate.
 
 ## Non-negotiables (Structure Integrity)
 
@@ -268,7 +310,7 @@ After writing, verify:
 - [ ] Every skill in the Skill Index was discovered from `$skills_dir` — no invented entries
 - [ ] All skill descriptions come from `SKILL.md` frontmatter — none invented by the agent
 - [ ] No hardcoded tool, platform, or directory names
-- [ ] File is under 130 lines
+- [ ] File is under 160 lines
 
 If any check fails, fix before confirming completion.
 

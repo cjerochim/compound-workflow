@@ -44,6 +44,17 @@ Onboarding:
 
 - `/install` — one action: copies agents/skills/commands, writes opencode.json, merges AGENTS.md, creates docs/todo dirs (run `npx compound-workflow install` in the project)
 
+## Orchestration Model
+
+The main agent stays lean. Context lives where it's needed, not at the top.
+
+- **Plan** selects the minimal skill set for the work and names each selection explicitly. Unused skills never load.
+- **Work** allocates tasks to subagents and passes only what each task needs: the problem statement, relevant file refs, success criteria. Not conversation history, not unrelated context.
+- **Subagents** run in isolation, return evidence and results. The main agent orchestrates, records outcomes, and moves to the next task.
+- **Skills load on demand.** Commands pull a skill into context only when a gate or step requires it — not as a precautionary baseline.
+
+Context budget rule: if a task can be done with less context, pass less. If a subagent can handle it, delegate.
+
 ## Non-negotiables (Structure Integrity)
 
 - **Commands are the public API.** Keep `/workflow:*` command docs stable; add capability via skills/agents, not new command variants.
