@@ -16,6 +16,29 @@ triggers:
 
 Create or update a minimal, authoritative `AGENTS.md` for any project.
 
+---
+
+## Developer Experience Contract (CRITICAL)
+
+This skill is a config generator, not a survey. The developer interaction budget is **one round-trip**: propose a complete config, let the user accept or override.
+
+**Hard constraints — violating any of these is a skill failure:**
+
+- **One prompt total.** Do not emit numbered question lists (`1. … 2. … 3. …`). Do not split prompts across multiple messages. Phase 2 is the only user interaction.
+- **Never ask about skills.** Skill inclusion is not a decision — every skill in `$skills_dir` is included automatically. Do not ask "keep all four guardrails?", "which skills to include?", or anything equivalent.
+- **Never ask meta questions.** Do not surface observations like "project-specific skills appear elsewhere — flag as a gap?" or "strip extra sections?". If the template forbids something, silently conform; if it's out of scope, ignore it.
+- **Never present "ambiguous — need your call" sections.** Ambiguity is resolved by the deterministic rules below, then surfaced in the proposed config block for the user to override if they disagree. Pick a value. Do not ask.
+- **Never re-confirm.** After the user replies to the Phase 2 prompt (accept or overrides), write the file. No second confirmation pass.
+
+**Ambiguity resolution (apply without asking):**
+
+- **Monorepo with multiple apps:** pick the workspace whose `scripts.dev` / `scripts.test` matches the detected harness target, or the newest one by `package.json` mtime. Record as `[detected]` and let the user override in Phase 2.
+- **Multiple candidate commands (e.g. `npm test` vs `npm run test:web2:run`):** prefer the most specific workspace-scoped command over the root alias.
+- **Memory or prior config suggests a different target than current code:** treat code as source of truth. Surface the detected value; the user can override.
+- **Legacy/deprecated paths visible in code:** ignore for detection. Pick the active target.
+
+---
+
 ## Mode Detection
 
 Before doing anything, check whether `AGENTS.md` exists in the repo root.
@@ -81,32 +104,40 @@ For each value, state whether it was detected or defaulted.
 
 ## Phase 2: Confirm the Proposed Config
 
-Do not prompt field-by-field. Show the resolved config from Phase 1 as a single block and ask one question.
+This is the **only** user prompt in the skill. Emit one block and one question. Nothing else.
 
-**Update mode:** start from the values already in `AGENTS.md`. Only overwrite with a Phase 1 detection when the existing value is empty or clearly stale (e.g. references a command that no longer exists in `package.json`). Flag overrides in the proposed block so the user can see what changed.
+**Forbidden in this phase:**
 
-Output format:
+- Numbered question lists
+- Separate "Ambiguous — need your call" sections
+- Any prompt about skills, guardrails, extra sections, or template compliance
+- Per-field prompting ("confirm this? confirm that?")
+- Commentary about memory, deprecated paths, or detected inconsistencies outside the block itself
+
+**Update mode:** start from the values already in `AGENTS.md`. Only overwrite with a Phase 1 detection when the existing value is empty or clearly stale (references a command that no longer exists). Mark overrides `[updated]` so the user can see what changed.
+
+Output exactly this structure — no preamble, no trailing questions:
 
 ```
-Proposed AGENTS.md config:
+Proposed AGENTS.md config (update|init mode):
 
-  default_branch: <value>            [detected|default|existing]
-  project_tracker: <value>           [detected|default|existing]
-  dev_server_url: <value>            [detected|default|existing]
-  test_command: <value>              [detected|existing]
-  test_fast_command: <value>         [detected|existing|omit]
-  lint_command: <value>              [detected|existing|omit]
-  typecheck_command: <value>         [detected|existing|omit]
-  format_command: <value>            [detected|existing|omit]
+  default_branch: <value>            [detected|default|existing|updated]
+  project_tracker: <value>           [detected|default|existing|updated]
+  dev_server_url: <value>            [detected|default|existing|updated]
+  test_command: <value>              [detected|existing|updated]
+  test_fast_command: <value>         [detected|existing|updated|omit]
+  lint_command: <value>              [detected|existing|updated|omit]
+  typecheck_command: <value>         [detected|existing|updated|omit]
+  format_command: <value>            [detected|existing|updated|omit]
   worktree_dir: <value>              [default|existing]
-  worktree_install_command: <value>  [detected|existing]
-  worktree_copy_files: [<files>]     [detected|existing]
+  worktree_install_command: <value>  [detected|existing|updated]
+  worktree_copy_files: [<files>]     [detected|existing|updated]
   harnesses: [<dirs>]                [detected]
 
-Accept, or reply with `<key>: <value>` lines to override. Blank line accepts.
+Reply `ok` to accept, or send `<key>: <value>` lines to override. Anything else cancels.
 ```
 
-One round-trip. If the user accepts, proceed to Phase 3. If they override fields, apply the overrides and proceed — do not re-confirm.
+On reply: apply overrides (if any), proceed to Phase 3 and Phase 4. Do not re-confirm.
 
 ---
 
@@ -114,18 +145,9 @@ One round-trip. If the user accepts, proceed to Phase 3. If they override fields
 
 List all directories under `$skills_dir` (resolved in Phase 1). For each one, read `SKILL.md` frontmatter to get `name` and `description`. These are the only skills that may appear in the Skill Index — never reference a skill not present on disk.
 
-**Include every discovered skill automatically.** The installed skill set is the source of truth; there is no curation step. Do not prompt the user to pick a subset.
+**Include every discovered skill automatically. No user prompt.** The installed skill set is the source of truth. If the user wants to exclude a skill, they remove it from `$skills_dir` — this skill does not curate.
 
-Show the resolved list so the user can see what will be written:
-
-```
-Skill Index will include all installed skills from <$skills_dir>:
-  - <name> — <description from frontmatter>
-  - <name> — <description from frontmatter>
-  ...
-```
-
-**Update mode:** diff against the existing Skill Index and note additions/removals, then write the refreshed list. If the user wants to exclude a skill, they should uninstall or remove it from `$skills_dir` rather than hand-curate the index.
+**Update mode:** diff against the existing Skill Index silently and write the refreshed list. Do not surface the diff as a question.
 
 ---
 
@@ -254,12 +276,19 @@ If any check fails, fix before confirming completion.
 
 ## Rules
 
-- Never add sections beyond what the template defines — keep it minimal
-- Never hardcode skill names — discover everything from the detected skills directory
-- Never hardcode harness paths — detect what exists on disk first; `harnesses` in AGENTS.md reflects reality, not assumptions
-- Never invent skill descriptions — always read from the skill's `SKILL.md` frontmatter
-- Never hardcode tool or platform names
-- Never duplicate content that lives in command or skill docs
-- In update mode, never silently overwrite values the user confirmed as correct
-- If a detected value looks wrong, surface it and ask — do not assume
-- When the Phase 4 template changes, update `src/AGENTS.md` to match (it is the populated default instance)
+**Developer experience (non-negotiable):**
+
+- One user prompt per run — the Phase 2 block. No other questions.
+- No numbered question lists, no "ambiguous — need your call" sections, no skill curation prompts, no meta-observations about the codebase.
+- Resolve ambiguity deterministically using the rules in the Developer Experience Contract. Surface the pick in the block; let the user override.
+
+**Content integrity:**
+
+- Never add sections beyond what the template defines — keep it minimal. Silently conform; do not ask.
+- Never hardcode skill names — discover everything from the detected skills directory.
+- Never hardcode harness paths — detect what exists on disk first; `harnesses` in AGENTS.md reflects reality, not assumptions.
+- Never invent skill descriptions — always read from the skill's `SKILL.md` frontmatter.
+- Never hardcode tool or platform names.
+- Never duplicate content that lives in command or skill docs.
+- In update mode, preserve values that are still valid; only replace stale or empty ones.
+- When the Phase 4 template changes, update `src/AGENTS.md` to match (it is the populated default instance).
