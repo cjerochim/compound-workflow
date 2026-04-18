@@ -1,6 +1,6 @@
 ---
 name: setup-agents
-description: Create or update AGENTS.md for any project. Detects project stack and installed harness directories, prompts for missing config, curates the Skill Index from installed skills, and writes a clean minimal AGENTS.md. Use when onboarding a new project or refreshing an existing config.
+description: Create or update AGENTS.md for any project. Detects project stack and installed harness directories, prompts for missing config, builds the Skill Index from all installed skills (no manual curation), and writes a clean minimal AGENTS.md. Use when onboarding a new project or refreshing an existing config.
 triggers:
   - setting up a new project
   - initialising AGENTS.md for the first time
@@ -92,25 +92,22 @@ Required:
 
 ---
 
-## Phase 3: Curate the Skill Index
+## Phase 3: Build the Skill Index
 
 List all directories under `$skills_dir` (resolved in Phase 1). For each one, read `SKILL.md` frontmatter to get `name` and `description`. These are the only skills that may appear in the Skill Index — never reference a skill not present on disk.
 
-Present the full discovered list to the user as a numbered menu:
+**Include every discovered skill automatically.** The installed skill set is the source of truth; there is no curation step. Do not prompt the user to pick a subset.
+
+Show the resolved list so the user can see what will be written:
 
 ```
-Installed skills (from <$skills_dir>):
-  1. <name> — <description from frontmatter>
-  2. <name> — <description from frontmatter>
+Skill Index will include all installed skills from <$skills_dir>:
+  - <name> — <description from frontmatter>
+  - <name> — <description from frontmatter>
   ...
-
-Which should appear in the Skill Index? (Enter numbers, or "all", or "all except N,N")
 ```
 
-**Init mode:** Ask which to include.
-**Update mode:** Show which are currently included and ask: "Keep, remove, or any to add?"
-
-Do not categorise skills in advance — the user decides what is relevant for their project.
+**Update mode:** diff against the existing Skill Index and note additions/removals, then write the refreshed list. If the user wants to exclude a skill, they should uninstall or remove it from `$skills_dir` rather than hand-curate the index.
 
 ---
 
@@ -215,7 +212,7 @@ harnesses:
 
 | Skill | Use when |
 | --- | --- |
-[... one row per skill the user selected in Phase 3; use the description from each skill's SKILL.md frontmatter ...]
+[... one row per skill discovered in Phase 3; use the description from each skill's SKILL.md frontmatter ...]
 ```
 
 Confirm: "AGENTS.md written."

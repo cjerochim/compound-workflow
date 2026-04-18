@@ -25,12 +25,13 @@ This command is an orchestrator, not an implementer.
 This command is responsible for:
 
 - reading and validating the approved plan
-- deriving executable todo contracts from approved feature requirements
+- breaking the plan into executable todo contracts via `skill: file-todos`
 - preserving intent from the plan during task derivation and execution
-- resolving required skills from the capability registry
-- determining execution order based on dependencies and preconditions
-- **delegating execution to subagents**
-- **collecting and verifying subagent output**
+- allocating the plan's `required_skills` onto each todo and passing them to subagents at delegation time
+- determining execution order — dependencies, preconditions, priority tier, blocking spikes first
+- identifying which ready todos can run in parallel without conflicting
+- delegating execution to subagents (never implementing directly)
+- collecting and verifying subagent output
 - routing work through required review gates
 - deciding `complete`, `changes_required`, `blocked`, or `plan_conflict`
 
@@ -317,14 +318,14 @@ If yes: set `status = plan_conflict`, stop further dependent execution, surface 
 
 ### Phase 1: Setup & Validation
 
-#### 1.1 Read and Validate Plan File
+#### Step 1 — Read and Validate Plan File
 
 - Read the plan file completely
 - Confirm the file exists and is readable
 - If missing acceptance criteria, scope, or non-goals — stop and return for refinement
 - Do not compensate for a weak plan by improvising hidden assumptions
 
-#### 1.2 Resolve Repo Defaults
+#### Step 2 — Resolve Repo Defaults
 
 Read `AGENTS.md` and look for the Repo Config Block. Resolve:
 
@@ -340,7 +341,7 @@ If any required quality gate command is missing:
 - record them in the first active todo work log entry
 - do not mark related todos complete unless the commands were run successfully
 
-#### 1.3 Resolve Plan Contract
+#### Step 3 — Resolve Plan Contract
 
 Extract from the plan:
 
@@ -362,7 +363,9 @@ If any of the following are missing, stop and return the plan for refinement:
 - actionable access/validation contract
 - enough implementation detail to derive executable tasks
 
-#### 1.4 Resolve Skill Assignments
+#### Step 4 — Resolve Skill Assignments
+
+The plan selects required skills per task. Work validates them against the Skill Index and allocates them to subagents at delegation — it does not re-decide skills or add universal baselines.
 
 Read the Skill Index from `AGENTS.md`.
 
@@ -370,7 +373,7 @@ For each implementation phase or task in the plan:
 
 - Check if the plan already carries `required_skills` annotations (written during `/workflow:plan`)
 - If annotations exist: validate each skill against the registry — confirm it exists and is applicable
-- If annotations are missing: resolve skills now by mapping task responsibility, objective, and constraints to the Skill Index
+- If annotations are missing on a task that needs skills: treat as a plan defect and stop — return to `/workflow:plan` for refinement
 - Record resolved skills per task — these will be attached to todo contracts in Phase 3
 
 If a required skill cannot be resolved from the registry:
@@ -378,7 +381,7 @@ If a required skill cannot be resolved from the registry:
 - surface it as a capability gap
 - do not proceed with that task until resolved
 
-#### 1.5 Resolve Testing Cadence
+#### Step 5 — Resolve Testing Cadence
 
 Infer testing cadence from the plan's risk profile.
 
@@ -432,7 +435,7 @@ Convert the approved plan into executable todo contracts.
 
 A todo is not a note. A todo is not a loose checklist item. A todo is an executable contract that can be delegated to a subagent, verified, and closed.
 
-#### 3.1 Todo Contract Rules
+#### Step 1 — Todo Contract Rules
 
 Every derived todo must be:
 
@@ -443,13 +446,13 @@ Every derived todo must be:
 - explicit about verification
 - explicit about evidence required for closure
 - explicitly anchored to approved intent
-- carrying resolved skill assignments from Phase 1.4
+- carrying resolved skill assignments from Phase 1 Step 4
 
 If a candidate task is too broad: split it before delegation.
 If a candidate task is ambiguous: refine it before delegation.
 If a candidate task depends on unresolved decisions: mark it `blocked`.
 
-#### 3.2 Required Todo Contract Schema
+#### Step 2 — Required Todo Contract Schema
 
 Every executable todo MUST contain:
 
@@ -461,7 +464,7 @@ type: build | review | qa | docs | spike | discussion
 objective: <what this task must achieve>
 responsibility: <primary responsibility domain>
 required_skills:
-  - <resolved from plan annotations or Phase 1.4>
+  - <resolved from plan annotations or Phase 1 Step 4>
 optional_skills:
   - <attached when they materially reduce risk>
 intent_anchor:
@@ -514,7 +517,7 @@ review_outcome:
   summary: pending
 ```
 
-#### 3.3 Todo Status Model
+#### Step 3 — Todo Status Model
 
 - `drafted` — derived but not yet ready to execute
 - `ready` — dependencies and preconditions satisfied
@@ -528,13 +531,13 @@ review_outcome:
 
 Important: `implemented` does not unblock downstream work. Only `complete` unblocks downstream work.
 
-#### 3.4 Responsibility Classification
+#### Step 4 — Responsibility Classification
 
 Every todo must declare one primary responsibility. If a task truly spans multiple major responsibilities, split it.
 
 Recommended values: `frontend`, `backend`, `schema`, `testing`, `playwright`, `infra`, `docs`, `spike`, `discussion`, `technical_review`, `qa_review`
 
-#### 3.5 Blocking Unknowns
+#### Step 5 — Blocking Unknowns
 
 When the plan includes unresolved decisions, missing access, risky unknowns, spike candidates, or discussion points — these must become explicit todos before dependent build work begins.
 
@@ -542,7 +545,7 @@ When the plan includes unresolved decisions, missing access, risky unknowns, spi
 - spike todos → reduce risk with a timebox and deliverable
 - build work blocked by them stays `blocked`
 
-#### 3.6 Create Todo Files
+#### Step 6 — Create Todo Files
 
 Confirm `file-todos` exists in the AGENTS.md registry before running. If missing, surface as a capability gap and stop.
 
@@ -566,7 +569,7 @@ Plan → todos mapping:
 - spike candidates → spike todos (`status: pending`)
 - review/qa requirements → review/qa todos
 
-#### 3.7 Dependency Rules
+#### Step 7 — Dependency Rules
 
 Execution order is dependency-driven, not list-order driven.
 
@@ -806,7 +809,7 @@ Ask-once fallback: if commands are not configured, ask once for run-provided com
 
 ### Phase 7: Completion
 
-#### 7.1 Final Drift Check
+#### Step 1 — Final Drift Check
 
 Verify the complete implementation still aligns to original plan intent:
 
@@ -817,7 +820,7 @@ Verify the complete implementation still aligns to original plan intent:
 
 If drift detected: set `status = plan_conflict`, stop, surface for review before claiming completion.
 
-#### 7.2 Completion Summary
+#### Step 2 — Completion Summary
 
 Provide:
 
@@ -829,7 +832,7 @@ Provide:
 - Plan conflicts / drift detected
 - Next execution step
 
-#### 7.3 Handoff Options
+#### Step 3 — Handoff Options
 
 - `/workflow:review` — validate quality of implemented work
 - `/workflow:compound` — capture durable learnings from this execution

@@ -58,7 +58,7 @@ description.
 - Constrained, well-defined scope
 
 **If requirements are already clear:**\
-Use **AskQuestion** to suggest:
+Use **AskUserQuestion** to suggest:
 
 > "Your requirements seem detailed enough to proceed directly to
 > planning. Should I run `/workflow:plan` instead, or would you like to
@@ -97,9 +97,9 @@ Also consider any repo-level guidance files such as `AGENTS.md`.
 
 Engage in collaborative dialogue rather than a rapid question loop.
 
-**Critical (non-negotiable):** Default response shape is **synthesize + discussion prompts + assumptions**. Multiple-choice / AskQuestion only for handoffs (Phase 0, Phase 4) or a single blocking question when the user is stuck.
+**Critical (non-negotiable):** Default response shape is **synthesize + discussion prompts + assumptions**. Multiple-choice / AskUserQuestion only for handoffs (Phase 0, Phase 4) or a single blocking question when the user is stuck.
 
-**Enforcement rule:** Do **not** use AskQuestion during exploration until **after** at least one full dialogue iteration (Synthesize + discussion prompts + Capture). AskQuestion is only for handoffs or when one focused multiple-choice truly unblocks.
+**Enforcement rule:** Do **not** use AskUserQuestion during exploration until **after** at least one full dialogue iteration (Synthesize + discussion prompts + Capture). AskUserQuestion is only for handoffs or when one focused multiple-choice truly unblocks.
 
 **Default cadence (per iteration):**
 
@@ -191,7 +191,7 @@ For each approach, provide:
 Lead with your recommendation and explain why. Apply YAGNI --- prefer
 simpler solutions.
 
-Use **AskQuestion** to confirm preferred direction if needed.
+Use **AskUserQuestion** to confirm preferred direction if needed.
 
 ---
 
@@ -224,7 +224,7 @@ If Open Questions exist:
 
 ### Phase 4: Handoff
 
-Use **AskQuestion** to present next steps:
+Use **AskUserQuestion** to present next steps:
 
 **Question:**
 "Brainstorm captured. What would you like to do next?"

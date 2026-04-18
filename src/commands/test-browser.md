@@ -97,7 +97,7 @@ If installation fails, inform the user and stop.
 
 Before starting tests, ask user if they want to watch the browser:
 
-Use AskQuestion with:
+Use AskUserQuestion with:
 - Question: "Do you want to watch the browser tests run?"
 - Options:
   1. **Headed (watch)** - Opens visible browser window so you can see tests run
@@ -154,7 +154,7 @@ git diff --name-only "origin/${default_branch}"...HEAD
 
 </determine_scope>
 
-### 3. Map Files to Routes
+### 4. Map Files to Routes
 
 <file_to_route_mapping>
 
@@ -175,7 +175,7 @@ Build a list of URLs to test based on the mapping.
 
 </file_to_route_mapping>
 
-### 4. Verify Server is Running
+### 5. Verify Server is Running
 
 <check_server>
 
@@ -200,7 +200,7 @@ Then run `/test-browser` again.
 
 </check_server>
 
-### 5. Test Each Affected Page
+### 6. Test Each Affected Page
 
 <test_pages>
 
@@ -239,7 +239,7 @@ agent-browser screenshot --full page-name-full.png  # Full page
 
 </test_pages>
 
-### 6. Human Verification (When Required)
+### 7. Human Verification (When Required)
 
 <human_verification>
 
@@ -253,7 +253,7 @@ Pause for human input when testing touches:
 | SMS | "Verify you received the SMS code" |
 | External APIs | "Confirm the [service] integration is working" |
 
-Use AskQuestion:
+Use AskUserQuestion:
 ```markdown
 **Human Verification Needed**
 
@@ -268,7 +268,7 @@ Did it work correctly?
 
 </human_verification>
 
-### 7. Handle Failures
+### 8. Handle Failures
 
 <failure_handling>
 
@@ -307,7 +307,7 @@ When a test fails:
 
 </failure_handling>
 
-### 8. Test Summary
+### 9. Test Summary
 
 <test_summary>
 

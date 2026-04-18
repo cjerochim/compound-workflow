@@ -49,7 +49,7 @@ Use it to resolve optional defaults used by this command:
 
 If not present, proceed with safe defaults and state what you assumed.
 
-### 0. Idea Refinement
+### Step 1 — Idea Refinement
 
 **Check for brainstorm output first:**
 
@@ -72,11 +72,11 @@ Use file discovery tools (Glob/Read) to locate and read recent brainstorm docume
 5. Use brainstorm decisions as input to the research phase
 
 **If multiple brainstorms could match:**
-Use **AskQuestion** to ask which brainstorm to use, or whether to proceed without one.
+Use **AskUserQuestion** to ask which brainstorm to use, or whether to proceed without one.
 
 **If no brainstorm found (or not relevant), run idea refinement:**
 
-Refine the idea through collaborative dialogue using **AskQuestion**:
+Refine the idea through collaborative dialogue using **AskUserQuestion**:
 
 - Ask questions one at a time to understand the idea fully
 - Prefer multiple choice questions when natural options exist
@@ -96,7 +96,7 @@ Refine the idea through collaborative dialogue using **AskQuestion**:
 
 ## Main Tasks
 
-### 1. Local Research (Always Runs - Parallel)
+### Step 2 — Local Research (Always Runs - Parallel)
 
 <thinking>
 First, I need to understand the project's conventions, existing patterns, and any documented learnings. This is fast and local - it informs whether external research is needed.
@@ -107,7 +107,7 @@ Run these agents **in parallel** to gather local context:
 - Task repo-research-analyst(feature_description)
 - Task learnings-researcher(feature_description)
 
-Also read the Skill Index from `AGENTS.md` directly — capture which skills are available and their trigger conditions. This will be used to annotate plan tasks with relevant skills in Step 1.6.
+Also read the Skill Index from `AGENTS.md` directly — capture which skills are available and their trigger conditions. This is a read-and-hold step; you will assign skills to tasks in Step 6.
 
 **What to look for:**
 
@@ -117,9 +117,9 @@ Also read the Skill Index from `AGENTS.md` directly — capture which skills are
 
 These findings inform the next step.
 
-### 1.5. Planning Fidelity + Confidence + Research Mode (REQUIRED)
+### Step 3 — Planning Fidelity + Confidence + Research Mode (REQUIRED)
 
-After Step 0 and local research, you MUST choose planning fidelity and confidence, then decide whether to run external research.
+After Step 1 (Idea Refinement) and Step 2 (Local Research), you MUST choose planning fidelity and confidence, then decide whether to run external research.
 
 #### Fidelity
 
@@ -164,7 +164,7 @@ If risky work is detected:
 
 - Spike evaluation is mandatory.
 - Declare `spikes_needed: yes|no`.
-- If `spikes_needed: yes`, include explicit Spike Candidates with upfront dependency and priority modeling (see Step 3.5).
+- If `spikes_needed: yes`, include explicit Spike Candidates with upfront dependency and priority modeling (see Step 11).
 - If `spikes_needed: no`, include a short rationale + risk mitigation note explaining why direct implementation is safe.
 
 #### Research Mode
@@ -179,7 +179,7 @@ Baseline policy (by fidelity):
 
 Override: high-risk topics always require external research, even if the user prefers speed.
 
-**Required sections by fidelity** (ensure the chosen template includes these; see Step 4):
+**Required sections by fidelity** (ensure the chosen template includes these; see Step 12):
 
 - **Low**: problem, constraints, acceptance criteria, implementation outline, verification checklist
 - **Medium**: all Low + alternatives/tradeoffs, dependency/risk table, rollout notes, observability/test notes
@@ -202,18 +202,18 @@ Research mode: local only | local + external
 Open questions: none | <list>
 ```
 
-**When Open questions is not "none":** You MUST materialize them in the plan body as actionable items (see Step 2.5). If an unknown blocks implementation feasibility, prefer **Spike Candidates**. If confidence is `Low`, the plan MUST include at least one checkbox under Discussion Points or Spike Candidates so `/workflow:work` can create pending todos and triage can resolve them.
+**When Open questions is not "none":** You MUST materialize them in the plan body as actionable items (see Step 9). If an unknown blocks implementation feasibility, prefer **Spike Candidates**. If confidence is `Low`, the plan MUST include at least one checkbox under Discussion Points or Spike Candidates so `/workflow:work` can create pending todos and triage can resolve them.
 
-### 1.5b. External Research (Conditional)
+### Step 4 — External Research (Conditional)
 
-Run external research when Step 1.5 selected `local + external`.
+Run external research when Step 3 selected `local + external`.
 
 Run these agents in parallel:
 
 - Task best-practices-researcher(feature_description)
 - Task framework-docs-researcher(feature_description)
 
-### 1.5c. Git History Research (Conditional)
+### Step 5 — Git History Research (Conditional)
 
 Use git history research when historical context is likely to change the plan.
 
@@ -227,7 +227,7 @@ If selected, run:
 
 - Task git-history-analyzer(feature_description)
 
-### 1.6. Consolidate Research
+### Step 6 — Consolidate Research
 
 After all research steps complete, consolidate findings:
 
@@ -240,7 +240,7 @@ After all research steps complete, consolidate findings:
 
 **Optional validation:** Briefly summarize findings and ask if anything looks off or missing before proceeding to planning.
 
-### 1.7. SpecFlow Analysis (by fidelity)
+### Step 7 — SpecFlow Analysis (by fidelity)
 
 Run flow/gap analysis to surface missing requirements before locking structure:
 
@@ -248,11 +248,11 @@ Run flow/gap analysis to surface missing requirements before locking structure:
 - **Medium fidelity:** recommended
 - **High fidelity:** required
 
-**Step 1 — Dispatch subagent:** Task spec-flow-analyzer(feature_description, research_findings)
+**Dispatch subagent:** Task spec-flow-analyzer(feature_description, research_findings)
 
-**Step 2 — Parent review:** Once findings are returned, assess whether gaps and edge cases are adequately surfaced. If coverage is insufficient or a critical flow was missed, re-dispatch with refined context before locking structure. Incorporate confirmed gaps into the upcoming issue structure and acceptance criteria.
+**Parent review:** Once findings are returned, assess whether gaps and edge cases are adequately surfaced. If coverage is insufficient or a critical flow was missed, re-dispatch with refined context before locking structure. Incorporate confirmed gaps into the upcoming issue structure and acceptance criteria.
 
-### 2. Issue Planning & Structure
+### Step 8 — Issue Planning & Structure
 
 <thinking>
 Think like a product manager - what would make this issue clear and actionable? Consider multiple perspectives
@@ -278,7 +278,7 @@ Think like a product manager - what would make this issue clear and actionable? 
 - [ ] Gather supporting materials (error logs, screenshots, design mockups)
 - [ ] Prepare code examples or reproduction steps if applicable, name the mock filenames in the lists
 
-### 2.5. Solution Scope Contract (REQUIRED for all plans)
+### Step 9 — Solution Scope Contract (REQUIRED for all plans)
 
 Every plan MUST include an explicit scope contract so `/workflow:work` can enforce intent.
 
@@ -299,7 +299,7 @@ Placement:
 - Put `solution_scope` in frontmatter.
 - Put `completion_expectation` and `non_goals` in a dedicated section (recommended: `## Scope Contract`) in the plan body.
 
-### 2.6. Agentic Access & Validation Contract (REQUIRED for all plans)
+### Step 10 — Agentic Access & Validation Contract (REQUIRED for all plans)
 
 Every plan MUST include an explicit contract describing how an agent will execute and verify the work without hidden assumptions.
 
@@ -322,9 +322,9 @@ Placement:
 - Add a dedicated section in the plan body: `## Agentic Access & Validation Contract`.
 - Reference this section from implementation phases/todos so `/workflow:work` can enforce it directly.
 
-### 3.5. Discussion Points & Spike Candidates
+### Step 11 — Discussion Points & Spike Candidates
 
-When you declared Open questions in Step 1.5 (other than "none"), and/or when risky-work spike evaluation requires spikes, the plan file MUST include one or both sections below with checkboxes so `/workflow:work` and `file-todos` can create pending todos for triage:
+When you declared Open questions in Step 3 (other than "none"), and/or when risky-work spike evaluation requires spikes, the plan file MUST include one or both sections below with checkboxes so `/workflow:work` and `file-todos` can create pending todos for triage:
 
 - **## Discussion Points (resolve/decide)** — Decisions to make (no code). Use `- [ ]` items (e.g. "Decide: X or Y?", "Confirm constraint Z").
 - **## Spike Candidates (timeboxed)** — Timeboxed investigations to de-risk. Use `- [ ] Spike: <short description>` items.
@@ -361,7 +361,7 @@ Example Spike Candidate:
   - Parallelizable: yes
 ```
 
-### 4. Choose Implementation Detail Level
+### Step 12 — Choose Implementation Detail Level
 
 Select how comprehensive you want the issue to be. Fidelity should drive this choice.
 
@@ -748,7 +748,7 @@ solution_scope: [partial_fix|full_remediation|migration]
 - Design documents: [links]
 ```
 
-### 5. Issue Creation & Formatting
+### Step 13 — Issue Creation & Formatting
 
 <thinking>
 Apply best practices for clarity and actionability, making the issue easy to scan and understand
@@ -792,7 +792,7 @@ Apply best practices for clarity and actionability, making the issue easy to sca
 </details>
 ````
 
-### 6. Final Review & Submission
+### Step 14 — Final Review & Submission
 
 **Pre-submission Checklist:**
 
@@ -820,7 +820,7 @@ mkdir -p docs/plans/
 
 Write the complete plan file to `docs/plans/YYYY-MM-DD-<type>-<slug>-plan.md`. This step is mandatory and cannot be skipped — even when running as part of LFG/SLFG or other automated pipelines.
 
-**When Open questions were declared (Step 1.5):** The written plan MUST include at least one of: `## Discussion Points (resolve/decide)` with `- [ ]` items, or `## Spike Candidates (timeboxed)` with `- [ ] Spike: ...` items. If confidence is `Low`, at least one checkbox is required in one of these sections. This ensures `file-todos` can create pending discussion/spike todos for `/workflow:triage`.
+**When Open questions were declared (Step 3):** The written plan MUST include at least one of: `## Discussion Points (resolve/decide)` with `- [ ]` items, or `## Spike Candidates (timeboxed)` with `- [ ] Spike: ...` items. If confidence is `Low`, at least one checkbox is required in one of these sections. This ensures `file-todos` can create pending discussion/spike todos for `/workflow:triage`.
 
 **When risky-work Spike Evaluation declared `spikes_needed: yes`:** The written plan MUST include `## Spike Candidates (timeboxed)` with at least one spike checkbox and required per-candidate metadata (`Initial priority`, `Depends on`, `Unblocks`, `Timebox`, `Deliverable`, `Parallelizable`) so ordering can be defined in plan, confirmed in triage, and enforced in work.
 
@@ -830,7 +830,7 @@ Confirm: "Plan written to docs/plans/[filename]"
 
 **Technical review (required when Fidelity is Medium or High):** After writing the plan file, if the declared **Fidelity is Medium or High**, you **must** run technical review—it is not optional. Run **Task planning-technical-reviewer(plan_path)** using the plan path just written. Do not perform technical review in-context unless the environment cannot run the Task; if you fall back, state "planning-technical-reviewer unavailable; running direct technical review (degraded bias resistance)" and then load the `technical-review` skill and run it in-context. If Fidelity is Low, skip this step; the user can still choose "Technical review" from Post-Generation Options or call `/workflow:tech-review` later.
 
-**Non-interactive mode:** When the invocation is non-interactive (e.g., `workflow:plan` run by automation, CI, or with an explicit non-interactive flag/convention), skip AskQuestion calls and do not present Post-Generation Options. For determinism, the repo should define the flag or convention (e.g., in `AGENTS.md` Repo Config Block or a documented env var). Still **declare** Fidelity, Confidence, Solution scope, Spike evaluation, Spikes needed, Research mode, and Open questions in the required announcement format before writing the plan. Use these defaults when user input is unavailable: fidelity = Medium, confidence = Medium, solution_scope = full_remediation, spike evaluation = not-required unless risky-work triggers are present, spikes needed = n/a when spike evaluation is not required, research mode = local + external for Medium/High risk topics else local only. Proceed directly to writing the plan file and then exit or return the plan path as output.
+**Non-interactive mode:** When the invocation is non-interactive (e.g., `workflow:plan` run by automation, CI, or with an explicit non-interactive flag/convention), skip AskUserQuestion calls and do not present Post-Generation Options. For determinism, the repo should define the flag or convention (e.g., in `AGENTS.md` Repo Config Block or a documented env var). Still **declare** Fidelity, Confidence, Solution scope, Spike evaluation, Spikes needed, Research mode, and Open questions in the required announcement format before writing the plan. Use these defaults when user input is unavailable: fidelity = Medium, confidence = Medium, solution_scope = full_remediation, spike evaluation = not-required unless risky-work triggers are present, spikes needed = n/a when spike evaluation is not required, research mode = local + external for Medium/High risk topics else local only. Proceed directly to writing the plan file and then exit or return the plan path as output.
 
 **Required in plan frontmatter:** Add these fields to the plan file:
 
@@ -840,7 +840,7 @@ Confirm: "Plan written to docs/plans/[filename]"
 
 ## Output Format
 
-**Filename:** Use the filename from Step 2 (Title & Categorization): `YYYY-MM-DD-<type>-<slug>-plan.md` with type and slug from the single contract.
+**Filename:** Use the filename from Step 8 (Title & Categorization): `YYYY-MM-DD-<type>-<slug>-plan.md` with type and slug from the single contract.
 
 ```
 docs/plans/YYYY-MM-DD-<type>-<slug>-plan.md
@@ -860,35 +860,21 @@ Examples:
 
 Technical review (above) is required for Medium/High fidelity and must be run via subagent when available.
 
-After writing the plan file, use **AskQuestion** to present these options:
+After writing the plan file, use **AskUserQuestion** to ask: "Plan ready at `docs/plans/YYYY-MM-DD-<type>-<slug>-plan.md`. What would you like to do next?"
 
-**Question:** "Plan ready at `docs/plans/YYYY-MM-DD-<type>-<slug>-plan.md`. What would you like to do next?"
+**Options and routing:**
 
-**Options:**
+1. **Open plan in editor** → Navigate to `docs/plans/<plan_filename>.md`
+2. **Review and refine** → Load `document-review` skill
+3. **Start `/workflow:work`** → Run `/workflow:work <plan_path>` (includes triage gate)
+4. **Start `/workflow:triage`** → Ensure plan todos exist (create via `file-todos` if needed), then run `/workflow:triage` to approve the ready queue
+5. **Create Issue** → See "Issue Creation" section below
+6. **Other** → Accept free text for rework or specific changes
 
-1. **Open plan in editor** - Open the plan file for review
-2. **Review and refine** - Improve the document through structured self-review
-3. **Start `/workflow:work`** - Execute this plan (includes default triage gate)
-4. **Start `/workflow:triage`** - Manually curate/prioritize queue before execution
-5. **Create Issue** - Create issue in project tracker (GitHub/Linear)
-6. **Other** - Adjust the plan
+Optional (only if present in this repo):
 
-Optional (only if those workflows exist in this repo):
-
-- `/deepen-plan` - Enhance each section with parallel research agents
-- **Technical review** - Load `technical-review` skill for technical correctness (no edits). Pair with `document-review` to apply any agreed changes to the plan.
-
-Based on selection:
-
-- **Open plan in editor** → Open the plan file in the editor (navigate to `docs/plans/<plan_filename>.md`)
-- **Review and refine** → Load `document-review` skill.
-- **Start `/workflow:work`** → Run `/workflow:work <plan_path>`; `/workflow:work` must run triage before implementation.
-- **Start `/workflow:triage`** → Ensure plan todos exist (create via `file-todos` if needed), then run `/workflow:triage` to approve priority/dependencies and the executable ready queue.
-- **Technical review** → Load `technical-review` skill; then if user agrees to changes, load `document-review` to update the plan.
-- **Create Issue** → See "Issue Creation" section below
-- **Other** → Accept free text for rework or specific changes
-
-**Note:** Only if `/deepen-plan` exists in this repo and the user has enabled it (e.g., ultrathink), you may run `/deepen-plan` after plan creation for extra depth; it is optional, not required.
+- **Technical review** → Load `technical-review` skill; if user agrees to changes, load `document-review` to update the plan
+- `/deepen-plan` → Enhance each section with parallel research agents (optional, not required)
 
 Loop back to options after changes until user selects `/workflow:work`, `/workflow:triage`, or ends the session.
 
@@ -903,7 +889,7 @@ When user selects "Create Issue", detect their project tracker from repo guidanc
 
 2. **If GitHub:**
 
-   Use **type** and **title** from Step 2 (title has no prefix). Compose issue title as `"<type>: <title>"` (e.g., `feat: User authentication flow`).
+   Use **type** and **title** from Step 8 (title has no prefix). Compose issue title as `"<type>: <title>"` (e.g., `feat: User authentication flow`).
 
    If the `gh` CLI is available, create the issue via:
 
@@ -915,7 +901,7 @@ When user selects "Create Issue", detect their project tracker from repo guidanc
 
 3. **If Linear:**
 
-   Use **type** and **title** from Step 2. For Linear, use either the full title or `"<type>: <title>"` per team convention.
+   Use **type** and **title** from Step 8. For Linear, use either the full title or `"<type>: <title>"` per team convention.
 
    If the `linear` CLI is available, create the issue via:
 

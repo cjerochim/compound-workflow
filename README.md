@@ -30,6 +30,8 @@ If your package manager skipped the lifecycle script, or after updating the pack
 npx compound-workflow install
 ```
 
+Then run `/setup-agents` in your agent harness to tailor `AGENTS.md` to this project — it detects your stack and installed harnesses, curates the Skill Index, and prompts for anything it can't infer. Re-run it whenever harnesses or skills change.
+
 ---
 
 ## The Workflow
