@@ -95,73 +95,53 @@ Also consider any repo-level guidance files such as `AGENTS.md`.
 
 #### 1.2 Structured Dialogue Exploration (Default)
 
-Engage in collaborative dialogue rather than a rapid question loop.
+Engage in collaborative **dialog, one question at a time**. This is a discussion, not a survey — ask open-ended, conversational questions that invite the user to think out loud. Readability beats coverage.
 
-**Critical (non-negotiable):** Default response shape is **synthesize + discussion prompts + assumptions**. Multiple-choice / AskUserQuestion only for handoffs (Phase 0, Phase 4) or a single blocking question when the user is stuck.
+**Critical (non-negotiable):** Default response shape is **synthesize + ONE open question + assumptions**. No "prompts to react to" menus. No multiple-choice questions during exploration. No multi-part questions. AskUserQuestion (which forces multiple-choice) is reserved strictly for handoffs (Phase 0, Phase 4) — never for exploration.
 
-**Enforcement rule:** Do **not** use AskUserQuestion during exploration until **after** at least one full dialogue iteration (Synthesize + discussion prompts + Capture). AskUserQuestion is only for handoffs or when one focused multiple-choice truly unblocks.
+**Enforcement rule:** Do **not** use AskUserQuestion during Phase 1 exploration. Ask open-ended questions in plain prose and let the user reply in plain prose. AskUserQuestion is only for the Phase 0 / Phase 4 handoff decisions.
 
 **Default cadence (per iteration):**
 
-1. **Synthesize Current Understanding** (2--4 bullets)
-2. **Ask at most ONE high-leverage question** (only if needed)
-3. **Surface Tensions & Unknowns** using 3--5 **discussion prompts** (not interrogation)
-4. **Capture Emerging Assumptions** (bullets)
+1. **Synthesize Current Understanding** (≤ 3 short bullets)
+2. **Ask ONE high-leverage question** (the single most useful thing to resolve now)
+3. **State Working Assumptions** (≤ 3 bullets, phrased as "tell me if any of these are wrong")
 
 **Hard rules:**
 
-- Do not ask follow-up questions in the same turn.
-- Ask **no more than one** clarifying question per iteration.
-- If blocked, ask **one** additional clarifying question max, then return to prompts.
+- Exactly **one** question per turn. No follow-ups, no "also…", no multi-part questions.
+- No "prompts to react to" / "pick any" menus. If tempted to list options, pick the single best one and ask that.
+- Keep the whole turn short — aim for ≤ 12 lines. A reader should grasp it in one glance.
+- If blocked, ask one more clarifying question **next** turn, never stack them.
 
 **First assistant message template (copy/paste shape):**
 
 ```markdown
-**What I think you're aiming for (so far):**
+**What I think you're aiming for:**
 - ...
 - ...
 
-**One question to anchor us:**
+**One question:**
 <single sentence>
 
-**Prompts to react to (pick any):**
-- Tradeoff: ...
-- Edge area: ...
-- UX vs architecture: ...
-- Scale implication: ...
-- Short-term vs long-term: ...
-
-**Working assumptions (tell me what’s wrong):**
+**I'm assuming (tell me if any of these are wrong):**
 - ...
 - ...
 ```
 
 For each iteration:
 
-1.  **Synthesize Current Understanding**
+1.  **Synthesize Current Understanding** (≤ 3 bullets)
 
     - What the feature appears to be
-    - Who it impacts
-    - What class of change this is (incremental, foundational, risky, trivial)
-    - Implied constraints
+    - Who it impacts / what class of change (incremental, foundational, risky, trivial)
+    - Implied constraint worth surfacing
 
-2.  **Ask at most ONE high-leverage question** (only if needed to unblock discussion)
+2.  **Ask ONE high-leverage, open-ended question** anchored on purpose, users, success, or a hard constraint. Use "how/what/why" phrasing — not "which of these". Invite the user to think out loud.
 
-3.  **Surface Tensions & Unknowns** via 3--5 prompts to react to (not interrogation), such as:
+3.  **State Working Assumptions** — the 1–3 most load-bearing beliefs you're operating on. Ask the user to flag anything wrong; do not turn these into extra questions.
 
-    - Tradeoff
-    - Edge area
-    - Scale implication
-    - UX vs architecture tension
-    - Short-term vs long-term implication
-
-4.  **Capture Emerging Assumptions** Explicitly note:
-
-    - Working assumptions
-    - Tentative decisions
-    - Areas still unresolved
-
-5.  Continue iteratively until:
+4.  Continue iteratively until:
 
     - Direction is clear
     - Or user says "proceed"
@@ -191,7 +171,7 @@ For each approach, provide:
 Lead with your recommendation and explain why. Apply YAGNI --- prefer
 simpler solutions.
 
-Use **AskUserQuestion** to confirm preferred direction if needed.
+Ask which direction resonates as an open question in the conversation ("Which of these fits best, or does something in between feel closer?"). Do **not** use AskUserQuestion here — keep it a discussion.
 
 ---
 

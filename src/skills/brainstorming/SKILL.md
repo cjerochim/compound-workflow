@@ -47,68 +47,53 @@ If requirements are clear, suggest: "Your requirements seem clear. Consider proc
 
 ### Phase 1: Understand the Idea
 
-Default to **discussion-first**. Questions are a tool of last resort to unblock discussion, not the main loop.
+Default to **one question at a time**. Readability beats coverage — the user pulls the next layer, you don't push all of it.
 
 **Default cadence (per iteration):**
 
-1. **Synthesize current understanding** (2--4 bullets)
-2. **Ask at most ONE high-leverage clarifying question** (only if needed)
-3. **Surface tensions & unknowns** via 3--5 **discussion prompts** (not interrogation)
-4. **Capture assumptions + tentative decisions** (bullets)
+1. **Synthesize current understanding** (≤ 3 short bullets)
+2. **Ask ONE high-leverage question** (the single most useful thing to resolve right now)
+3. **State working assumptions** (≤ 3 bullets, phrased as "tell me if any of these are wrong")
 
 **Hard rules:**
 
-- Ask **no more than one** clarifying question per iteration.
-- Do **not** ask follow-up questions in the same turn.
-- If ambiguity is blocking progress, ask **one** additional clarifying question max, then return to discussion prompts.
+- Exactly **one** question per turn. No follow-ups, no "also…", no multi-part questions.
+- No "prompts to react to" / "pick any" menus. If you're tempted to list options, pick the single best one and ask that.
+- Keep the whole turn short — think ≤ 12 lines of output. A reader should grasp it in one glance.
+- If ambiguity blocks progress, ask one more clarifying question next turn. Never stack them.
 
 **First response template (copy/paste shape):**
 
 ```markdown
-**What I think you're aiming for (so far):**
+**What I think you're aiming for:**
 - ...
 - ...
 
-**One question to anchor us:**
+**One question:**
 <single sentence>
 
-**Prompts to react to (pick any):**
-- Tradeoff: ...
-- Edge area: ...
-- UX vs architecture: ...
-- Scale implication: ...
-- Short-term vs long-term: ...
-
-**Working assumptions (tell me what’s wrong):**
+**I'm assuming (tell me if any of these are wrong):**
 - ...
 - ...
 ```
 
-**Choosing the ONE question (when needed):**
+**Choosing the ONE question:**
 
-- **Do not open with multiple-choice.** Open with synthesis and discussion prompts. Multiple-choice applies only when you have already done a dialogue iteration and are asking that one allowed question.
+This is a **dialog**, not a survey. Ask open, conversational questions that invite the user to think out loud — not multiple-choice prompts that force a pick.
 
-1. **Prefer multiple choice when natural options exist** (only after a dialogue iteration)
-
-   - Good: "Should the notification be: (a) email only, (b) in-app only, or (c) both?"
-   - Avoid: "How should users be notified?"
-
-2. **Make it high-leverage**
-
-   - Anchor on **purpose**, **users**, **success**, or a **hard constraint**
-   - Avoid implementation sequencing ("how will we build it?")
-
-3. **Validate assumptions explicitly**
-
-   - "I'm assuming users will be logged in. Is that correct?"
-
-4. **Prefer success criteria early**
+1. **Anchor on purpose, users, success, or a hard constraint.** Avoid implementation sequencing ("how will we build it?").
+2. **Keep it open-ended.** Prefer "how", "what", "why" over "which of these".
+   - Good: "How would you want users to be notified, and why that way?"
+   - Avoid: "Should the notification be: (a) email, (b) in-app, or (c) both?"
+3. **Validate a specific assumption** when that's the biggest unknown — phrased so the user can elaborate, not just yes/no.
+   - "I'm assuming users will be logged in when this triggers — is that right, and what happens if they aren't?"
+4. **Prefer success criteria early.**
    - "What would make you say 'this worked'?"
 
-**Prompt menu (examples):**
+**Question bank (pick one per turn — never list several):**
 
 - Purpose: "What problem is painful enough to fix now?"
-- Users/context: "Who is the primary user and what’s their moment-of-need?"
+- Users: "Who is the primary user and what's their moment-of-need?"
 - Constraints: "What constraint should we treat as immovable?"
 - Success: "What does success look like (observable behavior)?"
 - Edges: "What must not happen? What failure would be unacceptable?"
@@ -222,14 +207,16 @@ This prevents wasted effort on misaligned designs.
 
 ## Anti-Patterns to Avoid
 
-| Anti-Pattern                          | Better Approach                             |
-| ------------------------------------- | ------------------------------------------- |
-| Asking many questions in a row        | Ask 1 high-leverage question, then prompts  |
-| Jumping to implementation details     | Stay focused on WHAT, not HOW               |
-| Proposing overly complex solutions    | Start simple, add complexity only if needed |
-| Ignoring existing codebase patterns   | Research what exists first                  |
-| Making assumptions without validating | State assumptions explicitly and confirm    |
-| Creating lengthy design documents     | Keep it concise—details go in the plan      |
+| Anti-Pattern                           | Better Approach                             |
+| -------------------------------------- | ------------------------------------------- |
+| Asking many questions in a row         | Exactly one question per turn               |
+| Listing "prompts to react to"          | Pick the single best question and ask it    |
+| Dense walls of bullets                 | ≤ 12 lines per turn; readable at a glance   |
+| Jumping to implementation details      | Stay focused on WHAT, not HOW               |
+| Proposing overly complex solutions     | Start simple, add complexity only if needed |
+| Ignoring existing codebase patterns    | Research what exists first                  |
+| Making assumptions without validating  | State assumptions explicitly and confirm    |
+| Creating lengthy design documents      | Keep it concise—details go in the plan      |
 
 ## Integration with Planning
 
