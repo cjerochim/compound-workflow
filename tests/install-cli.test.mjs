@@ -102,6 +102,61 @@ test("install: .agents/ gets agents, skills, and commands", () => {
   }
 });
 
+test("install: .claude/ gets agents, skills, and commands", () => {
+  const projectRoot = setup();
+  try {
+    const result = runInstall(projectRoot);
+    assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
+
+    assert.ok(fs.existsSync(path.join(projectRoot, ".claude", "agents")), ".claude/agents should exist");
+    assert.ok(fs.existsSync(path.join(projectRoot, ".claude", "skills")), ".claude/skills should exist");
+    assert.ok(fs.existsSync(path.join(projectRoot, ".claude", "commands")), ".claude/commands should exist");
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("install: every skill in src/skills/ appears in every harness", () => {
+  const projectRoot = setup();
+  try {
+    const result = runInstall(projectRoot);
+    assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
+
+    const srcSkills = path.join(repoRoot, "src", "skills");
+    const expected = fs.readdirSync(srcSkills, { withFileTypes: true })
+      .filter((e) => e.isDirectory() && fs.existsSync(path.join(srcSkills, e.name, "SKILL.md")))
+      .map((e) => e.name);
+    assert.ok(expected.length > 0, "source skills must exist for the parity assertion to mean anything");
+
+    for (const harness of [".claude", ".cursor", ".agents"]) {
+      for (const name of expected) {
+        const skillMd = path.join(projectRoot, harness, "skills", name, "SKILL.md");
+        assert.ok(fs.existsSync(skillMd), `${harness}/skills/${name}/SKILL.md should exist`);
+      }
+    }
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("install: updated skill content overwrites previous copy", () => {
+  const projectRoot = setup();
+  try {
+    const stalePath = path.join(projectRoot, ".claude", "skills", "setup-agents", "SKILL.md");
+    fs.mkdirSync(path.dirname(stalePath), { recursive: true });
+    fs.writeFileSync(stalePath, "stale-contents", "utf8");
+
+    const result = runInstall(projectRoot);
+    assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
+
+    const sourceContents = fs.readFileSync(path.join(repoRoot, "src", "skills", "setup-agents", "SKILL.md"), "utf8");
+    const installedContents = fs.readFileSync(stalePath, "utf8");
+    assert.equal(installedContents, sourceContents, "reinstall should overwrite stale skill content");
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
 test("install: copied files are real files, not symlinks", () => {
   const projectRoot = setup();
   try {

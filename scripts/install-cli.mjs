@@ -2,14 +2,14 @@
 /**
  * compound-workflow install
  *
- * Copies agents, skills, and commands from the package into target platform dirs:
- *   .claude/agents/   — flat agent .md files (Claude Code)
- *   .cursor/agents/   — agents preserving subdirs (Cursor)
- *   .cursor/skills/   — skill dirs (Cursor)
- *   .cursor/commands/ — command .md files (Cursor)
- *   .agents/agents/   — agents (OpenCode / general)
- *   .agents/skills/   — skills (OpenCode / general)
- *   .agents/commands/ — commands (OpenCode / general)
+ * Copies agents, skills, and commands from the package into every harness dir.
+ * Harnesses are declared in HARNESSES below; every harness receives all three
+ * asset kinds so skills and commands stay in parity across .claude/, .cursor/,
+ * and .agents/. Only agent layout varies per harness (flat vs. recursive).
+ *
+ *   .claude/{agents,skills,commands}  — Claude Code (flat agents)
+ *   .cursor/{agents,skills,commands}  — Cursor (recursive agents)
+ *   .agents/{agents,skills,commands}  — OpenCode / generic (recursive agents)
  *
  * Also writes opencode.json, AGENTS.md, and standard docs directories.
  *
@@ -366,6 +366,18 @@ function parseArgs(argv) {
 }
 
 // ---------------------------------------------------------------------------
+// Harness registry — every harness receives agents + skills + commands.
+// Agent layout varies because Claude Code requires flat .md files while
+// Cursor and OpenCode preserve subdirectories.
+// ---------------------------------------------------------------------------
+
+const HARNESSES = [
+  { name: ".claude", agentsMode: "flat" },
+  { name: ".cursor", agentsMode: "recursive" },
+  { name: ".agents", agentsMode: "recursive" },
+];
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -391,18 +403,16 @@ function main() {
   console.log("Package:", PACKAGE_ROOT);
   console.log("OpenCode CLI:", hasCommand("opencode") ? "yes" : "no");
 
-  // .claude/agents/ — flat (Claude Code requires flat .md files)
-  copyAgentsFlat(srcAgents, path.join(targetRoot, ".claude", "agents"), args.dryRun, ".claude/agents/");
+  for (const h of HARNESSES) {
+    const agentsDest = path.join(targetRoot, h.name, "agents");
+    const skillsDest = path.join(targetRoot, h.name, "skills");
+    const commandsDest = path.join(targetRoot, h.name, "commands");
 
-  // .cursor/agents/, .cursor/skills/, .cursor/commands/
-  copyAgentsRecursive(srcAgents, path.join(targetRoot, ".cursor", "agents"), args.dryRun, ".cursor/agents/");
-  copySkills(srcSkills, path.join(targetRoot, ".cursor", "skills"), args.dryRun, ".cursor/skills/");
-  copyCommands(srcCommands, path.join(targetRoot, ".cursor", "commands"), args.dryRun, ".cursor/commands/");
-
-  // .agents/agents/, .agents/skills/, .agents/commands/ (OpenCode / general)
-  copyAgentsRecursive(srcAgents, path.join(targetRoot, ".agents", "agents"), args.dryRun, ".agents/agents/");
-  copySkills(srcSkills, path.join(targetRoot, ".agents", "skills"), args.dryRun, ".agents/skills/");
-  copyCommands(srcCommands, path.join(targetRoot, ".agents", "commands"), args.dryRun, ".agents/commands/");
+    const copyAgents = h.agentsMode === "flat" ? copyAgentsFlat : copyAgentsRecursive;
+    copyAgents(srcAgents, agentsDest, args.dryRun, `${h.name}/agents/`);
+    copySkills(srcSkills, skillsDest, args.dryRun, `${h.name}/skills/`);
+    copyCommands(srcCommands, commandsDest, args.dryRun, `${h.name}/commands/`);
+  }
 
   writeOpenCodeJson(targetRoot, packageSrc, args.dryRun);
   writeAgentsMd(targetRoot, PACKAGE_ROOT, args.dryRun);
