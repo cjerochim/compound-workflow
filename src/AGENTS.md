@@ -62,7 +62,7 @@ Context budget rule: if a task can be done with less context, pass less. If a su
 - **Local grounding is mandatory.** Every plan must cite at least 1–3 internal file path/line refs and any relevant `docs/solutions/**` learnings.
 - **Fidelity + confidence are required declarations** in every plan file.
 - **Solution scope contract is mandatory in every plan.** Plans must declare `solution_scope` (`partial_fix|full_remediation|migration`) plus completion expectation and non-goals.
-- **Isolation preflight is a hard gate.** `/workflow:work` must complete and record worktree/isolation preflight before any implementation commands.
+- **Isolation preflight is a hard gate.** `/workflow:work` must complete and record `isolation_preflight.status: passed` with command evidence before any implementation commands.
 - **Triage before execution is mandatory.** `/workflow:work` must run a triage pass before executing todos.
 - **Independent review is required for code/config changes.** `/workflow:review` must emit `review_independence_mode: independent|degraded`.
 - **Standards baseline is mandatory for code/config changes.** `/workflow:work` and `/workflow:review` must apply `skill: standards` as a hard gate.
@@ -122,6 +122,6 @@ harnesses: []
 | `setup-agents` | Creating or updating AGENTS.md for a project. |
 | `agent-browser` | Inspecting available agents/skills and routing deterministically. |
 | `data-foundations` | Designing multi-tenant schema/access boundaries (RLS, grants). |
-| `pii-protection-prisma` | Storing or processing PII. |
+| `pii-protection` | Storing or processing PII. |
 | `financial-workflow-integrity` | Workflows with money or regulatory outcomes. |
 | `audit-traceability` | Append-only auditing with actor attribution. |

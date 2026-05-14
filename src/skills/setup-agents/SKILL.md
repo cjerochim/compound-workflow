@@ -65,6 +65,7 @@ For each found harness, check `<harness>/skills/`. Record:
 - `$skills_dirs` — map of `<harness>` → `<harness>/skills/` for every harness that has a skills subdirectory
 
 If **no harness directories exist**, stop:
+
 > No harness directories found. Run `npx compound-workflow install` first, then re-run this skill.
 
 > **Note:** `harnesses` in AGENTS.md Repo Config may become stale if harness directories are added or removed. Re-run `/setup-agents` to refresh it.
@@ -82,19 +83,19 @@ Read the following files if they exist (do not error if missing):
 
 From these, infer:
 
-| Config key | Detection signal |
-| --- | --- |
-| `test_command` | `scripts.test` in package.json; vitest/jest config presence |
-| `test_fast_command` | `scripts.test:fast`, `scripts.test:watch`, or vitest equivalent |
-| `lint_command` | `scripts.lint` in package.json; eslint config presence |
-| `typecheck_command` | `scripts.typecheck` or `scripts.type-check`; tsconfig presence |
-| `format_command` | `scripts.format` in package.json; prettier config presence |
-| `dev_server_url` | vite config `server.port`; default `http://localhost:5173` for Vite, `http://localhost:3000` for others |
-| `worktree_install_command` | `package-lock.json` → `npm ci`; `yarn.lock` → `yarn install`; `pnpm-lock.yaml` → `pnpm install` |
-| `default_branch` | `git symbolic-ref refs/remotes/origin/HEAD` → strip `refs/remotes/origin/`; fallback `main` |
-| `project_tracker` | `.github/` exists → `github`; else `none` |
-| `worktree_dir` | default `.worktrees` |
-| `worktree_copy_files` | glob `.env*` in repo root, excluding `.env.example` and `.env.sample` |
+| Config key                 | Detection signal                                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `test_command`             | `scripts.test` in package.json; vitest/jest config presence                                             |
+| `test_fast_command`        | `scripts.test:fast`, `scripts.test:watch`, or vitest equivalent                                         |
+| `lint_command`             | `scripts.lint` in package.json; eslint config presence                                                  |
+| `typecheck_command`        | `scripts.typecheck` or `scripts.type-check`; tsconfig presence                                          |
+| `format_command`           | `scripts.format` in package.json; prettier config presence                                              |
+| `dev_server_url`           | vite config `server.port`; default `http://localhost:5173` for Vite, `http://localhost:3000` for others |
+| `worktree_install_command` | `package-lock.json` → `npm ci`; `yarn.lock` → `yarn install`; `pnpm-lock.yaml` → `pnpm install`         |
+| `default_branch`           | `git symbolic-ref refs/remotes/origin/HEAD` → strip `refs/remotes/origin/`; fallback `main`             |
+| `project_tracker`          | `.github/` exists → `github`; else `none`                                                               |
+| `worktree_dir`             | default `.worktrees`                                                                                    |
+| `worktree_copy_files`      | glob `.env*` in repo root, excluding `.env.example` and `.env.sample`                                   |
 
 For each value, state whether it was detected or defaulted.
 
@@ -247,7 +248,7 @@ Context budget rule: if a task can be done with less context, pass less. If a su
 - **Local grounding is mandatory.** Every plan must cite at least 1–3 internal file path/line refs and any relevant `docs/solutions/**` learnings.
 - **Fidelity + confidence are required declarations** in every plan file.
 - **Solution scope contract is mandatory in every plan.** Plans must declare `solution_scope` (`partial_fix|full_remediation|migration`) plus completion expectation and non-goals.
-- **Isolation preflight is a hard gate.** `/workflow:work` must complete and record worktree/isolation preflight before any implementation commands.
+- **Isolation preflight is a hard gate.** `/workflow:work` must complete and record `isolation_preflight.status: passed` with command evidence before any implementation commands.
 - **Triage before execution is mandatory.** `/workflow:work` must run a triage pass before executing todos.
 - **Independent review is required for code/config changes.** `/workflow:review` must emit `review_independence_mode: independent|degraded`.
 - **Standards baseline is mandatory for code/config changes.** `/workflow:work` and `/workflow:review` must apply `skill: standards` as a hard gate.
@@ -285,15 +286,17 @@ format_command: <value or omit>
 worktree_dir: <value>
 worktree_install_command: <value>
 worktree_copy_files:
-  - <file1>
-harnesses:
-  - <detected harness dir 1>
-\`\`\`
+
+- <file1>
+  harnesses:
+- <detected harness dir 1>
+  \`\`\`
 
 ## Skill Index
 
 | Skill | Use when |
-| --- | --- |
+| ----- | -------- |
+
 [... one row per skill discovered in Phase 3; use the description from each skill's SKILL.md frontmatter ...]
 ```
 

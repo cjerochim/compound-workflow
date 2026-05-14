@@ -12,7 +12,7 @@
       "template": "@AGENTS.md\n@.agents/commands/assess.md\nArguments: $ARGUMENTS\n"
     },
     "install": {
-      "description": "Install compound-workflow in this project (native mode): writes opencode.json, merges AGENTS.md, and creates docs/todo dirs.",
+      "description": "Install compound-workflow in this project — copies agents/skills/commands, writes opencode.json, merges AGENTS.md, and creates docs/todo dirs.",
       "agent": "build",
       "template": "@AGENTS.md\n@.agents/commands/install.md\nArguments: $ARGUMENTS\n"
     },
@@ -37,7 +37,7 @@
       "template": "@AGENTS.md\n@.agents/commands/workflow-compound.md\nArguments: $ARGUMENTS\n"
     },
     "workflow:plan": {
-      "description": "Transform feature descriptions into well-structured project plans using an explicit fidelity and confidence model",
+      "description": "Transform feature descriptions into contract-based execution plans with explicit artifacts, isolated task contracts, and a fidelity/confidence model",
       "agent": "build",
       "template": "@AGENTS.md\n@.agents/commands/workflow-plan.md\nArguments: $ARGUMENTS\n"
     },
@@ -57,9 +57,14 @@
       "template": "@AGENTS.md\n@.agents/commands/workflow-triage.md\nArguments: $ARGUMENTS\n"
     },
     "workflow:work": {
-      "description": "Execute a plan file systematically (implementation + verification) without auto-shipping",
+      "description": "Stateless orchestrator that executes approved plans by scheduling isolated agents for build, validation, review, and drift checking — using artifact-based contracts with no context accumulation",
       "agent": "build",
       "template": "@AGENTS.md\n@.agents/commands/workflow-work.md\nArguments: $ARGUMENTS\n"
+    },
+    "workflow:agents": {
+      "description": "Review and update AGENTS.md to keep skills and agents accurate, consistent, and aligned to current workflow needs",
+      "agent": "build",
+      "template": "@AGENTS.md\n@.agents/commands/workflow-agents.md\nArguments: $ARGUMENTS\n"
     }
   },
   "agent": {

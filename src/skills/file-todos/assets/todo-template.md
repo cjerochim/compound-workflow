@@ -2,7 +2,7 @@
 status: pending
 priority: p2
 issue_id: "XXX"
-tags: []  # e.g. spike, discussion, backend, testing
+tags: [] # e.g. spike, discussion, backend, testing
 dependencies: []
 ---
 
@@ -30,10 +30,12 @@ Present multiple options with pros, cons, effort estimates, and risk assessment.
 Approach: Describe the solution clearly.
 
 Pros:
+
 - Benefit 1
 - Benefit 2
 
 Cons:
+
 - Drawback 1
 - Drawback 2
 
@@ -48,9 +50,11 @@ Risk: Low / Medium / High
 Approach: Describe the solution clearly.
 
 Pros:
+
 - Benefit 1
 
 Cons:
+
 - Drawback 1
 
 Effort: 4-6 hours
@@ -102,6 +106,7 @@ Chronological record of work sessions, actions taken, and learnings.
 By: <name>
 
 Actions:
+
 - Changes made (include file references)
 - Commands executed
 - Tests run
@@ -109,10 +114,12 @@ Actions:
 - Status transition (`ready` -> `pending` with `tags: [blocker]` when blocked, or `ready` -> `complete` when done)
 
 Learnings:
+
 - What worked / what didn't
 - Key insights
 
 Blocker Decision (only when blocked):
+
 - Blocker summary:
 - Constraints discovered:
 - Options considered (>=3):

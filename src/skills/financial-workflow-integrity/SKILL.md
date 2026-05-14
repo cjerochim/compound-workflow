@@ -1,9 +1,9 @@
 ---
 name: financial-workflow-integrity
-description: Enforce correct financial workflows using durable state, idempotency, immutability, and concurrency guards (Prisma + Postgres).
+description: Enforce correct financial workflows using durable state, idempotency, immutability, and concurrency guards (Drizzle + Postgres).
 ---
 
-# Financial Workflow Integrity Standard (Prisma + Postgres)
+# Financial Workflow Integrity Standard (Drizzle + Postgres)
 
 ## Purpose
 
@@ -46,34 +46,45 @@ Provide a practical standard for building workflows that have financial outcomes
 
 ### Money representation
 
-- MUST represent money as integer minor units + currency (e.g. cents + ISO currency code).
+- MUST represent money as `numeric(10,2)` or `numeric(12,2)` in Postgres (exact decimal arithmetic).
 - MUST NOT use floating point for monetary values.
+- MUST use a decimal library (e.g. `decimal.js`, `big.js`) for arithmetic in application code — Drizzle returns `numeric` columns as `string` by default, which is safe for storage and transport but not for math.
+- MUST store currency as ISO 4217 code alongside monetary amounts.
 
 ---
 
 ## Core Data Model (Baseline)
 
+All schema examples use Drizzle ORM (`drizzle-orm/pg-core`).
+
 ### applications (or equivalent)
 
 Required columns:
 
-- `status` (enum)
-- `current_step`
-- `version` (int)
-- `created_at`, `updated_at`
+- `status` (pgEnum)
+- `current_step` (text)
+- `version` (integer, default 1)
+- `created_at` (timestamp)
 
 ### Immutable submissions
 
 Store what was submitted/approved against:
 
-```sql
-CREATE TABLE application_submissions (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  application_id uuid NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
-  submission_no int NOT NULL,
-  submitted_data jsonb NOT NULL,
-  submitted_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (application_id, submission_no)
+```typescript
+import { pgTable, uuid, integer, jsonb, timestamp, unique } from "drizzle-orm/pg-core";
+
+export const applicationSubmissions = pgTable(
+  "application_submissions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    applicationId: uuid("application_id").notNull().references(() => applications.id, { onDelete: "cascade" }),
+    submissionNo: integer("submission_no").notNull(),
+    submittedData: jsonb("submitted_data").notNull(),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique().on(table.applicationId, table.submissionNo),
+  ]
 );
 ```
 
@@ -82,58 +93,78 @@ CREATE TABLE application_submissions (
 Rules:
 
 - `request_hash` MUST be computed from a canonical, stable representation.
-- Hash inputs MUST include: operation, entity id, actor/principal id, and any money fields (amount_minor, currency).
+- Hash inputs MUST include: operation, entity id, actor/principal id, and any money fields (amount, currency).
 - If a key is re-used with a different hash, reject as misuse.
 
 Recommended schema:
 
-```sql
-CREATE TYPE idempotency_status AS ENUM ('STARTED','SUCCEEDED','FAILED');
+```typescript
+import { pgTable, pgEnum, text, uuid, jsonb, timestamp, index } from "drizzle-orm/pg-core";
 
-CREATE TABLE idempotency_keys (
-  scope text NOT NULL,               -- e.g. "application.submit" / "payout.create" / "webhook.stripe"
-  key text NOT NULL,                 -- client/provider idempotency key
-  operation text NOT NULL,           -- explicit operation name
-  entity_id uuid NULL,               -- entity being acted on (nullable for provider webhooks)
-  principal_id text NULL,            -- user/admin/service principal identifier
+export const idempotencyStatusEnum = pgEnum("idempotency_status", [
+  "STARTED",
+  "SUCCEEDED",
+  "FAILED",
+]);
 
-  request_hash text NOT NULL,
-  status idempotency_status NOT NULL DEFAULT 'STARTED',
-  response jsonb NULL,               -- safe response only; MUST NOT contain secrets/PII
+export const idempotencyKeys = pgTable(
+  "idempotency_keys",
+  {
+    scope: text("scope").notNull(),                // e.g. "application.submit" / "payout.create" / "webhook.stripe"
+    key: text("key").notNull(),                    // client/provider idempotency key
+    operation: text("operation").notNull(),         // explicit operation name
+    entityId: uuid("entity_id"),                   // entity being acted on (nullable for provider webhooks)
+    principalId: text("principal_id"),              // user/admin/service principal identifier
 
-  expires_at timestamptz NOT NULL,   -- lease/ttl for STARTED recovery
-  locked_at timestamptz NULL,
-  locked_by text NULL,
+    requestHash: text("request_hash").notNull(),
+    status: idempotencyStatusEnum("status").notNull().default("STARTED"),
+    response: jsonb("response"),                   // safe response only; MUST NOT contain secrets/PII
 
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (scope, key)
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),   // lease/ttl for STARTED recovery
+    lockedAt: timestamp("locked_at", { withTimezone: true }),
+    lockedBy: text("locked_by"),
+
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // Composite primary key
+    // Note: Drizzle uses .primaryKey() on columns or primaryKey() helper for composites
+    index("idempotency_keys_status_idx").on(table.status),
+    index("idempotency_keys_expires_at_idx").on(table.expiresAt),
+  ]
 );
-
-CREATE INDEX idempotency_keys_status_idx ON idempotency_keys(status);
-CREATE INDEX idempotency_keys_expires_at_idx ON idempotency_keys(expires_at);
+// Primary key: (scope, key) — define via primaryKey({ columns: [table.scope, table.key] })
 ```
 
 ### Step runs (side-effect idempotency)
 
 Each step that causes an external effect MUST create a durable row first.
 
-```sql
-CREATE TYPE step_run_status AS ENUM ('STARTED','SUCCEEDED','FAILED');
+```typescript
+import { pgTable, pgEnum, uuid, text, jsonb, integer, timestamp } from "drizzle-orm/pg-core";
 
-CREATE TABLE workflow_step_runs (
-  entity_id uuid NOT NULL,
-  step_key text NOT NULL,
+export const stepRunStatusEnum = pgEnum("step_run_status", [
+  "STARTED",
+  "SUCCEEDED",
+  "FAILED",
+]);
 
-  status step_run_status NOT NULL DEFAULT 'STARTED',
-  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
-  attempt_count int NOT NULL DEFAULT 1,
-  last_error text NULL,
+export const workflowStepRuns = pgTable(
+  "workflow_step_runs",
+  {
+    entityId: uuid("entity_id").notNull(),
+    stepKey: text("step_key").notNull(),
 
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now(),
+    status: stepRunStatusEnum("status").notNull().default("STARTED"),
+    metadata: jsonb("metadata").notNull().default({}),
+    attemptCount: integer("attempt_count").notNull().default(1),
+    lastError: text("last_error"),
 
-  PRIMARY KEY (entity_id, step_key)
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  // Primary key: (entityId, stepKey) — define via primaryKey({ columns: [table.entityId, table.stepKey] })
 );
 ```
 
@@ -141,13 +172,18 @@ CREATE TABLE workflow_step_runs (
 
 Always dedupe by provider event id.
 
-```sql
-CREATE TABLE provider_events (
-  provider text NOT NULL,
-  event_id text NOT NULL,
-  received_at timestamptz NOT NULL DEFAULT now(),
-  payload jsonb NULL,
-  PRIMARY KEY (provider, event_id)
+```typescript
+import { pgTable, text, jsonb, timestamp } from "drizzle-orm/pg-core";
+
+export const providerEvents = pgTable(
+  "provider_events",
+  {
+    provider: text("provider").notNull(),
+    eventId: text("event_id").notNull(),
+    receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+    payload: jsonb("payload"),
+  },
+  // Primary key: (provider, eventId) — define via primaryKey({ columns: [table.provider, table.eventId] })
 );
 ```
 
@@ -163,22 +199,108 @@ Every transition MUST be:
 - conditional on current version
 - increments version
 
-Example:
+### Drizzle pattern
 
-```sql
-UPDATE applications
-SET status = 'PROCESSING',
-    version = version + 1,
-    updated_at = now()
-WHERE id = $1
-  AND status = 'SUBMITTED'
-  AND version = $2;
+Use Drizzle's `.update().set().where(and(...)).returning()` to atomically attempt the transition. An empty result array means the transition was lost to a concurrent writer.
+
+```typescript
+import { eq, and, sql } from "drizzle-orm";
+
+const [updated] = await db
+  .update(applications)
+  .set({
+    status: "PROCESSING",
+    version: sql`${applications.version} + 1`,
+    updatedAt: new Date(),
+  })
+  .where(
+    and(
+      eq(applications.id, applicationId),
+      eq(applications.status, "SUBMITTED"),
+      eq(applications.version, expectedVersion)
+    )
+  )
+  .returning();
+
+if (!updated) {
+  // Conflict: another writer already transitioned this row.
+  // Reload and decide: no-op if already advanced, or return 409.
+  throw new ConflictError("Application already transitioned");
+}
+
+// Only run side effects AFTER winning the transition.
 ```
 
-If 0 rows updated: treat as conflict.
+Key points:
 
-- reload and no-op if already advanced
-- never run side effects unless you won the transition
+- `.returning()` returns the updated rows. An empty array means zero rows matched — treat as conflict.
+- Never run side effects unless you won the transition.
+- Reload the row after a conflict to decide whether to no-op (already advanced) or reject.
+
+---
+
+## Drizzle Transactions
+
+Use `db.transaction()` to group state transitions and side-effect guards into a single atomic unit. Drizzle transactions auto-rollback on throw.
+
+```typescript
+const result = await db.transaction(async (tx) => {
+  // 1. Win the state transition
+  const [updated] = await tx
+    .update(applications)
+    .set({
+      status: "APPROVED",
+      version: sql`${applications.version} + 1`,
+    })
+    .where(
+      and(
+        eq(applications.id, applicationId),
+        eq(applications.status, "PENDING_APPROVAL"),
+        eq(applications.version, expectedVersion)
+      )
+    )
+    .returning();
+
+  if (!updated) {
+    throw new ConflictError("Transition lost");
+  }
+
+  // 2. Write audit log within the same transaction
+  await tx.insert(auditLog).values({
+    entityType: "application",
+    entityId: applicationId,
+    action: "approved",
+    actorId: userId,
+    workspaceId,
+    previousState: { status: "PENDING_APPROVAL" },
+    newState: { status: "APPROVED" },
+    correlationId,
+  });
+
+  // 3. Guard side effects within the same transaction
+  const [stepClaimed] = await tx
+    .insert(workflowStepRuns)
+    .values({
+      entityId: applicationId,
+      stepKey: "send_approval_email",
+    })
+    .onConflictDoNothing()
+    .returning();
+
+  return { updated, stepClaimed };
+});
+
+// 4. Only run external side effects AFTER successful commit
+if (result.stepClaimed) {
+  await sendApprovalEmail(result.updated);
+}
+```
+
+Key points:
+
+- The transaction auto-rolls back if any statement throws.
+- Combine state transition + audit log + step claim in one transaction.
+- External side effects (email, webhook) run AFTER the transaction commits, never inside it.
 
 ---
 
@@ -211,6 +333,54 @@ Any operation initiated by:
 
 Never perform the action before claiming the key.
 
+### Drizzle example
+
+```typescript
+import { eq, and } from "drizzle-orm";
+
+// Claim the idempotency key
+const [claimed] = await db
+  .insert(idempotencyKeys)
+  .values({
+    scope: "invoice.finalize",
+    key: idempotencyKey,
+    operation: "finalize",
+    entityId: invoiceId,
+    principalId: userId,
+    requestHash: computedHash,
+    expiresAt: new Date(Date.now() + 5 * 60_000), // 5 min TTL
+  })
+  .onConflictDoNothing()
+  .returning();
+
+if (!claimed) {
+  // Key already exists — load and decide
+  const [existing] = await db
+    .select()
+    .from(idempotencyKeys)
+    .where(
+      and(
+        eq(idempotencyKeys.scope, "invoice.finalize"),
+        eq(idempotencyKeys.key, idempotencyKey)
+      )
+    );
+
+  if (existing.requestHash !== computedHash) {
+    throw new BadRequestError("Idempotency key reuse with different payload");
+  }
+  if (existing.status === "SUCCEEDED") {
+    return existing.response; // Replay stored response
+  }
+  if (existing.status === "STARTED") {
+    throw new ConflictError("Operation in progress");
+  }
+  // FAILED — return deterministic failure
+  throw new OperationFailedError(existing.response);
+}
+
+// Key claimed — proceed with the action
+```
+
 ---
 
 ## Step-Level Idempotency Standard
@@ -227,15 +397,40 @@ Any step that causes a side effect:
 
 ### Pattern
 
-```sql
-INSERT INTO workflow_step_runs (entity_id, step_key, metadata)
-VALUES ($1, 'send_confirmation_email', '{}'::jsonb)
-ON CONFLICT DO NOTHING;
+```typescript
+const [stepClaimed] = await tx
+  .insert(workflowStepRuns)
+  .values({
+    entityId: applicationId,
+    stepKey: "send_confirmation_email",
+    metadata: {},
+  })
+  .onConflictDoNothing()
+  .returning();
+
+// Only proceed if insert succeeded (row was claimed)
+if (!stepClaimed) {
+  return; // Already executed — skip
+}
+
+// Execute the side effect
+const result = await sendEmail(/* ... */);
+
+// Mark as succeeded with provider metadata
+await tx
+  .update(workflowStepRuns)
+  .set({
+    status: "SUCCEEDED",
+    metadata: { messageId: result.id },
+    updatedAt: new Date(),
+  })
+  .where(
+    and(
+      eq(workflowStepRuns.entityId, applicationId),
+      eq(workflowStepRuns.stepKey, "send_confirmation_email")
+    )
+  );
 ```
-
-Only proceed if insert succeeded.
-
-Update the row to `SUCCEEDED` with provider ids in `metadata`.
 
 ---
 
@@ -275,6 +470,62 @@ Model:
 - Insert into `provider_events` first; if conflict, no-op.
 - Apply request-level idempotency on callback processing scope if you execute multiple sub-actions.
 - Update business state via version-guarded transitions.
+
+### Drizzle example
+
+```typescript
+import { eq, and } from "drizzle-orm";
+
+// Dedupe by provider event id
+const [eventClaimed] = await db
+  .insert(providerEvents)
+  .values({
+    provider: "stripe",
+    eventId: stripeEvent.id,
+    payload: stripeEvent,
+  })
+  .onConflictDoNothing()
+  .returning();
+
+if (!eventClaimed) {
+  // Already processed — return 200 to provider
+  return new Response("OK", { status: 200 });
+}
+
+// Process the event within a transaction
+await db.transaction(async (tx) => {
+  // Version-guarded state transition
+  const [updated] = await tx
+    .update(payments)
+    .set({
+      status: "CONFIRMED",
+      version: sql`${payments.version} + 1`,
+      bankReference: stripeEvent.data.charge_id,
+    })
+    .where(
+      and(
+        eq(payments.id, paymentId),
+        eq(payments.status, "PENDING"),
+        eq(payments.version, expectedVersion)
+      )
+    )
+    .returning();
+
+  if (!updated) {
+    throw new ConflictError("Payment already transitioned");
+  }
+
+  // Audit log within the same transaction
+  await tx.insert(auditLog).values({
+    entityType: "payment",
+    entityId: paymentId,
+    action: "confirmed_via_webhook",
+    actorId: null, // system event
+    workspaceId,
+    correlationId,
+  });
+});
+```
 
 ---
 
@@ -317,99 +568,11 @@ For money-adjacent actions:
 
 ---
 
-## Prisma Models (Baseline)
-
-```prisma
-model Application {
-  id          String @id @default(uuid()) @db.Uuid
-  status      String
-  currentStep String
-  version     Int    @default(1)
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  submissions ApplicationSubmission[]
-  stepRuns    WorkflowStepRun[]
-}
-
-model ApplicationSubmission {
-  id            String   @id @default(uuid()) @db.Uuid
-  applicationId String   @db.Uuid
-  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-
-  submissionNo  Int
-  submittedData Json
-  submittedAt   DateTime @default(now())
-
-  @@unique([applicationId, submissionNo])
-}
-
-enum IdempotencyStatus {
-  STARTED
-  SUCCEEDED
-  FAILED
-}
-
-model IdempotencyKey {
-  scope       String
-  key         String
-  operation   String
-  entityId    String?  @db.Uuid
-  principalId String?
-
-  requestHash String
-  status      IdempotencyStatus @default(STARTED)
-  response    Json?
-
-  expiresAt   DateTime
-  lockedAt    DateTime?
-  lockedBy    String?
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@id([scope, key])
-  @@index([status])
-  @@index([expiresAt])
-}
-
-enum StepRunStatus {
-  STARTED
-  SUCCEEDED
-  FAILED
-}
-
-model WorkflowStepRun {
-  entityId      String @db.Uuid
-  stepKey       String
-
-  status        StepRunStatus @default(STARTED)
-  metadata      Json          @default("{}")
-  attemptCount  Int           @default(1)
-  lastError     String?
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@id([entityId, stepKey])
-}
-
-model ProviderEvent {
-  provider   String
-  eventId    String
-  receivedAt DateTime @default(now())
-  payload    Json?
-
-  @@id([provider, eventId])
-}
-```
-
----
-
 ## PR Review Checklist
 
-- [ ] All state transitions are guarded by status + version.
+- [ ] All state transitions are guarded by status + version using Drizzle `and(eq(...), eq(...))`.
+- [ ] Optimistic locking uses `.returning()` and checks for empty result array to detect conflicts.
+- [ ] State transitions and audit writes occur within a single `db.transaction()`.
 - [ ] Any externally triggered financial action uses request-level idempotency.
 - [ ] Idempotency scope includes actor/principal + operation + entity (prevents collisions).
 - [ ] Every side effect has step-level idempotency with durable status/metadata.
@@ -417,6 +580,17 @@ model ProviderEvent {
 - [ ] Provider idempotency keys are used where supported.
 - [ ] Webhooks dedupe by provider event id and are treated as duplicates.
 - [ ] Audit events emitted for transitions and decisions (no sensitive payloads).
+- [ ] Money stored as `numeric(10,2)` or `numeric(12,2)` — never floating point.
+- [ ] Numeric values from Drizzle (returned as `string`) use a decimal library for arithmetic.
+
+---
+
+## References
+
+- Drizzle update: https://orm.drizzle.team/docs/update
+- Drizzle transactions: https://orm.drizzle.team/docs/transactions
+- Drizzle operators (`and`, `eq`, `sql`): https://orm.drizzle.team/docs/operators
+- Drizzle pgTable / pgEnum: https://orm.drizzle.team/docs/sql-schema-declaration
 
 ---
 

@@ -100,12 +100,12 @@ User may optionally run `document-review` on the created doc. If the repo has do
 
 ## Common Mistakes to Avoid
 
-| Wrong | Correct |
-|-------|---------|
-| Subagents write files like `context-analysis.md`, `solution-draft.md` | Use `compound-docs`; write the primary solution doc only |
-| Research and assembly in parallel | Enrichment completes, then capture runs |
-| Unrequested side-effect file changes | Only update other files when user explicitly selects post-capture actions from the skill menu |
-| Presenting a different post-capture menu | Use the `compound-docs` decision menu as-is |
+| Wrong                                                                 | Correct                                                                                       |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Subagents write files like `context-analysis.md`, `solution-draft.md` | Use `compound-docs`; write the primary solution doc only                                      |
+| Research and assembly in parallel                                     | Enrichment completes, then capture runs                                                       |
+| Unrequested side-effect file changes                                  | Only update other files when user explicitly selects post-capture actions from the skill menu |
+| Presenting a different post-capture menu                              | Use the `compound-docs` decision menu as-is                                                   |
 
 ## Success output (shape)
 
@@ -129,14 +129,15 @@ This documentation will be searchable for future reference when similar issues o
 
 <auto_invoke>
 <trigger_phrases>
+
 - "that worked"
 - "it's fixed"
 - "working now"
 - "problem solved"
 - "that did it"
-</trigger_phrases>
-<manual_override>Use /workflow:compound [context] to document immediately without waiting for auto-detection.</manual_override>
-</auto_invoke>
+  </trigger_phrases>
+  <manual_override>Use /workflow:compound [context] to document immediately without waiting for auto-detection.</manual_override>
+  </auto_invoke>
 
 ## Routes To
 

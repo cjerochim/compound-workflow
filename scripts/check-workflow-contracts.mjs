@@ -94,19 +94,44 @@ const requiredChecks = [
   },
   {
     file: "src/commands/workflow-work.md",
-    pattern: "Yes / No — explicit opt-out required",
-    description: "worktree decision prompt is explicit yes/no in work command",
+    pattern: "Missing isolation approval is a hard blocker.",
+    description: "work command blocks when isolation approval is absent",
   },
   {
     file: "src/commands/workflow-work.md",
     pattern:
-      "No file writes, implementation commands, test/lint/typecheck commands, or dependency-install commands may run before this gate passes.",
+      "No source file writes, implementation commands, test/lint/typecheck commands, or dependency-install commands may run before this gate passes.",
     description: "pre-gate write/command prohibition in work command",
   },
   {
     file: "src/commands/workflow-work.md",
-    pattern: "gate_status: passed",
-    description: "gate_status must be recorded before proceeding in work command",
+    pattern: "npm run workflow:preflight",
+    description: "work command requires executable workflow preflight",
+  },
+  {
+    file: "src/commands/workflow-work.md",
+    pattern: "isolation_preflight:",
+    description: "work command requires structured isolation_preflight evidence",
+  },
+  {
+    file: "src/commands/workflow-work.md",
+    pattern: "If this block is missing, implementation has not started.",
+    description: "missing isolation preflight blocks implementation",
+  },
+  {
+    file: "src/commands/workflow-plan.md",
+    pattern: "Implementation Start Preconditions",
+    description: "plan template carries implementation start preconditions",
+  },
+  {
+    file: "scripts/workflow-preflight.mjs",
+    pattern: "current_checkout_approved",
+    description: "workflow preflight script supports explicit current checkout approval",
+  },
+  {
+    file: "package.json",
+    pattern: "\"workflow:preflight\": \"node scripts/workflow-preflight.mjs\"",
+    description: "workflow preflight script is exposed as npm command",
   },
   {
     file: "src/commands/workflow-review.md",

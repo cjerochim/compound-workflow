@@ -26,6 +26,7 @@ If you find yourself reaching for browser automation tools outside of `agent-bro
 <role>QA Engineer specializing in browser-based end-to-end testing</role>
 
 This command tests affected pages in a real browser, catching issues that unit tests miss:
+
 - JavaScript integration bugs
 - CSS/layout regressions
 - User workflow breakages
@@ -53,11 +54,13 @@ Branching note:
 ## Setup
 
 **Check installation:**
+
 ```bash
 command -v agent-browser >/dev/null 2>&1 && echo "Installed" || echo "NOT INSTALLED"
 ```
 
 **Install if needed:**
+
 ```bash
 npm install -g agent-browser
 agent-browser install  # Downloads Chromium (~160MB)
@@ -98,6 +101,7 @@ If installation fails, inform the user and stop.
 Before starting tests, ask user if they want to watch the browser:
 
 Use AskUserQuestion with:
+
 - Question: "Do you want to watch the browser tests run?"
 - Options:
   1. **Headed (watch)** - Opens visible browser window so you can see tests run
@@ -114,6 +118,7 @@ Store the choice and use `--headed` flag when user selects "Headed".
 <determine_scope>
 
 **If PR number provided:**
+
 ```bash
 gh pr view [number] --json files -q '.files[].path'
 ```
@@ -189,10 +194,12 @@ agent-browser snapshot -i
 If `dev_server_url` is configured in `AGENTS.md`, use that instead of `http://localhost:3000`.
 
 If server is not running, inform user:
+
 ```markdown
 **Server not running**
 
 Please start your development server:
+
 - Use the repo's dev command (see `AGENTS.md` if configured)
 
 Then run `/test-browser` again.
@@ -207,18 +214,21 @@ Then run `/test-browser` again.
 For each affected route, use agent-browser CLI commands (NOT Chrome MCP):
 
 **Step 1: Navigate and capture snapshot**
+
 ```bash
 agent-browser open "http://localhost:3000/[route]"
 agent-browser snapshot -i
 ```
 
 **Step 2: For headed mode (visual debugging)**
+
 ```bash
 agent-browser --headed open "http://localhost:3000/[route]"
 agent-browser --headed snapshot -i
 ```
 
 **Step 3: Verify key elements**
+
 - Use `agent-browser snapshot -i` to get interactive elements with refs
 - Page title/heading present
 - Primary content rendered
@@ -226,12 +236,14 @@ agent-browser --headed snapshot -i
 - Forms have expected fields
 
 **Step 4: Test critical interactions**
+
 ```bash
 agent-browser click @e1  # Use ref from snapshot
 agent-browser snapshot -i
 ```
 
 **Step 5: Take screenshots**
+
 ```bash
 agent-browser screenshot page-name.png
 agent-browser screenshot --full page-name-full.png  # Full page
@@ -245,23 +257,26 @@ agent-browser screenshot --full page-name-full.png  # Full page
 
 Pause for human input when testing touches:
 
-| Flow Type | What to Ask |
-|-----------|-------------|
-| OAuth | "Please sign in with [provider] and confirm it works" |
-| Email | "Check your inbox for the test email and confirm receipt" |
-| Payments | "Complete a test purchase in sandbox mode" |
-| SMS | "Verify you received the SMS code" |
-| External APIs | "Confirm the [service] integration is working" |
+| Flow Type     | What to Ask                                               |
+| ------------- | --------------------------------------------------------- |
+| OAuth         | "Please sign in with [provider] and confirm it works"     |
+| Email         | "Check your inbox for the test email and confirm receipt" |
+| Payments      | "Complete a test purchase in sandbox mode"                |
+| SMS           | "Verify you received the SMS code"                        |
+| External APIs | "Confirm the [service] integration is working"            |
 
 Use AskUserQuestion:
+
 ```markdown
 **Human Verification Needed**
 
 This test touches the [flow type]. Please:
+
 1. [Action to take]
 2. [What to verify]
 
 Did it work correctly?
+
 1. Yes - continue testing
 2. No - describe the issue
 ```
@@ -279,6 +294,7 @@ When a test fails:
    - Note the exact reproduction steps
 
 2. **Ask user how to proceed:**
+
    ```markdown
    **Test Failed: [route]**
 
@@ -286,6 +302,7 @@ When a test fails:
    Console errors: [if any]
 
    How to proceed?
+
    1. Fix now - I'll help debug and fix
    2. Create todo - Add to todos/ for later
    3. Skip - Continue testing other pages
@@ -321,24 +338,28 @@ After all tests complete, present summary:
 
 ### Pages Tested: [count]
 
-| Route | Status | Notes |
-|-------|--------|-------|
-| `/users` | Pass | |
-| `/settings` | Pass | |
-| `/dashboard` | Fail | Console error: [msg] |
-| `/checkout` | Skip | Requires payment credentials |
+| Route        | Status | Notes                        |
+| ------------ | ------ | ---------------------------- |
+| `/users`     | Pass   |                              |
+| `/settings`  | Pass   |                              |
+| `/dashboard` | Fail   | Console error: [msg]         |
+| `/checkout`  | Skip   | Requires payment credentials |
 
 ### Console Errors: [count]
+
 - [List any errors found]
 
 ### Human Verifications: [count]
+
 - OAuth flow: Confirmed
 - Email delivery: Confirmed
 
 ### Failures: [count]
+
 - `/dashboard` - [issue description]
 
 ### Created Todos: [count]
+
 - `005-pending-p1-browser-test-dashboard-error.md`
 
 ### Result: [PASS / FAIL / PARTIAL]

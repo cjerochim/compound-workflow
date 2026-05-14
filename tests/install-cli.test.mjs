@@ -24,6 +24,23 @@ function copyDirRecursiveForTest(src, dest) {
   }
 }
 
+function assertNoSymlinksUnder(dir) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const entryPath = path.join(dir, entry.name);
+    const stat = fs.lstatSync(entryPath);
+    assert.ok(!stat.isSymbolicLink(), `${entryPath} should be a real file or directory, not a symlink`);
+    if (entry.isDirectory()) assertNoSymlinksUnder(entryPath);
+  }
+}
+
+function sourceSkillNames(root = repoRoot) {
+  const srcSkills = path.join(root, "src", "skills");
+  return fs.readdirSync(srcSkills, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && fs.existsSync(path.join(srcSkills, e.name, "SKILL.md")))
+    .map((e) => e.name)
+    .sort();
+}
+
 /** Copy minimal package contents into node_modules so install runs as a consumer project. */
 function copyMinimalPackageIntoNodeModules(projectRoot) {
   const pkgDir = path.join(projectRoot, "node_modules", "compound-workflow");
@@ -59,6 +76,10 @@ function setup() {
 test("install: agents copied flat to .claude/agents/", () => {
   const projectRoot = setup();
   try {
+    const staleNestedAgent = path.join(projectRoot, ".claude", "agents", "research", "stale.md");
+    fs.mkdirSync(path.dirname(staleNestedAgent), { recursive: true });
+    fs.writeFileSync(staleNestedAgent, "stale", "utf8");
+
     const result = runInstall(projectRoot);
     assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
 
@@ -122,16 +143,40 @@ test("install: every skill in src/skills/ appears in every harness", () => {
     const result = runInstall(projectRoot);
     assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
 
-    const srcSkills = path.join(repoRoot, "src", "skills");
-    const expected = fs.readdirSync(srcSkills, { withFileTypes: true })
-      .filter((e) => e.isDirectory() && fs.existsSync(path.join(srcSkills, e.name, "SKILL.md")))
-      .map((e) => e.name);
+    const expected = sourceSkillNames();
     assert.ok(expected.length > 0, "source skills must exist for the parity assertion to mean anything");
 
     for (const harness of [".claude", ".cursor", ".agents"]) {
       for (const name of expected) {
         const skillMd = path.join(projectRoot, harness, "skills", name, "SKILL.md");
         assert.ok(fs.existsSync(skillMd), `${harness}/skills/${name}/SKILL.md should exist`);
+      }
+    }
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("install: removed skill aliases are absent from source and harness output", () => {
+  const forbidden = ["compound_doc", "pii-protection-prisma"];
+  const names = sourceSkillNames();
+
+  for (const name of forbidden) {
+    assert.equal(names.includes(name), false, `src/skills/${name} should not exist`);
+  }
+
+  const projectRoot = setup();
+  try {
+    const result = runInstall(projectRoot);
+    assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
+
+    for (const harness of [".claude", ".cursor", ".agents"]) {
+      for (const name of forbidden) {
+        assert.equal(
+          fs.existsSync(path.join(projectRoot, harness, "skills", name)),
+          false,
+          `${harness}/skills/${name} should not be installed`
+        );
       }
     }
   } finally {
@@ -157,20 +202,36 @@ test("install: updated skill content overwrites previous copy", () => {
   }
 });
 
-test("install: copied files are real files, not symlinks", () => {
+test("install: source and copied files are real files, not symlinks", () => {
+  assertNoSymlinksUnder(path.join(repoRoot, "src", "skills"));
+
   const projectRoot = setup();
   try {
     const result = runInstall(projectRoot);
     assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
 
-    for (const f of fs.readdirSync(path.join(projectRoot, ".claude", "agents"))) {
-      const stat = fs.lstatSync(path.join(projectRoot, ".claude", "agents", f));
-      assert.ok(!stat.isSymbolicLink(), `${f} in .claude/agents should be a real file`);
+    for (const harness of [".claude", ".cursor", ".agents"]) {
+      assertNoSymlinksUnder(path.join(projectRoot, harness, "agents"));
+      assertNoSymlinksUnder(path.join(projectRoot, harness, "skills"));
+      assertNoSymlinksUnder(path.join(projectRoot, harness, "commands"));
     }
-    for (const f of fs.readdirSync(path.join(projectRoot, ".agents", "commands"))) {
-      const stat = fs.lstatSync(path.join(projectRoot, ".agents", "commands", f));
-      assert.ok(!stat.isSymbolicLink(), `${f} in .agents/commands should be a real file`);
-    }
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("install: AGENTS.md is copied from the package src template", () => {
+  const projectRoot = setup();
+  try {
+    const packageAgents = path.join(projectRoot, "node_modules", "compound-workflow", "src", "AGENTS.md");
+    const sentinel = "sentinel-package-agents-template";
+    fs.appendFileSync(packageAgents, `\n<!-- ${sentinel} -->\n`, "utf8");
+
+    const result = runInstall(projectRoot);
+    assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
+
+    const installed = fs.readFileSync(path.join(projectRoot, "AGENTS.md"), "utf8");
+    assert.match(installed, new RegExp(sentinel), "installed AGENTS.md should come from package src/AGENTS.md");
   } finally {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }

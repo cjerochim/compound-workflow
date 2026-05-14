@@ -16,6 +16,7 @@
   ],
   "scripts": {
     "postinstall": "node scripts/postinstall.mjs",
+    "workflow:preflight": "node scripts/workflow-preflight.mjs",
     "check:pack-readme": "node scripts/check-pack-readme.mjs",
     "test:install": "node --test tests/install-cli.test.mjs"
   },

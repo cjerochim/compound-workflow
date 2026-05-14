@@ -18,7 +18,7 @@ Five themes apply to all frontend work. All must be satisfied.
 | **Code Quality** | Control flow, immutability, error handling |
 | **Services** | IO boundary, Effect Layer structure, runtime composition |
 | **State Management** | Controller responsibilities, state and event contracts |
-| **Presentation** | Component structure, composition patterns, visual conventions |
+| **Presentation** | Base/component/structure taxonomy, composition patterns, visual conventions |
 
 ---
 
@@ -32,7 +32,7 @@ Load the relevant reference before reviewing or writing code in that area.
 | Control flow, error handling, or data transforms | `references/code-quality.md` |
 | Effect services, Layers, or runtime composition | `references/services.md` |
 | State machines, events, context, or actor patterns | `references/state-management.md` |
-| Component structure or visual conventions | `references/presentation.md` |
+| Component structure, visual conventions, or **structure vs composition** (`presentation/structures/*`, page shells, `*Panel` that only fill another structure’s slots) | `references/presentation.md` — section **Structures vs composition-only wrappers** |
 | Full review or uncertainty about which layer applies | All five |
 
 ---
@@ -47,7 +47,7 @@ Each is **pass/fail**. A single `fail` means the work is incomplete.
 | `code_quality` | Code Quality | Control flow is flat, transforms are immutable, errors are handled explicitly |
 | `services` | Services | All IO is isolated to the service layer — no IO in entities, controllers, or containers |
 | `state_management` | State Management | Controllers own state; containers extract values and callbacks — never pass raw machine internals to components |
-| `presentation` | Presentation | Components follow the folder, composition, and visual conventions |
+| `presentation` | Presentation | Presentation follows the base/component/structure taxonomy, structures expose slot props (`children`/`ReactNode`), containers populate content, and no presentation units float outside the defined folder structure. Composition that only fills another structure’s slots must not live under `presentation/structures/` — see `references/presentation.md` → **Structures vs composition-only wrappers**. Interactive presentation structures must include Storybook state-matrix evidence (visual states + UI interaction plays). |
 
 ---
 
@@ -68,6 +68,25 @@ On any `fail`: load the relevant reference file, surface the specific violation 
 
 ---
 
+## Storybook Evidence for Interactive Presentation Work
+
+When work changes interactive presentation units (especially `presentation/structures/*`), include Storybook evidence alongside `standards_compliance`:
+
+```markdown
+storybook_evidence:
+  - state_matrix: [story path(s) that cover required visual states]
+  - interaction_plays: [story path(s) and play names proving UI transitions/callback contracts]
+  - scope_note: "UI/state/composability only; business logic tested at container/controller layer"
+```
+
+Rules:
+
+- Cover each critical visual state from the design tree (not just a default story)
+- `play()` tests assert UI transitions and callback contracts only
+- Do not treat Storybook stories as business-logic tests
+
+---
+
 ## Reference Files
 
 | File | Theme | Contents |
@@ -76,4 +95,4 @@ On any `fail`: load the relevant reference file, surface the specific violation 
 | `references/code-quality.md` | Code Quality | Control flow, immutability, error handling, validation boundary |
 | `references/services.md` | Services | Effect Layer pattern, service structure, runtime composition |
 | `references/state-management.md` | State Management | XState v5 patterns, events, guards, actions, actor communication |
-| `references/presentation.md` | Presentation | Folder structure, compound components, barrel pattern, visual conventions |
+| `references/presentation.md` | Presentation | Base/component/structure taxonomy, folder structure, slot composition, barrel pattern, visual conventions |

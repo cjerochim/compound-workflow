@@ -22,8 +22,12 @@ import { Context, Effect, Layer } from "effect";
 export class PlaylistService extends Context.Tag("PlaylistService")<
   PlaylistService,
   {
-    readonly fetchPlaylists: (folderId: string) => Effect.Effect<Playlist[], ApiError>;
-    readonly savePlaylist: (playlist: Playlist) => Effect.Effect<void, ApiError>;
+    readonly fetchPlaylists: (
+      folderId: string,
+    ) => Effect.Effect<Playlist[], ApiError>;
+    readonly savePlaylist: (
+      playlist: Playlist,
+    ) => Effect.Effect<void, ApiError>;
   }
 >() {}
 
@@ -72,10 +76,7 @@ import { ManagedRuntime, Layer } from "effect";
 import { FeatureServicesLive } from "src/features/{feature}/infrastructure/services";
 import { OtherFeatureServicesLive } from "src/features/other/infrastructure/services";
 
-const AppLayer = Layer.mergeAll(
-  FeatureServicesLive,
-  OtherFeatureServicesLive,
-);
+const AppLayer = Layer.mergeAll(FeatureServicesLive, OtherFeatureServicesLive);
 
 export const AppRuntime = ManagedRuntime.make(AppLayer);
 export type AppServices = Layer.Layer.Success<typeof AppLayer>;
@@ -113,6 +114,7 @@ src/
 ## Quick Check — Common Violations
 
 **IO performed directly in a controller:**
+
 ```typescript
 // ❌ Controller doing IO
 actions: assign({
@@ -133,6 +135,7 @@ invoke: {
 ```
 
 **Raw Promise returned from a service:**
+
 ```typescript
 // ❌ Returns a Promise — loses typed errors and composability
 export const PlaylistServiceLive = Layer.succeed(PlaylistService, {
@@ -150,6 +153,7 @@ export const PlaylistServiceLive = Layer.succeed(PlaylistService, {
 ```
 
 **Runtime constructed inside a machine:**
+
 ```typescript
 // ❌ Machine owns the runtime — never do this
 context: {
@@ -163,6 +167,7 @@ context: ({ input }) => ({
 ```
 
 **Feature services bypassing their index:**
+
 ```typescript
 // ❌ App runtime imports individual services directly
 import { PlaylistServiceLive } from "src/features/{feature}/infrastructure/services/PlaylistService";

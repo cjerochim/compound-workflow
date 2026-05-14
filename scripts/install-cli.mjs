@@ -127,6 +127,7 @@ function copyAgentsFlat(srcDir, destDir, dryRun, label) {
   fs.mkdirSync(destDir, { recursive: true });
   try {
     for (const e of fs.readdirSync(destDir, { withFileTypes: true })) {
+      if (e.isDirectory()) fs.rmSync(path.join(destDir, e.name), { recursive: true, force: true });
       if (e.name.endsWith(".md") && !srcNames.has(e.name)) fs.rmSync(path.join(destDir, e.name), { force: true });
     }
   } catch { /* ignore */ }
@@ -284,8 +285,8 @@ function extractRepoConfigBlock(md) {
   return { block, rest };
 }
 
-function writeAgentsMd(targetRoot, packageRoot, dryRun) {
-  const templatePath = path.join(packageRoot, "src", "AGENTS.md");
+function writeAgentsMd(targetRoot, srcRoot, dryRun) {
+  const templatePath = path.join(srcRoot, "AGENTS.md");
   const targetPath = path.join(targetRoot, "AGENTS.md");
   const templateMd = fs.readFileSync(templatePath, "utf8");
   const existingMd = fs.existsSync(targetPath) ? fs.readFileSync(targetPath, "utf8") : null;
@@ -415,7 +416,7 @@ function main() {
   }
 
   writeOpenCodeJson(targetRoot, packageSrc, args.dryRun);
-  writeAgentsMd(targetRoot, PACKAGE_ROOT, args.dryRun);
+  writeAgentsMd(targetRoot, packageSrc, args.dryRun);
   ensureDirs(targetRoot, args.dryRun);
 
   console.log("\nDone.");

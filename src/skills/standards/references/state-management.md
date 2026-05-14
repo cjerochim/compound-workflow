@@ -76,7 +76,10 @@ export const playlistMachine = setup({
     events:
       | { type: "playlist.load"; payload: { folderId: string } }
       | { type: "playlist.sync"; payload: { playlists: Playlist[] } }
-      | { type: "playlist.public.selectionChanged"; payload: { ids: string[] } };
+      | {
+          type: "playlist.public.selectionChanged";
+          payload: { ids: string[] };
+        };
   },
   guards: {
     hasPlaylists: ({ context }) =>
@@ -91,17 +94,23 @@ export const playlistMachine = setup({
     assignPlaylists: assign({
       playlists: ({ event }) => event.payload.playlists,
     }),
-    notifyLoaded: sendTo(
-      ({ system }) => system.get("notifier"),
-      { type: "notifier.notify", payload: { message: "Playlists loaded" } }
-    ),
+    notifyLoaded: sendTo(({ system }) => system.get("notifier"), {
+      type: "notifier.notify",
+      payload: { message: "Playlists loaded" },
+    }),
   },
   actors: {
     fetchPlaylists: fromPromise(
-      ({ input }: { input: { runtime: typeof AppRuntime; folderId: string } }) =>
+      ({
+        input,
+      }: {
+        input: { runtime: typeof AppRuntime; folderId: string };
+      }) =>
         input.runtime.runPromise(
-          PlaylistService.pipe(Effect.flatMap(svc => svc.fetchPlaylists(input.folderId)))
-        )
+          PlaylistService.pipe(
+            Effect.flatMap((svc) => svc.fetchPlaylists(input.folderId)),
+          ),
+        ),
     ),
   },
 }).createMachine({
@@ -174,6 +183,7 @@ states: {
 ```
 
 **When to use parallel states vs separate machines:**
+
 - Use `type: "parallel"` when concerns share context and lifecycle — they start and stop together
 - Use separate invoked machines when concerns are fully independent and need their own context
 - Do not use parallel states for concerns that need to coordinate transitions between regions — that coupling is a signal to rethink the model
@@ -213,6 +223,7 @@ This is a common source of bugs when migrating from v4, where external transitio
 ## 4. Context
 
 Context is appropriate for:
+
 - **Payloads** — data received from events, passed downstream to containers
 - **Previous values** — snapshots held for diffing/change detection
 - **Derived UI data** — transformed data ready for containers to select
@@ -221,6 +232,7 @@ Context is appropriate for:
 - **Runtime** — the injected Effect runtime (infrastructure, not domain data)
 
 Context is **not** appropriate for:
+
 - Values you switch on to determine transitions
 - Flags that represent where the machine is or what it's doing
 - Anything with a finite set of values that map to distinct behaviours
@@ -263,7 +275,8 @@ const { sidebarCollapsed, currentRoute } = snapshot.context; // Fully typed
 
 ```typescript
 // ❌ Casting when types are already declared in setup()
-const collapsed = (snapshot.context as { sidebarCollapsed: boolean }).sidebarCollapsed;
+const collapsed = (snapshot.context as { sidebarCollapsed: boolean })
+  .sidebarCollapsed;
 
 // ✅ Destructure directly — types flow from setup()
 const { sidebarCollapsed } = snapshot.context;
@@ -285,7 +298,7 @@ setup({
       | { type: "playlist.load"; payload: { folderId: string } }
       | { type: "playlist.sync"; payload: { playlists: Playlist[] } };
   },
-})
+});
 
 // ❌ Enum — breaks XState v5 type inference
 enum EventType {
@@ -297,6 +310,7 @@ enum EventType {
 ### Namespace convention
 
 **Internal events** — private to the machine, defined in the controller file:
+
 ```
 { type: "{controllerNamespace}.{eventName}" }
 
@@ -306,6 +320,7 @@ enum EventType {
 ```
 
 **Public events** — cross-machine API, defined in `types.ts`:
+
 ```
 { type: "{controllerNamespace}.public.{eventName}" }
 
@@ -367,7 +382,7 @@ setup({
     hasPlaylists: ({ context }) =>
       playlistSelectionEntity.hasPlaylists(context.playlists),
   },
-})
+});
 ```
 
 ### Guarded transition arrays
@@ -443,7 +458,7 @@ setup({
       activeFolderId: null,
     }),
   },
-})
+});
 ```
 
 ### Action params
@@ -494,25 +509,27 @@ setup({
 
       // Conditionally notify if something changed
       if (check("hasAddedPlaylists")) {
-        enqueue.sendTo(
-          ({ system }) => system.get("notifier"),
-          { type: "notifier.notify", payload: { message: "New playlists added" } }
-        );
+        enqueue.sendTo(({ system }) => system.get("notifier"), {
+          type: "notifier.notify",
+          payload: { message: "New playlists added" },
+        });
       }
 
       // Raise an internal event for further processing
       enqueue.raise({ type: "playlist.reconcile" });
     }),
   },
-})
+});
 ```
 
 **When to use `enqueueActions`:**
+
 - A transition needs to run multiple actions where some are conditional
 - You need to mix `assign` with `sendTo` or `raise` in one logical step
 - You need guard-checked branching inside a single action handler
 
 **When not to use `enqueueActions`:**
+
 - The actions are all unconditional — list them in the `actions` array directly
 - The branching should be a guarded transition array instead
 
@@ -596,19 +613,19 @@ setup({
         }),
     }),
   },
-})
+});
 ```
 
 ### Decision rule
 
-| Question | Answer | Use |
-|---|---|---|
-| Does the work belong to a specific state? | Yes | `invoke` |
-| Should the actor stop when the state exits? | Yes | `invoke` |
-| Are you calling an Effect service? | Yes | `invoke` |
-| Do you need a dynamic number of actors? | Yes | `spawn` |
-| Does the actor need to outlive the state that created it? | Yes | `spawn` |
-| Is it a system-wide actor registered with `systemId`? | Yes | `invoke` at root |
+| Question                                                  | Answer | Use              |
+| --------------------------------------------------------- | ------ | ---------------- |
+| Does the work belong to a specific state?                 | Yes    | `invoke`         |
+| Should the actor stop when the state exits?               | Yes    | `invoke`         |
+| Are you calling an Effect service?                        | Yes    | `invoke`         |
+| Do you need a dynamic number of actors?                   | Yes    | `spawn`          |
+| Does the actor need to outlive the state that created it? | Yes    | `spawn`          |
+| Is it a system-wide actor registered with `systemId`?     | Yes    | `invoke` at root |
 
 **`invoke` is the default.** Effect service calls are always state-scoped. Reach for `spawn` only when the use case clearly requires a dynamic, independently-lived actor.
 
@@ -641,10 +658,10 @@ export const rootMachine = setup({
 ```typescript
 export const playlistMachine = setup({
   actions: {
-    notifyPlaylistSaved: sendTo(
-      ({ system }) => system.get("notifier"),
-      { type: "notifier.notify", payload: { message: "Playlist saved" } }
-    ),
+    notifyPlaylistSaved: sendTo(({ system }) => system.get("notifier"), {
+      type: "notifier.notify",
+      payload: { message: "Playlist saved" },
+    }),
   },
 }).createMachine({
   on: {
@@ -779,11 +796,13 @@ states: {
 
 ```typescript
 // In the container — reads tags, never state names
-const isFolderView = useSelector(actor, s => s.hasTag(Tags.VIEW_MODE_FOLDER));
-const isLoading = useSelector(actor, s => s.hasTag(Tags.LOADING));
+const isFolderView = useSelector(actor, (s) => s.hasTag(Tags.VIEW_MODE_FOLDER));
+const isLoading = useSelector(actor, (s) => s.hasTag(Tags.LOADING));
 
 // ❌ Never do this — tightly coupled to internal structure
-const isFolderView = useSelector(actor, s => s.matches("viewModeManagement.folderView"));
+const isFolderView = useSelector(actor, (s) =>
+  s.matches("viewModeManagement.folderView"),
+);
 ```
 
 ---
@@ -800,12 +819,12 @@ src/features/{feature}/
 └── types.ts                  # Public event union types only — create when needed
 ```
 
-| Concern | Location |
-|---|---|
+| Concern                        | Location        |
+| ------------------------------ | --------------- |
 | `setup()` + machine definition | Controller file |
-| Tags enum | Controller file |
-| Internal event union type | Controller file |
-| Public event union type | `types.ts` |
+| Tags enum                      | Controller file |
+| Internal event union type      | Controller file |
+| Public event union type        | `types.ts`      |
 
 `types.ts` is only introduced when public events need to be consumed by other controllers. Do not create it preemptively.
 
@@ -813,28 +832,29 @@ src/features/{feature}/
 
 ## 13. v5 API Changes from v4
 
-| v4 | v5 |
-|---|---|
-| `createMachine(config, options)` | `setup({ guards, actors, actions }).createMachine(config)` |
-| `interpret(machine)` | `createActor(machine, { input })` |
-| `service.send()` | `actor.send()` |
-| `cond: 'guardName'` | `guard: 'guardName'` |
-| `assign((ctx, evt) => ...)` | `assign(({ context, event }) => ...)` |
-| `send()` action | `sendTo()` / `raise()` |
-| `sendParent()` | `sendTo(({ context }) => context.parentRef, event)` |
-| `pure()` / `choose()` | `enqueueActions()` |
-| `broadcast()` (custom) | Receptionist pattern — `sendTo(({ system }) => system.get('id'), event)` |
-| Implicit external transitions | Internal by default — use `reenter: true` to re-enter |
-| Enum event types | String literal union event types |
-| `in: '...'` transition property | `guard: stateIn(...)` from `xstate/guards` |
-| `state.history` | Track previous snapshot manually via `actor.subscribe()` |
-| `escalate()` action | Throw directly in actions — errors propagate automatically |
+| v4                               | v5                                                                       |
+| -------------------------------- | ------------------------------------------------------------------------ |
+| `createMachine(config, options)` | `setup({ guards, actors, actions }).createMachine(config)`               |
+| `interpret(machine)`             | `createActor(machine, { input })`                                        |
+| `service.send()`                 | `actor.send()`                                                           |
+| `cond: 'guardName'`              | `guard: 'guardName'`                                                     |
+| `assign((ctx, evt) => ...)`      | `assign(({ context, event }) => ...)`                                    |
+| `send()` action                  | `sendTo()` / `raise()`                                                   |
+| `sendParent()`                   | `sendTo(({ context }) => context.parentRef, event)`                      |
+| `pure()` / `choose()`            | `enqueueActions()`                                                       |
+| `broadcast()` (custom)           | Receptionist pattern — `sendTo(({ system }) => system.get('id'), event)` |
+| Implicit external transitions    | Internal by default — use `reenter: true` to re-enter                    |
+| Enum event types                 | String literal union event types                                         |
+| `in: '...'` transition property  | `guard: stateIn(...)` from `xstate/guards`                               |
+| `state.history`                  | Track previous snapshot manually via `actor.subscribe()`                 |
+| `escalate()` action              | Throw directly in actions — errors propagate automatically               |
 
 ---
 
 ## 14. Quick Check — Common Violations
 
 **Using `broadcast()` — removed in v5:**
+
 ```typescript
 // ❌
 broadcast({ type: "panelStack.public.sync", payload: ... })
@@ -844,6 +864,7 @@ sendTo(({ system }) => system.get("notifier"), { type: "notifier.notify", ... })
 ```
 
 **Using enum for event types:**
+
 ```typescript
 // ❌ Breaks XState v5 type inference
 enum EventType { LOAD = "playlist.load" }
@@ -854,15 +875,19 @@ on: { "playlist.load": { ... } }
 ```
 
 **Using `sendParent()` — deprecated:**
+
 ```typescript
 // ❌
-actions: sendParent({ type: "child.done" })
+actions: sendParent({ type: "child.done" });
 
 // ✅
-actions: sendTo(({ context }) => context.parentRef, { type: "playlist.public.childCompleted" })
+actions: sendTo(({ context }) => context.parentRef, {
+  type: "playlist.public.childCompleted",
+});
 ```
 
 **Using `pure()` or `choose()` — removed:**
+
 ```typescript
 // ❌
 actions: pure((context, event) => [
@@ -880,6 +905,7 @@ actions: enqueueActions(({ enqueue, check }) => {
 ```
 
 **Expecting parent entry/exit to fire without `reenter: true`:**
+
 ```typescript
 // ❌ resetForm will NOT fire — internal transition by default in v5
 on: {
@@ -893,6 +919,7 @@ on: {
 ```
 
 **Spawning when invoke is correct:**
+
 ```typescript
 // ❌ spawn leaks — nothing stops this actor when the state exits
 actions: assign({
@@ -907,6 +934,7 @@ invoke: {
 ```
 
 **Boolean flag in context that should be a state node:**
+
 ```typescript
 // ❌
 type Context = { isLoading: boolean; hasError: boolean };
@@ -916,6 +944,7 @@ states: { idle: {}, loading: {}, error: {} }
 ```
 
 **Using v4 `cond` and `assign` signatures:**
+
 ```typescript
 // ❌ v4
 { cond: "hasPlaylists" }
@@ -927,10 +956,11 @@ assign(({ context, event }) => ({ ... }))
 ```
 
 **Targeting state name in container:**
+
 ```typescript
 // ❌
-s.matches("viewModeManagement.folderView")
+s.matches("viewModeManagement.folderView");
 
 // ✅
-s.hasTag(Tags.VIEW_MODE_FOLDER)
+s.hasTag(Tags.VIEW_MODE_FOLDER);
 ```

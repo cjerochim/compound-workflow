@@ -8,8 +8,8 @@ allowed-tools:
   - Bash # Create directories
   - Grep # Search existing docs
 preconditions:
-  - For solved problems: problem has been solved (not in-progress). For implementation insights: implementation complete and there is a reusable learning to capture.
-  - Solution or approach has been verified working (or for insights: pattern is clear and reusable)
+  - "For solved problems: problem has been solved (not in-progress). For implementation insights: implementation complete and there is a reusable learning to capture."
+  - "Solution or approach has been verified working (or for insights: pattern is clear and reusable)"
 ---
 
 # compound-docs Skill
@@ -54,7 +54,7 @@ Post-capture actions (by explicit user choice) may update other references (e.g.
 - Obvious syntax errors
 - Trivial fixes immediately corrected
 - Only when there is nothing non-trivial to document (do not skip solely because the work was a "planned feature" rather than a bug fix)
-</step>
+  </step>
 
 <step number="2" required="true" depends_on="1">
 ### Step 2: Gather Context
@@ -89,6 +89,7 @@ I need a few details to document this properly:
 
 [Continue after user provides details]
 ```
+
 </step>
 
 <step number="3" required="false" depends_on="2">
@@ -142,7 +143,7 @@ Format: `YYYY-MM-DD-<module-slug>-<symptom-slug>.md`
 - `2026-02-19-brief-system-missing-include-caused-n-plus-one.md`
 - `2026-02-19-email-processing-parameter-not-saving-state.md`
 - `2026-02-19-assistant-webview-crash-on-resize.md`
-</step>
+  </step>
 
 <step number="5" required="true" depends_on="4" blocking="true">
 ### Step 5: Validate YAML Schema
@@ -198,6 +199,7 @@ mkdir -p "docs/solutions/${CATEGORY}"
 ```
 
 **Result:**
+
 - Single file in category directory
 - Enum validation ensures consistent categorization
 
@@ -218,11 +220,13 @@ If this represents a common pattern (3+ similar issues), suggest using Option 3 
 **Critical Pattern Detection (Optional Proactive Suggestion):**
 
 If this issue has automatic indicators suggesting it might be critical:
+
 - Severity: `critical` in YAML
 - Affects multiple modules OR foundational systems
 - Non-obvious solution
 
 Then in the decision menu (Step 8), add a note:
+
 ```
 💡 This might be worth adding to Required Reading (Option 2)
 ```
@@ -271,11 +275,13 @@ What's next?
 **Option 2: Add to Required Reading** ⭐ PRIMARY PATH FOR CRITICAL PATTERNS
 
 User selects this when:
+
 - System made this mistake multiple times across different modules
 - Solution is non-obvious but must be followed every time
 - Foundational requirement (framework/runtime rules, safety practices, etc.)
 
 Action:
+
 1. Extract pattern from the documentation
 2. Format as ❌ WRONG vs ✅ CORRECT with code examples
 3. Add to `docs/solutions/patterns/critical-patterns.md`
@@ -328,6 +334,7 @@ NOTE: This is a post-capture action and will create/modify an additional file be
 User selects this when the documented solution relates to an existing learning skill:
 
 Action:
+
 1. Prompt: "Which skill? (<skill-name>)"
 2. Determine which reference file to update (resources.md, patterns.md, or examples.md)
 3. Add link and brief description to appropriate section
@@ -343,6 +350,7 @@ Example:
 User selects this when the solution represents the start of a new learning domain:
 
 Action:
+
 1. Prompt: "What should the new skill be called? (e.g., stripe-billing, email-processing)"
 2. Create a new skill directory: `<skill-name>/` in the skills directory of the current harness (resolve from `harnesses` in AGENTS.md Repo Config)
 3. Add `SKILL.md` in the new skill directory with a clear description (what + when to use)
@@ -367,11 +375,13 @@ Action:
 ## Integration Points
 
 **Invoked by:**
+
 - /workflow:compound command (primary interface)
 - Manual invocation in conversation after solution confirmed
 - Can be triggered by detecting confirmation phrases like "that worked", "it's fixed", etc.
 
 **Invokes:**
+
 - None (terminal skill - does not delegate to other skills)
 
 **Handoff expectations:**
@@ -427,6 +437,7 @@ Documentation is successful when ALL of the following are true:
 ## Execution Guidelines
 
 **MUST do:**
+
 - Validate YAML frontmatter (BLOCK if invalid per Step 5 validation gate)
 - Extract exact error messages from conversation
 - Include code examples in solution section
@@ -434,6 +445,7 @@ Documentation is successful when ALL of the following are true:
 - Ask user and WAIT if critical context missing
 
 **MUST NOT do:**
+
 - Skip YAML validation (validation gate is blocking)
 - Use vague descriptions (not searchable)
 - Omit code examples or cross-references

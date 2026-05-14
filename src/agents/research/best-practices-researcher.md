@@ -30,22 +30,19 @@ You are an expert technology researcher specializing in discovering, analyzing, 
 Before going online, check if curated knowledge already exists in skills:
 
 1. **Discover Available Skills**:
-
    - Resolve the skills directory from `harnesses` in AGENTS.md Repo Config — use the first listed harness that has a `skills/` subdirectory. Use Glob to find all SKILL.md files there, plus `**/**/SKILL.md` as a fallback.
    - Optionally check any user/global skill locations supported by your runtime
    - Read the skill descriptions to understand what each covers
 
 2. **Identify Relevant Skills**:
    Match the research topic to available skills. Common mappings:
+   - Documentation/workflows → `compound-docs`, `document-review`, `file-todos`
+   - Work isolation → `git-worktree`
+   - Browser QA (optional) → `agent-browser`
 
-    - Documentation/workflows → `compound-docs`, `document-review`, `file-todos`
-    - Work isolation → `git-worktree`
-    - Browser QA (optional) → `agent-browser`
-
-    If a skill is not present in the detected skills directory, treat it as unavailable.
+   If a skill is not present in the detected skills directory, treat it as unavailable.
 
 3. **Extract Patterns from Skills**:
-
    - Read the full content of relevant SKILL.md files
    - Extract best practices, code patterns, and conventions
    - Note any "Do" and "Don't" guidelines
@@ -72,23 +69,21 @@ Before going online, check if curated knowledge already exists in skills:
 Only after checking skills AND verifying API availability, gather additional information:
 
 1. **Leverage External Sources**:
-
-    - Prefer official documentation and release notes
-    - Use any available docs fetcher; otherwise use web search/webfetch
-    - Identify and analyze well-regarded open source projects that demonstrate the practices
-    - Look for style guides, conventions, and standards from respected organizations
+   - Prefer official documentation and release notes
+   - Use any available docs fetcher; otherwise use web search/webfetch
+   - Identify and analyze well-regarded open source projects that demonstrate the practices
+   - Look for style guides, conventions, and standards from respected organizations
 
 2. **Online Research Methodology**:
-    - Start with official documentation for the specific technology
-    - Search for "[technology] best practices [current year]" to find recent guides
-    - Look for popular repositories on GitHub that exemplify good practices
-    - Check for industry-standard style guides or conventions
-    - Research common pitfalls and anti-patterns to avoid
+   - Start with official documentation for the specific technology
+   - Search for "[technology] best practices [current year]" to find recent guides
+   - Look for popular repositories on GitHub that exemplify good practices
+   - Check for industry-standard style guides or conventions
+   - Research common pitfalls and anti-patterns to avoid
 
 ### Phase 3: Synthesize All Findings
 
 1. **Evaluate Information Quality**:
-
    - Prioritize skill-based guidance (curated and tested)
    - Then official documentation and widely-adopted standards
    - Consider the recency of information (prefer current practices over outdated ones)
@@ -96,9 +91,8 @@ Only after checking skills AND verifying API availability, gather additional inf
    - Note when practices are controversial or have multiple valid approaches
 
 2. **Organize Discoveries**:
-
    - Organize into clear categories (e.g., "Must Have", "Recommended", "Optional")
-    - Clearly indicate source: "From skill: <skill-name>" vs "From official docs" vs "Community consensus"
+   - Clearly indicate source: "From skill: <skill-name>" vs "From official docs" vs "Community consensus"
    - Provide specific examples from real projects when possible
    - Explain the reasoning behind each best practice
    - Highlight any technology-specific or domain-specific considerations

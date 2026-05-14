@@ -14,7 +14,9 @@ export const createAction = (params) => {
   if (params.pendingFolder) {
     return { metadata: { createFolder: params.pendingFolder, mode: "create" } };
   } else if (params.existingFolder) {
-    return { metadata: { targetFolder: params.existingFolder, mode: "existing" } };
+    return {
+      metadata: { targetFolder: params.existingFolder, mode: "existing" },
+    };
   } else {
     throw new Error("Invalid params");
   }
@@ -26,7 +28,9 @@ export const createAction = (params) => {
     return { metadata: { createFolder: params.pendingFolder, mode: "create" } };
   }
   if (params.existingFolder) {
-    return { metadata: { targetFolder: params.existingFolder, mode: "existing" } };
+    return {
+      metadata: { targetFolder: params.existingFolder, mode: "existing" },
+    };
   }
   throw new Error("Invalid params");
 };
@@ -48,14 +52,14 @@ Data operations return new values. Never mutate existing objects or arrays.
 ```typescript
 // ❌ Mutation
 const updatePlaylist = (playlists, id, label) => {
-  const playlist = playlists.find(p => p.id === id);
+  const playlist = playlists.find((p) => p.id === id);
   playlist.label = label; // mutates
   return playlists;
 };
 
 // ✅ Immutable transform
 const updatePlaylist = (playlists, id, label) =>
-  playlists.map(p => p.id === id ? { ...p, label } : p);
+  playlists.map((p) => (p.id === id ? { ...p, label } : p));
 ```
 
 ---
@@ -105,7 +109,9 @@ Validate at the boundary between layers. Controllers validate runtime inputs bef
 if (!ctx.activeTabId || !ctx.activeFolderId) {
   throw new Error("Active tab ID and folder ID are required");
 }
-const playlist = ctx.availablePlaylists.find(p => p.id === evt.payload.playlistId);
+const playlist = ctx.availablePlaylists.find(
+  (p) => p.id === evt.payload.playlistId,
+);
 if (!playlist) throw new Error("Playlist not found");
 
 // Entity receives clean, validated data
@@ -151,6 +157,7 @@ export const createAction = ({
 ## Quick Check — Common Violations
 
 **`else`/`else-if` instead of early exits:**
+
 ```typescript
 // ❌ Nested conditionals
 if (a) { return x; } else if (b) { return y; } else { throw ... }
@@ -162,6 +169,7 @@ throw new Error("Unexpected state");
 ```
 
 **Conditional spreading:**
+
 ```typescript
 // ❌ Obscures intent
 const action = { ...(condition && { prop: value }) };
@@ -172,17 +180,23 @@ return base;
 ```
 
 **Silent error suppression:**
+
 ```typescript
 // ❌ No intent documented
-try { doSomething(); } catch {}
+try {
+  doSomething();
+} catch {}
 
 // ✅ Intent explicit
-try { doSomething(); } catch {
+try {
+  doSomething();
+} catch {
   // SSR context — localStorage unavailable, safe to ignore
 }
 ```
 
 **Silent return on unexpected state:**
+
 ```typescript
 // ❌ Hides bugs
 if (!playlist) return;

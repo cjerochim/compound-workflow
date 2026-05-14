@@ -34,6 +34,7 @@ Entities are pure functions. They have no knowledge of state machines, services,
 Entities are the data boundary for backend responses — they apply defaults and ensure correct shape as part of the transform. They may use Effect's typed utilities (`Effect.try`, `Option`, `Either`) for safe transforms, but must remain pure. No runtime, no Layer dependencies.
 
 **Rules:**
+
 - Pure functions only — no side effects, no framework imports, no IO
 - No classes — functions only
 - One file per concern (`PlaylistSelectionEntity.ts` vs `PlaylistReorderEntity.ts`)
@@ -41,12 +42,12 @@ Entities are the data boundary for backend responses — they apply defaults and
 
 **Naming conventions:**
 
-| Prefix | Purpose | Example |
-|---|---|---|
+| Prefix | Purpose           | Example             |
+| ------ | ----------------- | ------------------- |
 | `hasX` | Boolean predicate | `hasAddedPlaylists` |
-| `isX` | Boolean predicate | `isValidState` |
-| `getX` | Retrieve/extract | `getAddedPlaylists` |
-| `toX` | Transform | `toPlaylistIds` |
+| `isX`  | Boolean predicate | `isValidState`      |
+| `getX` | Retrieve/extract  | `getAddedPlaylists` |
+| `toX`  | Transform         | `toPlaylistIds`     |
 
 **Function signatures** — use object params for 2+ arguments:
 
@@ -100,6 +101,7 @@ Containers are the composition layer. Three responsibilities:
 3. **Compose** hooks, translations, and presentation components
 
 **Rules:**
+
 - One container per controller
 - No logic — no transforms, no business rules
 - No conditionals around events — forward unconditionally, let the controller decide
@@ -149,6 +151,7 @@ const onAction = useCallback(() => {
 Location: `src/features/{feature}/presentation/`
 
 Presentation components are UI only. They receive props and render. No state machines, no services, no business logic.
+Within `presentation/`, organise units into `base/`, `components/`, `structures/`, and `pages/` as defined in `references/presentation.md`.
 
 See `references/presentation.md` for folder structure and composition rules.
 
@@ -170,7 +173,7 @@ src/
     │       ├── PlaylistService.ts
     │       ├── FolderService.ts
     │       └── index.ts               # Feature layer composition
-    ├── presentation/                  # UI components
+    ├── presentation/                  # UI only (base/components/structures/pages)
     └── types.ts                       # Public events (create only when needed)
 ```
 
@@ -187,6 +190,7 @@ Relative paths are acceptable within the same feature for deeply nested files.
 ## Quick Check — Common Violations
 
 **Logic in a container:**
+
 ```typescript
 // ❌ Container deciding
 if (isEditing) actor.send({ type: "playlist.save" });
@@ -196,6 +200,7 @@ actor.send({ type: "playlist.action", payload: { isEditing } });
 ```
 
 **Side effect in an entity:**
+
 ```typescript
 // ❌ Entity performing IO
 export const fetchPlaylists = async (folderId: string) => {
@@ -204,19 +209,21 @@ export const fetchPlaylists = async (folderId: string) => {
 
 // ✅ Entity is a pure transform
 export const toPlaylistItems = (raw: RawPlaylist[]): PlaylistItem[] =>
-  raw.map(r => ({ id: r.playlistId, label: r.playlistTitle ?? "Untitled" }));
+  raw.map((r) => ({ id: r.playlistId, label: r.playlistTitle ?? "Untitled" }));
 ```
 
 **Layer skipping:**
+
 ```typescript
 // ❌ Container importing an entity directly
 import * as playlistEntity from "src/features/{feature}/domain/entities/PlaylistEntity";
 
 // ✅ Container reads from controller state only
-const playlists = useSelector(actor, s => s.context.playlists);
+const playlists = useSelector(actor, (s) => s.context.playlists);
 ```
 
 **Passing machine internals to presentation:**
+
 ```typescript
 // ❌ Presentation receives send/snapshot — leaks machine contract into UI layer
 <Sidebar snapshot={snapshot} send={send} />

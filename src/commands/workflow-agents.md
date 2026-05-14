@@ -27,20 +27,17 @@ This command reviews the registry and updates it in place.
 #### Behaviour
 
 1. Locate registry:
-
    - src/AGENTS.md
    - fallback: AGENTS.md
 
 2. Read entire file
 
 3. Review:
-
    - skills (clarity, overlap, gaps)
    - agents (scope, supported skills, duplication)
    - structure (consistency)
 
 4. Fix:
-
    - tighten vague skills
    - remove or merge duplicates
    - add missing capabilities ONLY if:

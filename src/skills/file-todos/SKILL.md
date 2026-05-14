@@ -71,11 +71,11 @@ Frontmatter fields:
 
 ```yaml
 ---
-status: ready              # pending | ready | complete | deferred
-priority: p1               # p1 | p2 | p3
+status: ready # pending | ready | complete | deferred
+priority: p1 # p1 | p2 | p3
 issue_id: "002"
 tags: [backend, testing]
-dependencies: ["001"]     # issue_ids this is blocked by
+dependencies: ["001"] # issue_ids this is blocked by
 ---
 ```
 

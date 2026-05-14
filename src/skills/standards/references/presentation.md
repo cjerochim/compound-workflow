@@ -33,14 +33,24 @@ Layout is a presentation concern. CSS handles responsive breakpoints without Jav
 
 ```css
 /* ❌ Bad — conflicts with Tailwind's token system */
-a { color: #646cff; }
-h1 { font-size: 3.2em; }
-button { background-color: #1a1a1a; }
+a {
+  color: #646cff;
+}
+h1 {
+  font-size: 3.2em;
+}
+button {
+  background-color: #1a1a1a;
+}
 
 /* ✅ Good — use @layer base with semantic tokens */
 @layer base {
-  * { @apply border-border; }
-  body { @apply bg-background text-foreground; }
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
 ```
 
@@ -75,32 +85,41 @@ Presentation components must have **zero framework imports**. They accept only p
 
 ```tsx
 // ✅ Pure — accepts children and a derived value as props
-import type { ReactNode } from 'react'
+import type { ReactNode } from "react";
 
-interface AppLayoutProps { children: ReactNode }
+interface AppLayoutProps {
+  children: ReactNode;
+}
 
 export function AppLayout({ children }: AppLayoutProps) {
-  return <div>{children}</div>
+  return <div>{children}</div>;
 }
 ```
 
 ```tsx
 // ✅ Pure — accepts extracted state as a prop, not the hook itself
-interface GlobalLoaderProps { isNavigating: boolean }
+interface GlobalLoaderProps {
+  isNavigating: boolean;
+}
 
 export function GlobalLoader({ isNavigating }: GlobalLoaderProps) {
-  if (!isNavigating) return null
-  return <div className="..." />
+  if (!isNavigating) return null;
+  return <div className="..." />;
 }
 ```
 
 ```tsx
 // ❌ Framework import in presentation — belongs in a container
-import { Outlet, useNavigation } from 'react-router-dom'
+import { Outlet, useNavigation } from "react-router-dom";
 
 export function AppLayout() {
-  const navigation = useNavigation()   // router concern — wrong layer
-  return <><GlobalLoader /><Outlet /></>
+  const navigation = useNavigation(); // router concern — wrong layer
+  return (
+    <>
+      <GlobalLoader />
+      <Outlet />
+    </>
+  );
 }
 ```
 
@@ -254,27 +273,27 @@ Use `compoundVariants` when classes only apply under a specific combination of v
 const buttonVariants = cva("font-medium rounded-md transition-colors", {
   variants: {
     intent: {
-      primary:   "bg-brand-primary text-white",
+      primary: "bg-brand-primary text-white",
       secondary: "bg-surface-elevated text-content-primary",
-      ghost:     "text-content-secondary",
+      ghost: "text-content-secondary",
     },
     size: {
       sm: "px-2 py-1 text-sm",
       md: "px-4 py-2 text-base",
     },
     disabled: {
-      true:  "opacity-50 cursor-not-allowed",
+      true: "opacity-50 cursor-not-allowed",
       false: "",
     },
   },
   compoundVariants: [
     // Hover only applies when not disabled
-    { intent: "primary",   disabled: false, class: "hover:bg-brand-secondary" },
+    { intent: "primary", disabled: false, class: "hover:bg-brand-secondary" },
     { intent: "secondary", disabled: false, class: "hover:bg-surface-overlay" },
   ],
   defaultVariants: {
     intent: "primary",
-    size:   "md",
+    size: "md",
     disabled: false,
   },
 });
@@ -289,7 +308,8 @@ type FolderItemVariantProps = VariantProps<typeof folderItemVariants>;
 
 // Make `intent` required, keep everything else optional
 interface FolderItemProps
-  extends Omit<FolderItemVariantProps, "intent">,
+  extends
+    Omit<FolderItemVariantProps, "intent">,
     Required<Pick<FolderItemVariantProps, "intent">> {
   label: string;
   className?: string;
@@ -326,25 +346,81 @@ const itemVariants = cva("flex items-center gap-2 px-3 py-2 rounded-md", {
 
 ---
 
+## Base vs Components vs Structures
+
+Presentation uses a strict taxonomy. Do not blur these boundaries.
+
+### Base elements
+
+Base elements wrap a single native HTML element. They apply token-level styling via CVA and expose a `className` prop. They have no domain knowledge — a `ButtonBase` doesn't know what it triggers, an `InputBase` doesn't know what it collects.
+
+### Components
+
+Components carry domain or feature semantics. They are composed from base elements and know what they represent — a `FolderItem` knows it's a folder, a `PlaylistCard` knows it's a playlist. They are self-contained and do not orchestrate layout.
+
+### Structures
+
+Structures define layout via slots (`children`, `ReactNode` props). They arrange where content goes but never render content directly. Containers populate the slots.
+
+### Structures vs composition-only wrappers
+
+A **structure** answers: _where do unknown blobs of UI go?_ It exposes **slots** and renders almost no domain/feature content itself (no product copy, no `.map` over domain rows, no “if conflict show this banner” unless that logic is passed in as `ReactNode`).
+
+A **composition-only wrapper** answers: _what goes into those slots for this screen?_ If the file’s only job is to **populate** an existing structure (e.g. pass `headerSlot` / `children`, map agenda rows to rows, branch on flags, wire `onClick` to handlers, hardcode labels), that is **composition**, not a second structure. **Do not** put it under `presentation/structures/`.
+
+**Where composition lives**
+
+- **`application/containers/*`** — production wiring: derive props, build `ReactNode` (or small slot bundles), pass into page/structure.
+- **Storybook** — fixtures, demos, and play stories that show the same composition without container/controller coupling.
+
+**Page views** (`presentation/pages/*` or feature page shells) should mostly **place** content the container already composed (e.g. `ReactNode` props), not re-implement the same slot-filling in two places.
+
+**Naming smell** — `*Panel`, `*Band`, `*Section` that only wrap **one** existing structure and fill its slots: either merge into the **container** + story, or the wrapper is wrongly classified.
+
+**Quick check** — “Does this file define layout regions only, with all substantive UI coming from props?” If **no**, it is not a structure.
+
+---
+
 ## Folder Structure
 
-Every component lives in its own PascalCase folder under `src/features/{feature}/presentation/`.
-
-### Simple component
-
-A self-contained component with no sub-components. One file only:
+No presentation React unit should float in ad-hoc folders. Use the taxonomy folders only.
 
 ```
-FolderItem/
+presentation/
+├── base/
+│   ├── index.ts
+│   └── ButtonBase/
+│       └── index.tsx
+├── components/
+│   ├── index.ts
+│   └── FolderItem/
+│       └── index.tsx
+├── structures/
+│   ├── index.ts
+│   └── FolderPanel/
+│       └── index.tsx
+├── pages/
+│   ├── index.ts
+│   └── FolderPageView/
+│       └── index.tsx
+└── index.ts
+```
+
+### Components folder patterns
+
+Every component lives in its own PascalCase folder.
+
+Simple component:
+
+```
+components/FolderItem/
 └── index.tsx        # component JSX + CVA definitions below
 ```
 
-### Compound component
-
-A larger component composed of multiple sub-components, exposed as a single public API via the barrel:
+Compound component:
 
 ```
-FolderSelector/
+components/FolderSelector/
 ├── index.ts                      # barrel — Object.assign composition
 ├── FolderSelectorRoot/
 │   └── index.tsx                 # root JSX + CVA below
@@ -360,6 +436,36 @@ FolderSelector/
 
 Sub-components that belong to the same concern stay in the parent folder as named exports. Only promote to a subfolder when independently meaningful.
 
+### Structures are slot-driven
+
+Structures provide slots via `children` and `ReactNode` props. Containers compose and populate those slots.
+
+```tsx
+import type { ReactNode } from "react";
+
+interface FolderPanelProps {
+  header: ReactNode;
+  actions: ReactNode;
+  children: ReactNode;
+}
+
+export const FolderPanel = ({
+  header,
+  actions,
+  children,
+}: FolderPanelProps) => (
+  <section className="flex flex-col gap-4">
+    <header>{header}</header>
+    <div>{actions}</div>
+    <main>{children}</main>
+  </section>
+);
+```
+
+### Storybook pages
+
+Use `presentation/pages/*` and page stories to demonstrate layouts composed from base elements, components, and structures. Keep container/controller logic out of these stories.
+
 ---
 
 ## Barrel Pattern
@@ -370,17 +476,21 @@ The `index.ts` barrel assembles the public API of the compound component. It is 
 // FolderSelector/index.ts
 import { FolderSelectorRoot } from "./FolderSelectorRoot";
 import { FolderItem } from "./FolderItem";
-import { FolderActions, FolderActionsAdd, FolderActionsMore } from "./FolderActions";
+import {
+  FolderActions,
+  FolderActionsAdd,
+  FolderActionsMore,
+} from "./FolderActions";
 import { FolderSelectorCollapsed } from "./FolderSelectorCollapsed";
 import { FolderSelectorExpanded } from "./FolderSelectorExpanded";
 
 export const FolderSelector = Object.assign(FolderSelectorRoot, {
-  Folder:      FolderItem,
-  Actions:     FolderActions,
-  ActionsAdd:  FolderActionsAdd,
+  Folder: FolderItem,
+  Actions: FolderActions,
+  ActionsAdd: FolderActionsAdd,
   ActionsMore: FolderActionsMore,
-  Collapsed:   FolderSelectorCollapsed,
-  Expanded:    FolderSelectorExpanded,
+  Collapsed: FolderSelectorCollapsed,
+  Expanded: FolderSelectorExpanded,
 });
 ```
 
@@ -425,6 +535,7 @@ This allows containers to apply layout-specific classes without breaking the com
 ## Quick Check — Common Violations
 
 **Raw value instead of a token:**
+
 ```typescript
 // ❌
 <div className="bg-[#1a1a2e] text-[14px]" />
@@ -434,6 +545,7 @@ This allows containers to apply layout-specific classes without breaking the com
 ```
 
 **CVA in a separate file:**
+
 ```typescript
 // ❌ Separate variants.ts file
 import { buttonVariants } from "./variants";
@@ -446,6 +558,7 @@ const buttonVariants = cva("...", { variants: { intent: { ... } } });
 ```
 
 **String concatenation instead of cn():**
+
 ```typescript
 // ❌ Class conflicts not resolved
 className={`${baseClasses} ${isActive ? "bg-brand-primary" : ""}`}
@@ -455,6 +568,7 @@ className={cn(baseClasses, isActive && "bg-brand-primary")}
 ```
 
 **Styles outside the component file:**
+
 ```typescript
 // ❌ styles.ts with styled components
 import { Base, BaseContent } from "./styles";
@@ -464,6 +578,7 @@ import { Base, BaseContent } from "./styles";
 ```
 
 **Barrel importing from outside component boundary:**
+
 ```typescript
 // ❌
 import { FolderItem } from "src/features/other/presentation/FolderItem";
@@ -473,6 +588,7 @@ import { FolderItem } from "./FolderItem";
 ```
 
 **Variant logic inline in JSX instead of CVA:**
+
 ```typescript
 // ❌ Variant logic scattered through JSX
 <div className={`rounded-md ${intent === "primary" ? "bg-brand-primary text-white" : "bg-surface-default text-content-primary"}`} />
@@ -482,6 +598,7 @@ import { FolderItem } from "./FolderItem";
 ```
 
 **JavaScript-driven responsive layout:**
+
 ```typescript
 // ❌ Resize listener + state machine tracking breakpoint
 const isMobile = snapshot.context.isMobile;
@@ -493,18 +610,26 @@ const isMobile = snapshot.context.isMobile;
 ```
 
 **Base element styles with hardcoded values:**
+
 ```css
 /* ❌ Bypasses token system */
-a { color: #646cff; }
-button { background-color: #1a1a1a; }
+a {
+  color: #646cff;
+}
+button {
+  background-color: #1a1a1a;
+}
 
 /* ✅ Use @layer base with semantic tokens */
 @layer base {
-  body { @apply bg-background text-foreground; }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
 ```
 
 **Separate `styles.ts` file:**
+
 ```typescript
 // ❌
 import * as S from './styles';
@@ -512,4 +637,63 @@ import * as S from './styles';
 
 // ✅
 <div className="fixed inset-0 z-50 bg-black/50" />
+```
+
+**Presentation unit outside taxonomy folders:**
+
+```typescript
+// ❌
+src / features / schedule / presentation / ScheduleFilterChip / index.tsx;
+
+// ✅
+src /
+  features /
+  schedule /
+  presentation /
+  components /
+  ScheduleFilterChip /
+  index.tsx;
+```
+
+**Structure hardcodes feature content instead of exposing slots:**
+
+```tsx
+// ❌
+export const SchedulePanel = () => (
+  <section>
+    <h2>Today's agenda</h2>
+    <button>Book shift</button>
+  </section>
+);
+
+// ✅
+interface SchedulePanelProps {
+  header: ReactNode;
+  actions: ReactNode;
+  children: ReactNode;
+}
+```
+
+**Composition-only wrapper filed under `structures/`:**
+
+```tsx
+// ❌ — only fills slots on `FolderPanel`; belongs in container + story
+export function FolderPanelWithHomepageSlots(props: { data: Data }) {
+  return (
+    <FolderPanel
+      header={<h2>{props.data.title}</h2>}
+      actions={<button type="button">Save</button>}
+      children={
+        <ul>
+          {props.data.rows.map((r) => (
+            <li key={r.id}>{r.label}</li>
+          ))}
+        </ul>
+      }
+    />
+  );
+}
+
+// ✅ — structure stays slot-only; container builds nodes and passes them in
+<FolderPanel header={headerNode} actions={actionsNode} children={bodyNode} />;
 ```

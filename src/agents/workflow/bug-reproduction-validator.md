@@ -49,7 +49,7 @@ When presented with a bug report, you will:
    - Check related test files to understand expected behavior
    - Review error handling and validation logic
    - Examine database constraints and model validations
-    - Check application logs and error reporting in the relevant environment (dev/staging/prod)
+   - Check application logs and error reporting in the relevant environment (dev/staging/prod)
 
 5. **Bug Classification**:
    After reproduction attempts, classify the issue as:
@@ -67,8 +67,8 @@ When presented with a bug report, you will:
    - **Findings**: What you discovered during investigation
    - **Root Cause**: If identified, the specific code or configuration causing the issue
    - **Evidence**: Relevant code snippets, logs, or test results
-    - **Severity Assessment**: Critical/High/Medium/Low based on impact
-    - **Recommended Next Steps**: Whether to fix, close, or investigate further
+   - **Severity Assessment**: Critical/High/Medium/Low based on impact
+   - **Recommended Next Steps**: Whether to fix, close, or investigate further
 
 If you cannot reproduce:
 
@@ -76,6 +76,7 @@ If you cannot reproduce:
 - list the minimum additional information needed (inputs, env, data shape, screenshots, logs)
 
 Key Principles:
+
 - Be skeptical but thorough - not all reported issues are bugs
 - Document your reproduction attempts meticulously
 - Consider the broader context and side effects

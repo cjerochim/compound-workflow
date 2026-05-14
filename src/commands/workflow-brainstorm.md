@@ -118,6 +118,7 @@ Engage in collaborative **dialog, one question at a time**. This is a discussion
 
 ```markdown
 **What I think you're aiming for:**
+
 - ...
 - ...
 
@@ -125,6 +126,7 @@ Engage in collaborative **dialog, one question at a time**. This is a discussion
 <single sentence>
 
 **I'm assuming (tell me if any of these are wrong):**
+
 - ...
 - ...
 ```
@@ -132,7 +134,6 @@ Engage in collaborative **dialog, one question at a time**. This is a discussion
 For each iteration:
 
 1.  **Synthesize Current Understanding** (≤ 3 bullets)
-
     - What the feature appears to be
     - Who it impacts / what class of change (incremental, foundational, risky, trivial)
     - Implied constraint worth surfacing
@@ -142,7 +143,6 @@ For each iteration:
 3.  **State Working Assumptions** — the 1–3 most load-bearing beliefs you're operating on. Ask the user to flag anything wrong; do not turn these into extra questions.
 
 4.  Continue iteratively until:
-
     - Direction is clear
     - Or user says "proceed"
 

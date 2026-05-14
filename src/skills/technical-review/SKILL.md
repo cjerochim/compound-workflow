@@ -39,12 +39,12 @@ Primary execution model: run an independent planning-phase pass first using `pla
 
 Evaluate the plan against:
 
-| Criterion               | What to Check                                                                                                                                 |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Architecture**        | Alignment with repo architecture and patterns: layers, controllers, routing, encapsulation; no conflicting or missing patterns.            |
-| **Code standards**      | Conventions, file layout (`app/`), naming, patterns used in the repo; no conflicting patterns.                                              |
-| **Quality**             | Testability, observability, error handling, dependencies; feasibility and scope realism.                                                    |
-| **Stack and libraries** | Expo, React Native, expo-router; existing deps and APIs used correctly; no unsupported or conflicting choices.                                |
+| Criterion               | What to Check                                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| **Architecture**        | Alignment with repo architecture and patterns: layers, controllers, routing, encapsulation; no conflicting or missing patterns. |
+| **Code standards**      | Conventions, file layout (`app/`), naming, patterns used in the repo; no conflicting patterns.                                  |
+| **Quality**             | Testability, observability, error handling, dependencies; feasibility and scope realism.                                        |
+| **Stack and libraries** | Expo, React Native, expo-router; existing deps and APIs used correctly; no unsupported or conflicting choices.                  |
 
 Note findings. Do not fix the doc in this skill—output options and recommendation.
 

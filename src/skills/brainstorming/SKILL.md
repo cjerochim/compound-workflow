@@ -66,6 +66,7 @@ Default to **one question at a time**. Readability beats coverage — the user p
 
 ```markdown
 **What I think you're aiming for:**
+
 - ...
 - ...
 
@@ -73,6 +74,7 @@ Default to **one question at a time**. Readability beats coverage — the user p
 <single sentence>
 
 **I'm assuming (tell me if any of these are wrong):**
+
 - ...
 - ...
 ```
@@ -207,16 +209,16 @@ This prevents wasted effort on misaligned designs.
 
 ## Anti-Patterns to Avoid
 
-| Anti-Pattern                           | Better Approach                             |
-| -------------------------------------- | ------------------------------------------- |
-| Asking many questions in a row         | Exactly one question per turn               |
-| Listing "prompts to react to"          | Pick the single best question and ask it    |
-| Dense walls of bullets                 | ≤ 12 lines per turn; readable at a glance   |
-| Jumping to implementation details      | Stay focused on WHAT, not HOW               |
-| Proposing overly complex solutions     | Start simple, add complexity only if needed |
-| Ignoring existing codebase patterns    | Research what exists first                  |
-| Making assumptions without validating  | State assumptions explicitly and confirm    |
-| Creating lengthy design documents      | Keep it concise—details go in the plan      |
+| Anti-Pattern                          | Better Approach                             |
+| ------------------------------------- | ------------------------------------------- |
+| Asking many questions in a row        | Exactly one question per turn               |
+| Listing "prompts to react to"         | Pick the single best question and ask it    |
+| Dense walls of bullets                | ≤ 12 lines per turn; readable at a glance   |
+| Jumping to implementation details     | Stay focused on WHAT, not HOW               |
+| Proposing overly complex solutions    | Start simple, add complexity only if needed |
+| Ignoring existing codebase patterns   | Research what exists first                  |
+| Making assumptions without validating | State assumptions explicitly and confirm    |
+| Creating lengthy design documents     | Keep it concise—details go in the plan      |
 
 ## Integration with Planning
 

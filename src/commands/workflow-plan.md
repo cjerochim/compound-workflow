@@ -1,19 +1,19 @@
 ---
 name: plan
 invocation: workflow:plan
-description: Transform feature descriptions into well-structured project plans using an explicit fidelity and confidence model
+description: Transform feature descriptions into contract-based execution plans with explicit artifacts, isolated task contracts, and a fidelity/confidence model
 argument-hint: "[feature description, bug report, improvement idea, or brainstorm doc path]"
 ---
 
 # Create a plan for a new feature or bug fix
 
-Transform feature descriptions into well-structured project plans using an explicit fidelity and confidence model.
+Transform feature descriptions into contract-based execution plans with explicit artifacts, isolated task contracts, and a fidelity/confidence model.
 
 ## Introduction
 
 **Note: The current year is 2026.** Use this when dating plans and searching for recent documentation.
 
-Transform feature descriptions, bug reports, or improvement ideas into well-structured markdown plan files that follow project conventions and best practices. This command provides flexible detail levels to match your needs.
+Transform feature descriptions, bug reports, or improvement ideas into contract-based markdown plan files that define a closed system of artifacts and executable task contracts. This command provides flexible detail levels scaled by fidelity, while guaranteeing that every task can be executed in isolation by a stateless subagent.
 
 Contract precedence: if this command conflicts with other workflow docs, follow `docs/principles/workflow-baseline-principles.md`, then `src/AGENTS.md`, then this command.
 
@@ -164,7 +164,7 @@ If risky work is detected:
 
 - Spike evaluation is mandatory.
 - Declare `spikes_needed: yes|no`.
-- If `spikes_needed: yes`, include explicit Spike Candidates with upfront dependency and priority modeling (see Step 11).
+- If `spikes_needed: yes`, include explicit Spike Candidates with upfront dependency and priority modeling (see Step 14).
 - If `spikes_needed: no`, include a short rationale + risk mitigation note explaining why direct implementation is safe.
 
 #### Research Mode
@@ -179,7 +179,7 @@ Baseline policy (by fidelity):
 
 Override: high-risk topics always require external research, even if the user prefers speed.
 
-**Required sections by fidelity** (ensure the chosen template includes these; see Step 12):
+**Required sections by fidelity** (ensure the chosen template includes these; see Step 15):
 
 - **Low**: problem, constraints, acceptance criteria, implementation outline, verification checklist
 - **Medium**: all Low + alternatives/tradeoffs, dependency/risk table, rollout notes, observability/test notes
@@ -202,7 +202,7 @@ Research mode: local only | local + external
 Open questions: none | <list>
 ```
 
-**When Open questions is not "none":** You MUST materialize them in the plan body as actionable items (see Step 9). If an unknown blocks implementation feasibility, prefer **Spike Candidates**. If confidence is `Low`, the plan MUST include at least one checkbox under Discussion Points or Spike Candidates so `/workflow:work` can create pending todos and triage can resolve them.
+**When Open questions is not "none":** You MUST materialize them in the plan body as actionable items (see Step 14). If an unknown blocks implementation feasibility, prefer **Spike Candidates**. If confidence is `Low`, the plan MUST include at least one checkbox under Discussion Points or Spike Candidates so `/workflow:work` can create pending todos and triage can resolve them.
 
 ### Step 4 — External Research (Conditional)
 
@@ -236,7 +236,8 @@ After all research steps complete, consolidate findings:
 - Note external documentation URLs and best practices (if external research was done)
 - List related issues or PRs discovered
 - Capture AGENTS.md conventions
-- **Annotate skill assignments:** for each planned implementation phase or task, identify the relevant skills from the Skill Index. Record these as `required_skills` per phase/task — they will be embedded in the plan and consumed by `/workflow:work` when delegating to subagents.
+- **Identify candidate artifacts:** from research findings, note existing files, schemas, configs, and fixtures that tasks will read or modify. These become `produced_by: input` artifacts in Step 8.
+- **Annotate skill assignments:** for each planned implementation area, identify the relevant skills from the Skill Index. Record these as `required_skills` — they will be attached to task contracts in Step 9 and consumed by `/workflow:work` when delegating to subagents.
 
 **Optional validation:** Briefly summarize findings and ask if anything looks off or missing before proceeding to planning.
 
@@ -252,7 +253,133 @@ Run flow/gap analysis to surface missing requirements before locking structure:
 
 **Parent review:** Once findings are returned, assess whether gaps and edge cases are adequately surfaced. If coverage is insufficient or a critical flow was missed, re-dispatch with refined context before locking structure. Incorporate confirmed gaps into the upcoming issue structure and acceptance criteria.
 
-### Step 8 — Issue Planning & Structure
+### Step 8 — Define Artifact Model
+
+Before defining tasks, define the artifacts the plan will produce and consume. Artifacts are the concrete outputs that flow between tasks — files, schemas, configurations, test fixtures, documentation. Every task will reference artifacts by ID; nothing else.
+
+Required artifact fields:
+
+```yaml
+artifacts:
+  - id: <kebab-case identifier, e.g., auth-schema.sql>
+    type: file | schema | config | fixture | documentation | test_suite | executable | report | design_doc
+    description: <what this artifact is>
+    produced_by: <task ID that creates it, or "input" if pre-existing>
+
+final_artifacts:
+  - id: <artifact ID>
+    acceptance_criteria:
+      - <plan-level acceptance criteria this artifact satisfies>
+```
+
+Rules:
+
+- Every artifact must have exactly one producer (a task ID or `input` for pre-existing resources).
+- Every task input must reference a declared artifact ID.
+- Every task output must be a declared artifact.
+- Pre-existing resources (e.g., existing files, fixtures, env configs) must be declared as `produced_by: input`.
+- If an artifact cannot be clearly defined, the scope is too vague — return to idea refinement or add a spike.
+- Do not declare `consumed_by` on artifacts. Consumption is determined by task inputs — the dependency graph is derived from task inputs and artifact producers in Step 10. Declaring consumers on artifacts creates a second source of truth that can drift.
+
+**`final_artifacts` (required):** Declare which artifacts represent the plan's deliverables — the concrete outputs that define "done". Every final artifact must be produced by a task, map to at least one plan-level acceptance criterion, and be validated. If the plan cannot name its final artifacts, the scope is not clear enough. If a final artifact does not map to any acceptance criterion, either the artifact is unnecessary or the acceptance criteria are incomplete.
+
+Derive the artifact list from:
+
+- Research findings (Step 6): existing files, schemas, configs identified
+- SpecFlow analysis (Step 7): gaps and requirements surfaced
+- The feature description itself: what new files, schemas, or outputs must exist when done
+
+**Fidelity scaling:**
+
+- **Low**: artifact list may be informal (IDs + descriptions). Type, producer, and `final_artifacts` are still required.
+- **Medium**: full artifact fields required.
+- **High**: full artifact fields required. Include pre-existing artifacts that tasks will read or modify.
+
+### Step 9 — Define Task Contracts
+
+Every task in the plan is a contract, not a description. A task contract defines exactly what a stateless executor needs to run the task in isolation — no access to the full plan, no assumed context from prior steps.
+
+Required task contract fields:
+
+```yaml
+task_contracts:
+  - id: <stable task id, e.g., task-1>
+    title: <short action-oriented title>
+    type: analysis | design | build | validate | review
+    objective: <what this task must achieve — one sentence>
+    inputs:
+      - artifact: <artifact ID — what this task reads>
+        scope:
+          type: file | function | lines | section
+          value: <explicit identifier — filename, function name, line range, or section heading>
+    output: <single artifact ID — what this task produces>
+    constraints:
+      - <boundaries this task must respect>
+    acceptance_criteria:
+      - <measurable conditions for this task to be complete>
+    required_skills:
+      - <resolved from Skill Index in Step 6>
+```
+
+Rules:
+
+- **One task, one output**: every task produces exactly one artifact. If a task would produce multiple outputs, split it into separate tasks — each producing one artifact.
+- **Explicit inputs**: every input must be a declared artifact ID from Step 8. No implicit references to "the plan", "prior context", or "the codebase".
+- **Input limits**: a task must consume no more than 5 input artifacts. If a task requires more, it is too broad — split it.
+- **Input scoping**: when an input artifact is large (e.g., an entire service file or schema), use the `scope` field to narrow what the subagent needs to read. Scope is a **best-effort targeting hint**, not a strict contract. It uses the structured format: `type` (one of `file`, `function`, `lines`, `section`) and `value` (an identifier that helps the subagent locate the relevant region). If `type: file`, the subagent reads the full file. If `type: function`, `value` should be the function name. If `type: lines`, `value` should be a line range (e.g., `42-78`). If `type: section`, `value` should be the heading text. The `scope` field is optional — when omitted, the agent reads the full artifact. Scope resolution at execution time is best-effort: if the exact target has moved or changed, the agent resolves to the closest match; if unresolvable, the agent falls back to the full artifact and continues execution.
+- **References only**: tasks receive artifact IDs resolved to file paths at execution time. Subagents read from those paths using the scope hint. The plan and the orchestrator never inline artifact content into task contracts or agent prompts.
+- **No mixed responsibility**: a task must not combine analysis with build, or design with validation. If it does, split it.
+- **Stateless**: a task contract must contain everything a subagent needs. If executing the task requires reading the full plan or knowing what another task did, the contract is incomplete — refine it.
+- **No manual dependencies**: do not declare a `dependencies` field. Dependencies are derived automatically from artifacts — if a task consumes an artifact, it depends on the task that produces that artifact. This is enforced in Step 10.
+
+**Fidelity scaling:**
+
+- **Low**: contracts may use shorter constraint and acceptance criteria lists. Inputs/output/objective are always required. `scope` is optional.
+- **Medium**: full contract fields required. `scope` recommended for large artifacts.
+- **High**: full contract fields required. `scope` required for any artifact that is not a single small file. Add `failure_modes` (what happens if this task fails) and `rollback_notes` (how to undo this task's output).
+
+### Step 10 — Validate Task Isolation
+
+Before assembling the final plan, validate that the artifact model and task contracts form a closed, executable system. This is a **hard stop** — if `isolation_validation.status` is not `passed`, the plan MUST NOT be written. Do not proceed to Step 11 or any subsequent step.
+
+**Validation checks:**
+
+1. **Input coverage**: can each task run using only its declared inputs? If a task implicitly needs something not in its inputs list, the contract is incomplete.
+2. **Input limits**: does each task consume 5 or fewer input artifacts? If a task exceeds this, it MUST be split.
+3. **Output singularity**: does each task produce exactly one artifact? No secondary outputs, no multi-output tasks.
+4. **Artifact traceability**: is every artifact either produced by a task or declared as `produced_by: input`? Are there orphan artifacts with no producer?
+5. **Dependency derivation**: derive the dependency graph from artifacts. For each task, identify which tasks produce its input artifacts — those are its dependencies. Check the derived graph for cycles. If any task declares or assumes a dependency that contradicts the derived graph — hard stop. The artifact graph is the single source of truth.
+6. **No hidden context**: does any task require access to the full plan, prior task results not declared as inputs, or shared mutable state? If yes, the contract is broken.
+7. **Consumer completeness**: is every produced artifact either consumed by another task (as an input) OR listed in `final_artifacts`? Orphan outputs that are neither consumed nor final indicate missing tasks or over-specification. Consumption is determined solely by scanning task inputs — not by a `consumed_by` field on artifacts.
+8. **Final artifact coverage**: is every artifact listed in `final_artifacts` produced by a task? Does every final artifact map to at least one plan-level acceptance criterion?
+9. **Plan completeness**: taken together, do the `final_artifacts` and their mapped acceptance criteria cover all plan-level acceptance criteria? If any plan acceptance criterion is not satisfied by a final artifact, either a final artifact is missing or the acceptance criteria are incomplete.
+
+**If any check fails:**
+
+- Identify the failing task(s) and the specific violation.
+- Split, refine, or add missing artifact declarations until all checks pass.
+- Do not proceed to plan assembly with invalid contracts.
+- Do not write the plan file until all checks pass.
+
+**Validation output** (record in the plan):
+
+```yaml
+isolation_validation:
+  status: passed | failed
+  checks:
+    input_coverage: passed | failed
+    input_limits: passed | failed
+    output_singularity: passed | failed
+    artifact_traceability: passed | failed
+    dependency_derivation: passed | failed
+    no_hidden_context: passed | failed
+    consumer_completeness: passed | failed
+    final_artifact_coverage: passed | failed
+    plan_completeness: passed | failed
+  notes: <any refinements made during validation>
+```
+
+### Step 11 — Issue Planning & Structure
 
 <thinking>
 Think like a product manager - what would make this issue clear and actionable? Consider multiple perspectives
@@ -278,7 +405,7 @@ Think like a product manager - what would make this issue clear and actionable? 
 - [ ] Gather supporting materials (error logs, screenshots, design mockups)
 - [ ] Prepare code examples or reproduction steps if applicable, name the mock filenames in the lists
 
-### Step 9 — Solution Scope Contract (REQUIRED for all plans)
+### Step 12 — Solution Scope Contract (REQUIRED for all plans)
 
 Every plan MUST include an explicit scope contract so `/workflow:work` can enforce intent.
 
@@ -299,7 +426,7 @@ Placement:
 - Put `solution_scope` in frontmatter.
 - Put `completion_expectation` and `non_goals` in a dedicated section (recommended: `## Scope Contract`) in the plan body.
 
-### Step 10 — Agentic Access & Validation Contract (REQUIRED for all plans)
+### Step 13 — Agentic Access & Validation Contract (REQUIRED for all plans)
 
 Every plan MUST include an explicit contract describing how an agent will execute and verify the work without hidden assumptions.
 
@@ -322,7 +449,7 @@ Placement:
 - Add a dedicated section in the plan body: `## Agentic Access & Validation Contract`.
 - Reference this section from implementation phases/todos so `/workflow:work` can enforce it directly.
 
-### Step 11 — Discussion Points & Spike Candidates
+### Step 14 — Discussion Points & Spike Candidates
 
 When you declared Open questions in Step 3 (other than "none"), and/or when risky-work spike evaluation requires spikes, the plan file MUST include one or both sections below with checkboxes so `/workflow:work` and `file-todos` can create pending todos for triage:
 
@@ -361,7 +488,7 @@ Example Spike Candidate:
   - Parallelizable: yes
 ```
 
-### Step 12 — Choose Implementation Detail Level
+### Step 15 — Choose Implementation Detail Level
 
 Select how comprehensive you want the issue to be. Fidelity should drive this choice.
 
@@ -394,7 +521,10 @@ title: [Issue Title]
 type: [feat|fix|refactor]
 status: active
 date: YYYY-MM-DD
+fidelity: low
+confidence: [high|medium|low]
 solution_scope: [partial_fix|full_remediation|migration]
+isolation_validation: passed
 ---
 
 # [Issue Title]
@@ -449,12 +579,32 @@ solution_scope: [partial_fix|full_remediation|migration]
   - lint: [command or "ask once if not configured"]
   - typecheck: [command or "ask once if not configured"]
 
-## Implementation Tasks
+## Artifacts
 
-- [ ] Task: [description]
-  - required_skills: [skill1, skill2]
-- [ ] Task: [description]
-  - required_skills: [skill1]
+- id: [artifact-id]
+  type: [file|schema|config|fixture|documentation|executable|report|test_suite]
+  description: [what this artifact is]
+  produced_by: [task-id or "input"]
+
+final_artifacts:
+  - id: [artifact-id]
+    acceptance_criteria: [plan-level criteria this artifact satisfies]
+
+## Task Contracts
+
+- id: [task-id]
+  title: [short action-oriented title]
+  type: [analysis|design|build|validate|review]
+  objective: [one sentence]
+  inputs:
+    - artifact: [artifact ID]
+      scope:
+        type: [file|function|lines|section]
+        value: [explicit identifier]
+  output: [single artifact ID]
+  constraints: [boundaries]
+  acceptance_criteria: [measurable conditions]
+  required_skills: [skill1, skill2]
 
 ## References
 
@@ -484,7 +634,10 @@ title: [Issue Title]
 type: [feat|fix|refactor]
 status: active
 date: YYYY-MM-DD
+fidelity: medium
+confidence: [high|medium|low]
 solution_scope: [partial_fix|full_remediation|migration]
+isolation_validation: passed
 ---
 
 # [Issue Title]
@@ -546,12 +699,32 @@ solution_scope: [partial_fix|full_remediation|migration]
 
 [What to monitor; how to test and validate]
 
-## Implementation Tasks
+## Artifacts
 
-- [ ] Task: [description]
-  - required_skills: [skill1, skill2]
-- [ ] Task: [description]
-  - required_skills: [skill1]
+- id: [artifact-id]
+  type: [file|schema|config|fixture|documentation|test_suite|executable|report]
+  description: [what this artifact is]
+  produced_by: [task-id or "input"]
+
+final_artifacts:
+  - id: [artifact-id]
+    acceptance_criteria: [plan-level criteria this artifact satisfies]
+
+## Task Contracts
+
+- id: [task-id]
+  title: [short action-oriented title]
+  type: [analysis|design|build|validate|review]
+  objective: [one sentence]
+  inputs:
+    - artifact: [artifact ID]
+      scope:
+        type: [file|function|lines|section]
+        value: [explicit identifier]
+  output: [single artifact ID]
+  constraints: [boundaries]
+  acceptance_criteria: [measurable conditions]
+  required_skills: [skill1, skill2]
 
 ## Agentic Access & Validation Contract
 
@@ -593,7 +766,10 @@ title: [Issue Title]
 type: [feat|fix|refactor]
 status: active
 date: YYYY-MM-DD
+fidelity: high
+confidence: [high|medium|low]
 solution_scope: [partial_fix|full_remediation|migration]
+isolation_validation: passed
 ---
 
 # [Issue Title]
@@ -627,34 +803,47 @@ solution_scope: [partial_fix|full_remediation|migration]
 
 [Detailed technical design]
 
-### Implementation Phases
+### Artifacts
 
-#### Phase 1: [Foundation]
+- id: [artifact-id]
+  type: [file|schema|config|fixture|documentation|test_suite|executable|report|design_doc]
+  description: [what this artifact is]
+  produced_by: [task-id or "input"]
 
-- Tasks and deliverables
-- required_skills: [skill1, skill2]
-- Success criteria
-- Estimated effort
+final_artifacts:
+  - id: [artifact-id]
+    acceptance_criteria: [plan-level criteria this artifact satisfies]
 
-#### Phase 2: [Core Implementation]
+### Task Contracts
 
-- Tasks and deliverables
-- required_skills: [skill1, skill2]
-- Success criteria
-- Estimated effort
-
-#### Phase 3: [Polish & Optimization]
-
-- Tasks and deliverables
-- required_skills: [skill1]
-- Success criteria
-- Estimated effort
+- id: [task-id]
+  title: [short action-oriented title]
+  type: [analysis|design|build|validate|review]
+  objective: [one sentence]
+  inputs:
+    - artifact: [artifact ID]
+      scope:
+        type: [file|function|lines|section]
+        value: [explicit identifier — required for large artifacts]
+  output: [single artifact ID]
+  constraints: [boundaries]
+  acceptance_criteria: [measurable conditions]
+  required_skills: [skill1, skill2]
+  failure_modes: [what happens if this task fails]
+  rollback_notes: [how to undo this task's output]
 
 ## Alternative Approaches Considered
 
 [Other solutions evaluated and why rejected]
 
 ## Acceptance Criteria
+
+### Implementation Start Preconditions
+
+- [ ] Dedicated worktree, existing worktree, or current-checkout approval is explicitly selected before implementation
+- [ ] `isolation_preflight.status: passed` is recorded with command evidence before source edits
+- [ ] This plan exists in the approved execution context
+- [ ] Triage is recorded before any build todo is delegated
 
 ### Functional Requirements
 
@@ -748,7 +937,7 @@ solution_scope: [partial_fix|full_remediation|migration]
 - Design documents: [links]
 ```
 
-### Step 13 — Issue Creation & Formatting
+### Step 16 — Issue Creation & Formatting
 
 <thinking>
 Apply best practices for clarity and actionability, making the issue easy to scan and understand
@@ -792,7 +981,7 @@ Apply best practices for clarity and actionability, making the issue easy to sca
 </details>
 ````
 
-### Step 14 — Final Review & Submission
+### Step 17 — Final Review & Submission
 
 **Pre-submission Checklist:**
 
@@ -800,6 +989,20 @@ Apply best practices for clarity and actionability, making the issue easy to sca
 - [ ] Labels accurately categorize the issue
 - [ ] All template sections are complete
 - [ ] `solution_scope`, completion expectation, and non-goals are explicitly documented
+- [ ] `## Artifacts` section is present with all artifacts declared (IDs, types, producers — no `consumed_by`)
+- [ ] `final_artifacts` is declared with acceptance criteria mapping for each
+- [ ] Every `final_artifact` maps to at least one plan-level acceptance criterion
+- [ ] `## Task Contracts` section is present with all tasks as contracts (inputs with scope, output, objective, acceptance criteria)
+- [ ] No task has `secondary_outputs` — one task, one output
+- [ ] No task has manually declared `dependencies` — dependencies are artifact-derived
+- [ ] No task exceeds 5 input artifacts
+- [ ] Task isolation validation passed (Step 10) — all 9 checks passed
+- [ ] `isolation_validation: passed` — plan MUST NOT be written if this is `failed`
+- [ ] Plan completeness check passed — all plan acceptance criteria are covered by final artifacts
+- [ ] Every task contract input references a declared artifact ID
+- [ ] Every task contract output is a declared artifact
+- [ ] Every produced artifact is either consumed by a task (as an input) or listed in `final_artifacts`
+- [ ] Artifact resolution is references only — no content inlined in contracts
 - [ ] `## Agentic Access & Validation Contract` is present and executable (no hidden/manual-only steps)
 - [ ] If `solution_scope = partial_fix`, Remaining Gaps checklist is present and actionable
 - [ ] If `solution_scope = migration`, migration safety checks + rollback triggers are specified
@@ -824,7 +1027,7 @@ Write the complete plan file to `docs/plans/YYYY-MM-DD-<type>-<slug>-plan.md`. T
 
 **When risky-work Spike Evaluation declared `spikes_needed: yes`:** The written plan MUST include `## Spike Candidates (timeboxed)` with at least one spike checkbox and required per-candidate metadata (`Initial priority`, `Depends on`, `Unblocks`, `Timebox`, `Deliverable`, `Parallelizable`) so ordering can be defined in plan, confirmed in triage, and enforced in work.
 
-**Execution-readiness gate:** If the written plan is missing the required `## Agentic Access & Validation Contract`, do not mark it as ready for `/workflow:work`; fix the plan first.
+**Execution-readiness gate:** If the written plan is missing the required `## Agentic Access & Validation Contract`, `## Artifacts`, or `## Task Contracts`, do not mark it as ready for `/workflow:work`; fix the plan first. If `isolation_validation` is not `passed`, the plan is not execution-ready.
 
 Confirm: "Plan written to docs/plans/[filename]"
 
@@ -837,10 +1040,11 @@ Confirm: "Plan written to docs/plans/[filename]"
 - `fidelity: low|medium|high`
 - `confidence: high|medium|low`
 - `solution_scope: partial_fix|full_remediation|migration`
+- `isolation_validation: passed|failed`
 
 ## Output Format
 
-**Filename:** Use the filename from Step 8 (Title & Categorization): `YYYY-MM-DD-<type>-<slug>-plan.md` with type and slug from the single contract.
+**Filename:** Use the filename from Step 11 (Title & Categorization): `YYYY-MM-DD-<type>-<slug>-plan.md` with type and slug from the single contract.
 
 ```
 docs/plans/YYYY-MM-DD-<type>-<slug>-plan.md
@@ -889,7 +1093,7 @@ When user selects "Create Issue", detect their project tracker from repo guidanc
 
 2. **If GitHub:**
 
-   Use **type** and **title** from Step 8 (title has no prefix). Compose issue title as `"<type>: <title>"` (e.g., `feat: User authentication flow`).
+   Use **type** and **title** from Step 11 (title has no prefix). Compose issue title as `"<type>: <title>"` (e.g., `feat: User authentication flow`).
 
    If the `gh` CLI is available, create the issue via:
 
@@ -901,7 +1105,7 @@ When user selects "Create Issue", detect their project tracker from repo guidanc
 
 3. **If Linear:**
 
-   Use **type** and **title** from Step 8. For Linear, use either the full title or `"<type>: <title>"` per team convention.
+   Use **type** and **title** from Step 11. For Linear, use either the full title or `"<type>: <title>"` per team convention.
 
    If the `linear` CLI is available, create the issue via:
 
