@@ -62,6 +62,7 @@ Context budget rule: if a task can be done with less context, pass less. If a su
 - **Local grounding is mandatory.** Every plan must cite at least 1–3 internal file path/line refs and any relevant `docs/solutions/**` learnings.
 - **Fidelity + confidence are required declarations** in every plan file.
 - **Solution scope contract is mandatory in every plan.** Plans must declare `solution_scope` (`partial_fix|full_remediation|migration`) plus completion expectation and non-goals.
+- **Isolation selection starts `/workflow:work`.** `/workflow:work` must ask for the execution context and wait for explicit selection before full plan reading, todo derivation, setup, implementation, or delegation. Dedicated worktree is recommended, but not silently assumed.
 - **Isolation preflight is a hard gate.** `/workflow:work` must complete and record `isolation_preflight.status: passed` with command evidence before any implementation commands.
 - **Triage before execution is mandatory.** `/workflow:work` must run a triage pass before executing todos.
 - **Independent review is required for code/config changes.** `/workflow:review` must emit `review_independence_mode: independent|degraded`.

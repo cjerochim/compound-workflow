@@ -84,24 +84,34 @@ const requiredChecks = [
   },
   {
     file: "src/commands/workflow-work.md",
-    pattern: "Environment Setup (Hard Gate)",
-    description: "worktree hard-gate section in work command",
+    pattern: "## Opening Sequence",
+    description: "work command starts with opening sequence",
   },
   {
     file: "src/commands/workflow-work.md",
-    pattern: "Opt-out requires explicit user confirmation.",
-    description: "worktree decision requires explicit opt-out in work command",
+    pattern: "Ask the user to choose the execution context and wait for the answer",
+    description: "work command requires explicit execution-context selection",
   },
   {
     file: "src/commands/workflow-work.md",
-    pattern: "Missing isolation approval is a hard blocker.",
-    description: "work command blocks when isolation approval is absent",
+    pattern: "`dedicated_worktree` is recommended, but never silently assumed or created.",
+    description: "work command separates recommendation from action",
+  },
+  {
+    file: "src/commands/workflow-work.md",
+    pattern: "Missing isolation selection is a hard blocker.",
+    description: "work command blocks when isolation selection is absent",
   },
   {
     file: "src/commands/workflow-work.md",
     pattern:
-      "No source file writes, implementation commands, test/lint/typecheck commands, or dependency-install commands may run before this gate passes.",
-    description: "pre-gate write/command prohibition in work command",
+      "The selected worktree/current checkout verification and this checkpoint are the only allowed mutations before preflight.",
+    description: "pre-preflight mutation boundary in work command",
+  },
+  {
+    file: "src/commands/workflow-work.md",
+    pattern: "If this order is violated, stop. Do not repair automatically.",
+    description: "generic ordering violation hard stop",
   },
   {
     file: "src/commands/workflow-work.md",
@@ -117,6 +127,41 @@ const requiredChecks = [
     file: "src/commands/workflow-work.md",
     pattern: "If this block is missing, implementation has not started.",
     description: "missing isolation preflight blocks implementation",
+  },
+  {
+    file: "src/commands/workflow-work.md",
+    pattern: "Phase 2 starts only after `isolation_preflight.status: passed`.",
+    description: "post-preflight setup phase is ordered after preflight",
+  },
+  {
+    file: "docs/principles/workflow-baseline-principles.md",
+    pattern: "must start with an Opening Sequence that asks for the execution context",
+    description: "baseline principle requires opening sequence isolation question",
+  },
+  {
+    file: "src/AGENTS.md",
+    pattern: "Isolation selection starts `/workflow:work`.",
+    description: "AGENTS template records isolation selection first gate",
+  },
+  {
+    file: "AGENTS.md",
+    pattern: "Isolation selection starts `/workflow:work`.",
+    description: "root AGENTS records isolation selection first gate",
+  },
+  {
+    file: "src/skills/setup-agents/SKILL.md",
+    pattern: "Isolation selection starts `/workflow:work`.",
+    description: "setup-agents template records isolation selection first gate",
+  },
+  {
+    file: "README.md",
+    pattern: "starts with an Opening Sequence",
+    description: "README documents opening sequence",
+  },
+  {
+    file: "src/skills/git-worktree/SKILL.md",
+    pattern: "Create a dedicated worktree only after explicit selection/confirmation",
+    description: "git-worktree skill aligns with explicit selection",
   },
   {
     file: "src/commands/workflow-plan.md",
@@ -195,6 +240,31 @@ const forbiddenChecks = [
     file: "src/commands/workflow-work.md",
     pattern: "Follow project coding standards (see AGENTS.md)",
     description: "legacy advisory-only coding standards wording in work command",
+  },
+  {
+    file: "src/commands/workflow-work.md",
+    pattern: "select `dedicated_worktree` automatically",
+    description: "silent dedicated worktree selection in work command",
+  },
+  {
+    file: "src/commands/workflow-work.md",
+    pattern: "Otherwise, select `dedicated_worktree`",
+    description: "implicit dedicated worktree fallback in work command",
+  },
+  {
+    file: "src/commands/workflow-work.md",
+    pattern: "return to Phase 2, create/update the isolation checkpoint",
+    description: "automatic preflight recovery mutation in work command",
+  },
+  {
+    file: "src/skills/git-worktree/SKILL.md",
+    pattern: "default to a worktree (opt-out)",
+    description: "legacy worktree opt-out wording",
+  },
+  {
+    file: "src/skills/git-worktree/SKILL.md",
+    pattern: "then bootstrap (copy env/config + install deps)",
+    description: "legacy bootstrap-before-preflight wording",
   },
 ];
 

@@ -840,7 +840,7 @@ final_artifacts:
 
 ### Implementation Start Preconditions
 
-- [ ] Dedicated worktree, existing worktree, or current-checkout approval is explicitly selected before implementation
+- [ ] Dedicated worktree, existing worktree, or current-checkout approval is explicitly selected before `/workflow:work` reads the full plan, derives todos, runs setup, implements, or delegates
 - [ ] `isolation_preflight.status: passed` is recorded with command evidence before source edits
 - [ ] This plan exists in the approved execution context
 - [ ] Triage is recorded before any build todo is delegated

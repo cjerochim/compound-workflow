@@ -43,7 +43,9 @@ Optional manual command:
 
 - **Isolation-first execution**  
   Intent: Reduce branch contamination and accidental edits through worktrees or equivalent isolation by default.
-  `/workflow:work` must ask (or honor an explicit prior user instruction) which isolation mode to use before any implementation commands.
+  `/workflow:work` must start with an Opening Sequence that asks for the execution context and waits for an explicit selection unless the invocation already contains an explicit approved mode.
+  Dedicated worktree is the recommended option, but it must not be silently assumed or created.
+  Current-checkout execution requires explicit user approval for `current_checkout_approved`.
   Implementation may not begin until `isolation_preflight.status: passed` is recorded with command evidence.
 
 - **No silent scope expansion**  

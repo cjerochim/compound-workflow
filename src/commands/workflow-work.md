@@ -69,7 +69,10 @@ This command is not responsible for:
 
 ## DO NOTs
 
+- Do not read the full plan, derive todos, run setup, delegate, or implement before the Opening Sequence is complete
 - Do not skip plan validation
+- Do not run any implementation, test, lint, typecheck, dependency-install, or source-edit command before isolation preflight passes
+- Do not continue in the current checkout unless `current_checkout_approved` was explicitly approved by the user or invocation
 - Do not skip registry resolution
 - Do not delegate without a valid execution contract
 - Do not delegate without passing the intent alignment gate
@@ -93,7 +96,54 @@ The input must be a plan file path.
 
 - If it is empty, ask the user for the plan file path.
 - If it does not exist or is not readable, stop and ask for the correct path.
-- Read the plan file completely before starting work.
+- Do not read the plan completely until the Opening Sequence is complete. Before then, only read the minimum metadata needed to identify the plan path and propose an execution context (for example, the filename slug).
+
+## Opening Sequence
+
+This is the first sequence in `/workflow:work`. It runs before full plan reading, plan validation, todo derivation, dependency installation, tests, source edits, or delegation.
+
+Run this sequence in order:
+
+1. Confirm the plan path is present and readable enough to identify it.
+2. Ask the user to choose the execution context and wait for the answer unless the invocation already contains an explicit approved mode.
+3. Resolve the selected execution context.
+4. Create or verify the selected worktree/current checkout context.
+5. Create or update the isolation checkpoint.
+6. Run `npm run workflow:preflight`.
+7. Continue to plan validation only after `isolation_preflight.status: passed`.
+
+Use this prompt for step 2:
+
+```text
+Before starting `/workflow:work`, choose the execution context:
+
+1. Dedicated worktree (recommended)
+2. Existing worktree
+3. Current checkout
+
+I will not read the full plan, derive todos, create files, run installs/tests, edit source, or delegate implementation until this is selected.
+```
+
+Selection rules:
+
+- `dedicated_worktree` is recommended, but never silently assumed or created.
+- `existing_worktree` requires an explicit path or user-approved resolved path.
+- `current_checkout_approved` requires explicit user approval; do not infer it from silence, small scope, current branch, user impatience, or prior model behavior.
+- Missing execution-context selection is a hard blocker.
+
+After the user selects a mode, state the resolved mode, approval source, intended path/branch, and next mutation. Wait for confirmation before the first mutation unless the same user response already explicitly approved that mutation.
+
+The selected execution context becomes the only valid command cwd for all subsequent phases after preflight passes.
+
+Until this sequence is complete, only these actions are allowed:
+
+- minimal read-only checks needed to identify the plan and repository
+- execution-context selection prompt
+- create or verify the selected worktree/current checkout context
+- create or update the isolation checkpoint
+- run `npm run workflow:preflight`
+
+If this order is violated, stop. Do not repair automatically. Report what happened using read-only evidence and wait for user direction.
 
 ## Operating Priority
 
@@ -352,12 +402,72 @@ If `status: fail`: the orchestrator sets the todo to `plan_conflict` and stops f
 
 ## Execution Workflow
 
-### Phase 1: Setup & Validation
+### Opening Sequence Evidence
+
+The Opening Sequence must create or update one todo/work-log entry with this exact section:
+
+Supported isolation modes:
+
+- `dedicated_worktree` — create a new worktree for this plan (recommended)
+- `existing_worktree` — use an existing worktree after verifying it matches this plan
+- `current_checkout_approved` — use the current checkout only after explicit user approval
+
+Missing isolation selection is a hard blocker. Do not infer `dedicated_worktree`, `existing_worktree`, or `current_checkout_approved` from silence.
+
+For `dedicated_worktree`, derive a branch name from the plan slug when safe, or ask for one if missing/ambiguous (e.g. `feat/<slug>`, `fix/<slug>`), then run `skill: git-worktree`. For `existing_worktree`, ask for/resolve the worktree path, switch command cwd to that path, and verify branch/path before continuing. For `current_checkout_approved`, require explicit opt-out confirmation and record the approval source before continuing.
+
+Before any source edits, create or update the isolation checkpoint:
+
+```markdown
+## Isolation Evidence
+
+- Mode: <dedicated_worktree | existing_worktree | current_checkout_approved>
+- Approval source: <user_prompt | plan_contract | explicit_argument>
+- Worktree: <absolute path or null>
+- Branch: <branch>
+- Plan copied/read from: <absolute path in execution context>
+- All subsequent commands cwd: <absolute path>
+- Triage completed: <yes|no>
+- Preflight status: <pending|passed>
+```
+
+The selected worktree/current checkout verification and this checkpoint are the only allowed mutations before preflight. Source edits, dependency installs, tests, todo derivation, implementation, and delegation are forbidden until this checkpoint exists and preflight has passed.
+
+Run the repo preflight script from the resolved execution context before Phase 1:
+
+```bash
+npm run workflow:preflight -- --plan <plan-path-in-execution-context> --mode <mode> --approval-source <source> --todo <isolation-checkpoint-todo> [--expected-branch <branch>]
+```
+
+The script output is mandatory command evidence. Record it verbatim or as a referenced log in the isolation checkpoint Work Log.
+
+Gate completion record (required before Phase 1 and in every `/workflow:work` output):
+
+```yaml
+isolation_preflight:
+  required: true
+  mode: dedicated_worktree | existing_worktree | current_checkout_approved
+  approval_source: user_prompt | plan_contract | explicit_argument
+  worktree_path: <absolute path or null>
+  branch: <branch>
+  all_subsequent_commands_cwd: <absolute path>
+  plan_path_in_execution_context: <absolute path>
+  triage_checkpoint_path: <todo path>
+  status: passed
+```
+
+If this block is missing, implementation has not started. If `status` is not `passed`, implementation is blocked.
+
+---
+
+### Phase 1: Plan Validation
+
+Phase 1 starts only after the Opening Sequence is complete. If `isolation_preflight.status: passed` is not recorded, stop and return to the Opening Sequence.
 
 #### Step 1 — Read and Validate Plan File
 
-- Read the plan file completely
 - Confirm the file exists and is readable
+- Read the plan file completely
 - If missing acceptance criteria, scope, or non-goals — stop and return for refinement
 - Do not compensate for a weak plan by improvising hidden assumptions
 
@@ -439,85 +549,20 @@ Record the chosen cadence before execution begins.
 
 ---
 
-### Phase 2: Environment Setup (Hard Gate)
+### Phase 2: Post-Preflight Environment Setup
 
-No source file writes, implementation commands, test/lint/typecheck commands, or dependency-install commands may run before this gate passes.
+Phase 2 starts only after `isolation_preflight.status: passed`.
 
-Allowed before gate: read-only inspection only (e.g. `ls`, `git status`, `git branch`).
+All commands in this phase must use `isolation_preflight.all_subsequent_commands_cwd`.
 
-The only permitted mutation before this gate passes is the isolation checkpoint todo/work-log entry described below. If the checkpoint does not exist, implementation has not started.
+If a worktree was created or selected, run worktree bootstrap now:
 
-**Default: use a worktree. Opt-out requires explicit user confirmation.**
+- Copy env/config files per the `git-worktree` skill.
+- Install dependencies using `worktree_install_command` or the detected package-manager command.
+- Apply `worktree_bootstrap_notes`.
+- Record the worktree path (e.g. `.worktrees/feat-xyz`) in the isolation checkpoint or first active Work Log entry.
 
-Supported isolation modes:
-
-- `dedicated_worktree` — create a new worktree for this plan (default/recommended)
-- `existing_worktree` — use an existing worktree after verifying it matches this plan
-- `current_checkout_approved` — use the current checkout only after explicit user approval
-
-Steps:
-
-1. Resolve your current branch (this is the default worktree base)
-2. Ask the user which isolation mode to use unless the plan or invocation already contains an explicit approved mode
-3. If `dedicated_worktree`: ask for branch name if missing (e.g. `feat/<slug>`, `fix/<slug>`), then run `skill: git-worktree`
-4. If `existing_worktree`: ask for/resolve the worktree path, switch command cwd to that path, and verify branch/path before continuing
-5. If `current_checkout_approved`: require explicit opt-out confirmation and record the approval source before continuing
-
-Missing isolation approval is a hard blocker. Do not infer `current_checkout_approved` from silence, small scope, current branch, user impatience, or prior model behavior.
-
-Worktree bootstrap (required when worktree created):
-
-- Immediately after entering the new worktree, run bootstrap per the `git-worktree` skill
-- Copy env/config, install deps, apply `worktree_bootstrap_notes`
-- Record the worktree path (e.g. `.worktrees/feat-xyz`) in a visible place — all subsequent steps use this as the implementation root
-
-#### Isolation Checkpoint (first mutation)
-
-Before any source edits, create or update one todo/work-log entry with this exact section:
-
-```markdown
-## Isolation Evidence
-
-- Mode: <dedicated_worktree | existing_worktree | current_checkout_approved>
-- Approval source: <user_prompt | plan_contract | explicit_argument>
-- Worktree: <absolute path or null>
-- Branch: <branch>
-- Plan copied/read from: <absolute path in execution context>
-- All subsequent commands cwd: <absolute path>
-- Triage completed: <yes|no>
-- Preflight status: <pending|passed>
-```
-
-This isolation checkpoint is the first allowed mutation in `/workflow:work`. Source edits are forbidden until it exists and preflight has passed.
-
-#### Executable Preflight (required)
-
-Run the repo preflight script from the resolved execution context before Phase 3:
-
-```bash
-npm run workflow:preflight -- --plan <plan-path-in-execution-context> --mode <mode> --approval-source <source> --todo <isolation-checkpoint-todo> [--expected-branch <branch>]
-```
-
-The script output is mandatory command evidence. Record it verbatim or as a referenced log in the isolation checkpoint Work Log.
-
-Gate completion record (required before Phase 3 and in every `/workflow:work` output):
-
-```yaml
-isolation_preflight:
-  required: true
-  mode: dedicated_worktree | existing_worktree | current_checkout_approved
-  approval_source: user_prompt | plan_contract | explicit_argument
-  worktree_path: <absolute path or null>
-  branch: <branch>
-  all_subsequent_commands_cwd: <absolute path>
-  plan_path_in_execution_context: <absolute path>
-  triage_checkpoint_path: <todo path>
-  status: passed
-```
-
-If this block is missing, implementation has not started. If `status` is not `passed`, implementation is blocked.
-
-**Preflight Violation Recovery:** If implementation starts before this gate is complete — disclose the violation immediately, stop all implementation actions, return to Phase 2, create/update the isolation checkpoint, run `npm run workflow:preflight`, complete the `isolation_preflight` record, and resume only after `status: passed`.
+Do not derive todos, run tests, edit source, or delegate implementation until this setup is complete or explicitly recorded as not required.
 
 ---
 

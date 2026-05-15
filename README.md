@@ -47,7 +47,7 @@ Clarify what to build before any planning starts. The agent asks structured ques
 Turn the brief into an executable plan. Declares fidelity level (Low / Medium / High), confidence, solution scope, and open questions. Cites local code references and prior solutions. No code is written here.
 
 ### `/workflow:work`
-Execute the approved plan. The agent derives todo contracts, isolates work in a git worktree, applies the standards gate, runs triage, delegates to subagents, and collects verified output. Evidence is required before any todo moves to complete.
+Execute the approved plan. The agent starts with an Opening Sequence that asks which execution context to use, recommends a dedicated worktree, and waits before reading the full plan or mutating state. After isolation preflight passes, it derives todo contracts, applies the standards gate, runs triage, delegates to subagents, and collects verified output. Evidence is required before any todo moves to complete.
 
 ### `/workflow:review`
 Independent quality check before the work is considered done. Runs in a separate pass from the implementer. Emits a clear pass / fail with standards compliance noted. Required for code and config changes.

@@ -185,7 +185,7 @@ git worktree list
 
 ## Integration with Workflows
 
-- `/workflow:work` should default to a worktree (opt-out), pass `from-branch = current active branch`, and then bootstrap (copy env/config + install deps).
+- `/workflow:work` asks for execution context first. Create a dedicated worktree only after explicit selection/confirmation, pass `from-branch = current active branch`, run preflight from the resolved context, and bootstrap only after `isolation_preflight.status: passed`.
 - `/workflow:review` may offer a worktree when not on the target branch.
 
 ## Troubleshooting
