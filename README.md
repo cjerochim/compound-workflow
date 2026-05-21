@@ -41,7 +41,7 @@ brainstorm → plan → work → review → compound → metrics
 ```
 
 ### `/workflow:brainstorm`
-Clarify what to build before any planning starts. The agent asks structured questions, surfaces ambiguities, and produces a brief that confirms intent and constraints. Nothing gets designed until the "what" is agreed.
+Clarify what to build before any planning starts. The agent walks one decision branch at a time, recommends an answer for each question, surfaces ambiguity, and produces a brief that confirms intent and constraints. This grill-style interrogation is inspired by Matt Pocock's `grill-me` skill; see [Matt Pocock on GitHub](https://github.com/mattpocock). Nothing gets designed until the "what" is agreed.
 
 ### `/workflow:plan`
 Turn the brief into an executable plan. Declares fidelity level (Low / Medium / High), confidence, solution scope, and open questions. Cites local code references and prior solutions. No code is written here.
