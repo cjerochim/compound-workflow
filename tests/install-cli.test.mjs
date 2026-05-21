@@ -65,6 +65,14 @@ function runInstall(projectRoot) {
   });
 }
 
+function runSourceCliInstall(projectRoot, extraArgs = []) {
+  const pkgCli = path.join(repoRoot, "scripts", "install-cli.mjs");
+  return spawnSync(process.execPath, [pkgCli, "install", "--root", projectRoot, ...extraArgs], {
+    cwd: projectRoot,
+    encoding: "utf8",
+  });
+}
+
 function setup() {
   const projectRoot = createTempProject();
   copyMinimalPackageIntoNodeModules(projectRoot);
@@ -254,6 +262,32 @@ test("install: opencode.json written with .agents/ paths", () => {
     const researchAgent = opencode.agent["repo-research-analyst"];
     assert.ok(researchAgent, "repo-research-analyst agent should exist");
     assert.match(researchAgent.prompt, /\.agents\/agents\//, "agent prompt should reference .agents/agents/");
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("install: running package CLI can install into a project without local node_modules copy", () => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), "compound-workflow-npx-"));
+  try {
+    const result = runSourceCliInstall(projectRoot);
+    assert.equal(result.status, 0, `source CLI install failed: ${result.stderr}\n${result.stdout}`);
+
+    assert.ok(fs.existsSync(path.join(projectRoot, ".agents", "commands", "workflow-brainstorm.md")));
+    assert.ok(fs.existsSync(path.join(projectRoot, ".agents", "skills", "brainstorming", "SKILL.md")));
+    assert.ok(fs.existsSync(path.join(projectRoot, "AGENTS.md")));
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("install: running package CLI dry-run works without local node_modules copy", () => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), "compound-workflow-npx-dry-"));
+  try {
+    const result = runSourceCliInstall(projectRoot, ["--dry-run"]);
+    assert.equal(result.status, 0, `source CLI dry-run failed: ${result.stderr}\n${result.stdout}`);
+    assert.match(result.stdout, /\[dry-run\] Would copy \d+ commands to \.agents\/commands\//);
+    assert.equal(fs.existsSync(path.join(projectRoot, ".agents")), false, "dry-run should not write harness dirs");
   } finally {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }

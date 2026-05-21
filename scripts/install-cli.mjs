@@ -366,6 +366,20 @@ function parseArgs(argv) {
   return out;
 }
 
+function resolvePackageSrc(targetRoot) {
+  const localInstallSrc = path.join(targetRoot, "node_modules", "compound-workflow", "src");
+  const runningPackageSrc = path.join(PACKAGE_ROOT, "src");
+
+  if (targetRoot !== PACKAGE_ROOT && fs.existsSync(localInstallSrc)) return localInstallSrc;
+  if (fs.existsSync(runningPackageSrc)) return runningPackageSrc;
+
+  console.error("Error: compound-workflow source files were not found.");
+  console.error("Expected package assets under either:");
+  console.error(`- ${localInstallSrc}`);
+  console.error(`- ${runningPackageSrc}`);
+  process.exit(2);
+}
+
 // ---------------------------------------------------------------------------
 // Harness registry — every harness receives agents + skills + commands.
 // Agent layout varies because Claude Code requires flat .md files while
@@ -385,16 +399,7 @@ const HARNESSES = [
 function main() {
   const args = parseArgs(process.argv);
   const targetRoot = realpathSafe(args.root);
-  const isSelfInstall = targetRoot === PACKAGE_ROOT;
-
-  const packageSrc = isSelfInstall
-    ? path.join(PACKAGE_ROOT, "src")
-    : path.join(targetRoot, "node_modules", "compound-workflow", "src");
-
-  if (!isSelfInstall && !fs.existsSync(packageSrc) && !args.dryRun) {
-    console.error("Error: compound-workflow not found in project. Run: npm install compound-workflow");
-    process.exit(2);
-  }
+  const packageSrc = resolvePackageSrc(targetRoot);
 
   const srcAgents = path.join(packageSrc, "agents");
   const srcSkills = path.join(packageSrc, "skills");

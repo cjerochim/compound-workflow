@@ -1,23 +1,20 @@
 ---
 name: brainstorm
 invocation: workflow:brainstorm
-description: Explore requirements and approaches through collaborative dialogue before planning implementation
+description: Interrogate a feature idea into a decision-grade WHAT contract before planning implementation
 argument-hint: "[feature idea or problem to explore]"
 ---
 
 # Brainstorm a Feature or Improvement
 
-Explore requirements and approaches through collaborative dialogue before planning implementation.
+Interrogate a feature idea into a planning-ready **WHAT** contract. This
+command precedes `/workflow:plan`, which answers **HOW** to build it.
 
 **Note: The current year is 2026.** Use this when dating brainstorm documents.
 
-Brainstorming helps answer **WHAT** to build through collaborative
-dialogue. It precedes `/workflow:plan`, which answers **HOW** to build
-it.
-
-**Process knowledge:** Load the `brainstorming` skill for detailed
-discussion-first facilitation (one-question-then-prompts), approach
-exploration patterns, and YAGNI principles.
+**Process knowledge:** Load the `brainstorming` skill for the grill-style
+decision-tree interview, one-branch-at-a-time questioning, recommended answers,
+repo-answerable question handling, and YAGNI principles.
 
 It is critical that you follow this workflow in order; do not skip or shortcut steps.
 
@@ -26,6 +23,9 @@ It is critical that you follow this workflow in order; do not skip or shortcut s
 - Do not write or modify application code.
 - Do not create commits or PRs.
 - Output is the brainstorm document only.
+- Stay focused on WHAT and WHY; leave HOW to `/workflow:plan`.
+- Never list all questions up front.
+- Never provide a questionnaire or discovery checklist for the user to answer.
 
 ---
 
@@ -45,164 +45,161 @@ Do not proceed until you have a feature description from the user.
 
 ---
 
-### Phase 0: Assess Requirements Clarity
+### Phase 0: Assess Whether Brainstorming Is Needed
 
-Evaluate whether brainstorming is needed based on the feature
-description.
+Evaluate whether the feature description already contains a planning-ready WHAT
+contract.
 
 **Clear requirements indicators:**
 
-- Specific acceptance criteria provided
-- Referenced existing patterns to follow
-- Described exact expected behavior
-- Constrained, well-defined scope
+- Specific acceptance criteria are provided.
+- The primary user and problem are clear.
+- Success can be observed or measured.
+- Constraints and non-goals are stated.
+- The desired product/workflow direction is explicit.
 
 **If requirements are already clear:**\
 Use **AskUserQuestion** to suggest:
 
 > "Your requirements seem detailed enough to proceed directly to
 > planning. Should I run `/workflow:plan` instead, or would you like to
-> explore the idea further?"
+> pressure-test the idea further first?"
 
-**State orchestration candidate signals (detection only):**
-
-- Multi-step async flow with branching or compensation
-- More than one boolean/flag controlling the same flow
-- Retries, timeouts, cancellation, or recovery requirements
-- Cross-component or cross-service coordination
-- Planned spawned-child actors or receptionist-style actor lookup
-
-If these signals appear, note that `/workflow:plan` should evaluate
-whether to load a state-orchestration skill (see Skill Index in
-AGENTS.md). Do not force architecture decisions in brainstorm.
+If the user continues brainstorming, proceed to Phase 1.
 
 ---
 
-### Phase 1: Understand the Idea
+### Phase 1: Decision-Tree Interrogation
 
-#### 1.1 Repository Research (Lightweight)
+Brainstorming is a guided interrogation, not a survey. Walk the user through the
+decision tree one branch at a time until the WHAT contract is strong enough for
+planning.
 
-Run a quick repo scan to understand existing patterns:
+**Critical rule:** Exactly one unresolved decision branch may be handled per
+assistant turn. Stop after asking the question. Wait for the user's answer before
+moving to another branch.
 
-- Task repo-research-analyst("Understand existing patterns related to:
-  <feature_description>")
+**Default turn shape:**
 
-Focus on: - Similar features - Established patterns - AGENTS.md guidance
+```markdown
+**Decision branch:** <one unresolved WHAT/WHY decision>
 
-Also consider any repo-level guidance files such as `AGENTS.md`.
+**Current read:** <1-3 bullets or short sentences>
 
----
+**Recommended answer:** <your recommended answer and why>
 
-#### 1.2 Structured Dialogue Exploration (Default)
-
-Engage in collaborative **dialog, one question at a time**. This is a discussion, not a survey — ask open-ended, conversational questions that invite the user to think out loud. Readability beats coverage.
-
-**Critical (non-negotiable):** Default response shape is **synthesize + ONE open question + assumptions**. No "prompts to react to" menus. No multiple-choice questions during exploration. No multi-part questions. AskUserQuestion (which forces multiple-choice) is reserved strictly for handoffs (Phase 0, Phase 4) — never for exploration.
-
-**Enforcement rule:** Do **not** use AskUserQuestion during Phase 1 exploration. Ask open-ended questions in plain prose and let the user reply in plain prose. AskUserQuestion is only for the Phase 0 / Phase 4 handoff decisions.
-
-**Default cadence (per iteration):**
-
-1. **Synthesize Current Understanding** (≤ 3 short bullets)
-2. **Ask ONE high-leverage question** (the single most useful thing to resolve now)
-3. **State Working Assumptions** (≤ 3 bullets, phrased as "tell me if any of these are wrong")
+**One question:** <one sentence asking the user to accept, reject, or modify the recommendation>
+```
 
 **Hard rules:**
 
-- Exactly **one** question per turn. No follow-ups, no "also…", no multi-part questions.
-- No "prompts to react to" / "pick any" menus. If tempted to list options, pick the single best one and ask that.
-- Keep the whole turn short — aim for ≤ 12 lines. A reader should grasp it in one glance.
-- If blocked, ask one more clarifying question **next** turn, never stack them.
+- Ask exactly one question per turn.
+- Provide a recommended answer for that question.
+- Ask about the most load-bearing unresolved decision first.
+- Do not ask multi-part questions.
+- Do not ask "also" follow-ups.
+- Do not list future questions.
+- Do not use AskUserQuestion during Phase 1.
+- Do not turn assumptions into extra questions.
+- If the user gives a vague answer, say what remains vague and ask one sharper follow-up.
 
-**First assistant message template (copy/paste shape):**
+**Decision branch order, unless the conversation demands otherwise:**
 
-```markdown
-**What I think you're aiming for:**
+1. Problem: what pain is worth solving now?
+2. User: who experiences it and in what moment?
+3. Success: what observable outcome proves this worked?
+4. Scope: what is included, excluded, or explicitly deferred?
+5. Constraints: what must not be violated?
+6. Direction: which product/workflow direction should planning preserve?
+7. Risks: what failure would make this unacceptable?
 
-- ...
-- ...
-
-**One question:**
-<single sentence>
-
-**I'm assuming (tell me if any of these are wrong):**
-
-- ...
-- ...
-```
-
-For each iteration:
-
-1.  **Synthesize Current Understanding** (≤ 3 bullets)
-    - What the feature appears to be
-    - Who it impacts / what class of change (incremental, foundational, risky, trivial)
-    - Implied constraint worth surfacing
-
-2.  **Ask ONE high-leverage, open-ended question** anchored on purpose, users, success, or a hard constraint. Use "how/what/why" phrasing — not "which of these". Invite the user to think out loud.
-
-3.  **State Working Assumptions** — the 1–3 most load-bearing beliefs you're operating on. Ask the user to flag anything wrong; do not turn these into extra questions.
-
-4.  Continue iteratively until:
-    - Direction is clear
-    - Or user says "proceed"
+Do not present this order to the user as a questionnaire. Use it internally to
+select the next single decision branch.
 
 ---
 
-#### Targeted Clarification Fallback
+### Phase 2: Repo-Answerable Questions
 
-If ambiguity blocks meaningful progress:
+If a question can be answered by exploring the repository, inspect the repository
+instead of asking the user.
 
-- Ask **one** focused, high-leverage clarification question.
-- Only use direct questioning when it is truly blocking meaningful discussion.
-- Avoid serial low-value questioning.
+Use repo exploration only to answer a specific active decision branch, such as:
 
----
+- whether a similar workflow or pattern already exists;
+- whether project guidance constrains the WHAT contract;
+- whether a proposed direction conflicts with documented repo principles.
 
-### Phase 2: Explore Approaches
+Keep this lightweight. Deep technical research, file-level design, skill
+selection, and implementation sequencing belong in `/workflow:plan`.
 
-Propose **2--3 concrete approaches** based on research and dialogue.
-
-For each approach, provide:
-
-- Brief description (2--3 sentences)
-- Pros and cons
-- When it is best suited
-
-Lead with your recommendation and explain why. Apply YAGNI --- prefer
-simpler solutions.
-
-Ask which direction resonates as an open question in the conversation ("Which of these fits best, or does something in between feel closer?"). Do **not** use AskUserQuestion here — keep it a discussion.
+If repo signals imply a planning concern, record it as a **Planning Note**, not a
+brainstorm decision. Example: "Planning should evaluate state-orchestration
+needs because the desired workflow includes retries and cancellation."
 
 ---
 
-### Phase 3: Capture the Design
+### Phase 3: Direction Options
+
+When the major decision branches are understood, present 2-3 product/workflow
+directions only if there is a real choice to make.
+
+For each direction, provide:
+
+- Brief description, focused on WHAT changes for the user or workflow.
+- Pros and cons.
+- Best fit.
+
+Lead with your recommendation and ask one question about that recommendation.
+
+Do not present implementation approaches, architecture choices, file changes,
+test strategy, rollout sequencing, or skill/subagent routing. Those belong in
+`/workflow:plan`.
+
+---
+
+### Phase 4: Capture the WHAT Contract
 
 Write a brainstorm document to:
 
 docs/brainstorms/YYYY-MM-DD-`<topic>`-brainstorm.md
 
+Ensure `docs/brainstorms/` exists before writing.
+
 **Document structure must include:**
 
 - What We're Building
-- Why This Approach
+- Problem and User
+- Success Criteria
+- Constraints
+- Non-Goals
+- Recommended Direction
+- Alternatives Considered
 - Key Decisions
+- Planning Notes
 - Open Questions
+- Resolved Questions
+- Next Steps
 
-Ensure `docs/brainstorms/` exists before writing.
+**Open question handling:**
 
-**Critical Rule:**\
-Before proceeding to Phase 4, check if Open Questions remain.
-
-If Open Questions exist:
-
-- Classify each as **blocking** vs **non-blocking**.
-- You MUST ask the user about each **blocking** question.
+- Classify each open question as **blocking** or **non-blocking**.
+- Ask the user about each blocking question one at a time before handoff.
 - Move resolved questions into a "Resolved Questions" section.
-- Non-blocking questions may remain for planning, but must be clearly stated.
+- Non-blocking questions may remain for planning, but must include ownership or a decision deadline.
+
+**Readiness declaration:**
+
+The document must declare one of:
+
+- `Ready for planning: yes`
+- `Ready for planning: no`
+- `Ready for planning: partial`
+
+If readiness is not `yes`, state the top blocker in one sentence.
 
 ---
 
-### Phase 4: Handoff
+### Phase 5: Handoff
 
 Use **AskUserQuestion** to present next steps:
 
@@ -211,16 +208,15 @@ Use **AskUserQuestion** to present next steps:
 
 **Options:**
 
-1.  Review and refine
-2.  Proceed to planning
-3.  Ask more questions
-4.  Done for now
+1. Review and refine
+2. Proceed to planning
+3. Continue interrogation
+4. Done for now
 
-If "Ask more questions" is selected: Return to Phase 1.2 and continue
-structured dialogue.
+If "Continue interrogation" is selected: return to Phase 1 and continue with
+the next unresolved decision branch.
 
-If "Review and refine" is selected: Load the `document-review` skill and
-apply it.
+If "Review and refine" is selected: load the `document-review` skill and apply it.
 
 ---
 
@@ -232,7 +228,13 @@ Brainstorm complete!
 
 Document: docs/brainstorms/YYYY-MM-DD-`<topic>`-brainstorm.md
 
-Key decisions: - \[Decision 1\] - \[Decision 2\]
+Readiness: ready|partial|blocked
+
+Key decisions:
+- [Decision 1]
+- [Decision 2]
+
+Top blocker: [one sentence, or "None"]
 
 Next: Run `/workflow:plan` when ready to implement.
 
@@ -240,8 +242,9 @@ Next: Run `/workflow:plan` when ready to implement.
 
 ## Important Guidelines
 
-- Stay focused on WHAT, not HOW
-- Dialogue first; interrogation only when necessary
-- Apply YAGNI
-- Keep outputs concise (200--300 words per section max)
-- NEVER CODE during brainstorming
+- Grill the idea, not the user.
+- Stay focused on WHAT and WHY, not HOW.
+- Be opinionated: every question gets a recommended answer.
+- Apply YAGNI.
+- Keep each turn short.
+- Never code during brainstorming.
