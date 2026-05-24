@@ -40,4 +40,4 @@ npx compound-workflow install --dry-run
 5. Creates/merges `AGENTS.md` using the package template while preserving an existing Repo Config Block.
 6. Creates missing directories: `docs/brainstorms`, `docs/plans`, `docs/solutions`, `docs/metrics/daily|weekly|monthly`, `todos`.
 
-Stale files from previous installs are pruned automatically on each run.
+Install overwrites compound-workflow assets with matching names, but preserves unrelated local agents, skills, and commands.

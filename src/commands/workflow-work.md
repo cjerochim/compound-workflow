@@ -109,7 +109,7 @@ Run this sequence in order:
 3. Resolve the selected execution context.
 4. Create or verify the selected worktree/current checkout context.
 5. Create or update the isolation checkpoint.
-6. Run `npm run workflow:preflight`.
+6. Run `npx compound-workflow preflight`.
 7. Continue to plan validation only after `isolation_preflight.status: passed`.
 
 Use this prompt for step 2:
@@ -141,7 +141,7 @@ Until this sequence is complete, only these actions are allowed:
 - execution-context selection prompt
 - create or verify the selected worktree/current checkout context
 - create or update the isolation checkpoint
-- run `npm run workflow:preflight`
+- run `npx compound-workflow preflight`
 
 If this order is violated, stop. Do not repair automatically. Report what happened using read-only evidence and wait for user direction.
 
@@ -433,10 +433,10 @@ Before any source edits, create or update the isolation checkpoint:
 
 The selected worktree/current checkout verification and this checkpoint are the only allowed mutations before preflight. Source edits, dependency installs, tests, todo derivation, implementation, and delegation are forbidden until this checkpoint exists and preflight has passed.
 
-Run the repo preflight script from the resolved execution context before Phase 1:
+Run the package-owned preflight script from the resolved execution context before Phase 1:
 
 ```bash
-npm run workflow:preflight -- --plan <plan-path-in-execution-context> --mode <mode> --approval-source <source> --todo <isolation-checkpoint-todo> [--expected-branch <branch>]
+npx compound-workflow preflight -- --plan <plan-path-in-execution-context> --mode <mode> --approval-source <source> --todo <isolation-checkpoint-todo> [--expected-branch <branch>]
 ```
 
 The script output is mandatory command evidence. Record it verbatim or as a referenced log in the isolation checkpoint Work Log.

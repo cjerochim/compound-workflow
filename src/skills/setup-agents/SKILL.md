@@ -124,7 +124,7 @@ Skills differ across harnesses. Align them? Aligning copies each skill's files i
 Reply `align` to sync, `skip` to leave them as-is.
 ```
 
-**If `align`:** for each skill, pick the harness where it lives as the source and copy its directory into every other harness's skills directory (create the directory if missing). Note what was copied in the final summary.
+**If `align`:** for each skill, pick the harness where it lives as the source and copy its directory into every other harness's skills directory (create the directory if missing). Do not delete skills, agents, commands, or local files that are not part of the copied skill. Note what was copied in the final summary.
 
 **If `skip`:** proceed with the union as the Skill Index; record in the summary that harnesses remain out of sync.
 

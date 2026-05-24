@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 function usage(exitCode = 0) {
   const msg = `
 Usage:
-  npm run workflow:preflight -- --plan <path> --mode <mode> --approval-source <source> --todo <path> [--expected-branch <branch>]
+  npx compound-workflow preflight -- --plan <path> --mode <mode> --approval-source <source> --todo <path> [--expected-branch <branch>]
 
 Modes:
   dedicated_worktree
@@ -86,6 +86,14 @@ function isInside(child, parent) {
   return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }
 
+function realpathSafe(p) {
+  try {
+    return fs.realpathSync(p);
+  } catch {
+    return path.resolve(p);
+  }
+}
+
 function currentWorktreeInfo(topLevel) {
   const porcelain = git(["worktree", "list", "--porcelain"], topLevel);
   const records = porcelain.split(/\n(?=worktree )/).map((record) => {
@@ -110,20 +118,22 @@ if (!args.todo) fail("--todo is required");
 if (!validModes.has(args.mode)) fail("--mode must be dedicated_worktree, existing_worktree, or current_checkout_approved");
 if (!validApprovalSources.has(args.approvalSource)) fail("--approval-source must be user_prompt, plan_contract, or explicit_argument");
 
-const cwd = path.resolve(process.cwd());
-const topLevel = path.resolve(git(["rev-parse", "--show-toplevel"]));
+const cwd = realpathSafe(process.cwd());
+const topLevel = realpathSafe(git(["rev-parse", "--show-toplevel"]));
 const branch = git(["branch", "--show-current"], topLevel);
 const defaultBranch = (gitMaybe(["symbolic-ref", "--short", "refs/remotes/origin/HEAD"], topLevel) ?? "")
   .replace(/^origin\//, "") || "main";
 const config = readRepoConfig(topLevel);
 const worktreeDirName = path.basename(config.worktree_dir ?? ".worktrees");
 
-const planPath = path.resolve(args.plan);
-const todoPath = path.resolve(args.todo);
+const planPathInput = path.resolve(args.plan);
+const todoPathInput = path.resolve(args.todo);
 
 if (!isInside(cwd, topLevel)) fail(`cwd ${cwd} is not inside git top-level ${topLevel}`);
-if (!fs.existsSync(planPath)) fail(`plan file does not exist: ${planPath}`);
-if (!fs.existsSync(todoPath)) fail(`todo/checkpoint file does not exist: ${todoPath}`);
+if (!fs.existsSync(planPathInput)) fail(`plan file does not exist: ${planPathInput}`);
+if (!fs.existsSync(todoPathInput)) fail(`todo/checkpoint file does not exist: ${todoPathInput}`);
+const planPath = realpathSafe(planPathInput);
+const todoPath = realpathSafe(todoPathInput);
 if (!isInside(planPath, topLevel)) fail(`plan file is not inside execution context: ${planPath}`);
 if (!isInside(todoPath, topLevel)) fail(`todo/checkpoint file is not inside execution context: ${todoPath}`);
 if (!branch) fail("current branch could not be resolved");

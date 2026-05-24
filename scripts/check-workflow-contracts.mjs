@@ -115,8 +115,8 @@ const requiredChecks = [
   },
   {
     file: "src/commands/workflow-work.md",
-    pattern: "npm run workflow:preflight",
-    description: "work command requires executable workflow preflight",
+    pattern: "npx compound-workflow preflight",
+    description: "work command requires package-owned executable workflow preflight",
   },
   {
     file: "src/commands/workflow-work.md",
@@ -174,9 +174,9 @@ const requiredChecks = [
     description: "workflow preflight script supports explicit current checkout approval",
   },
   {
-    file: "package.json",
-    pattern: "\"workflow:preflight\": \"node scripts/workflow-preflight.mjs\"",
-    description: "workflow preflight script is exposed as npm command",
+    file: "scripts/install-cli.mjs",
+    pattern: "args.command === \"preflight\"",
+    description: "workflow preflight script is exposed as compound-workflow CLI subcommand",
   },
   {
     file: "src/commands/workflow-review.md",

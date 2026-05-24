@@ -50,6 +50,10 @@ function copyMinimalPackageIntoNodeModules(projectRoot) {
     path.join(repoRoot, "scripts", "install-cli.mjs"),
     path.join(pkgDir, "scripts", "install-cli.mjs")
   );
+  fs.copyFileSync(
+    path.join(repoRoot, "scripts", "workflow-preflight.mjs"),
+    path.join(pkgDir, "scripts", "workflow-preflight.mjs")
+  );
   fs.copyFileSync(path.join(repoRoot, "src", "AGENTS.md"), path.join(pkgDir, "src", "AGENTS.md"));
   copyDirRecursiveForTest(path.join(repoRoot, "src", "agents"), path.join(pkgDir, "src", "agents"));
   copyDirRecursiveForTest(path.join(repoRoot, "src", "skills"), path.join(pkgDir, "src", "skills"));
@@ -73,6 +77,14 @@ function runSourceCliInstall(projectRoot, extraArgs = []) {
   });
 }
 
+function runInstalledCli(projectRoot, args = []) {
+  const pkgCli = path.join(projectRoot, "node_modules", "compound-workflow", "scripts", "install-cli.mjs");
+  return spawnSync(process.execPath, [pkgCli, ...args], {
+    cwd: projectRoot,
+    encoding: "utf8",
+  });
+}
+
 function setup() {
   const projectRoot = createTempProject();
   copyMinimalPackageIntoNodeModules(projectRoot);
@@ -81,12 +93,12 @@ function setup() {
 
 // ---------------------------------------------------------------------------
 
-test("install: agents copied flat to .claude/agents/", () => {
+test("install: agents copied flat to .claude/agents/ while preserving local nested agents", () => {
   const projectRoot = setup();
   try {
-    const staleNestedAgent = path.join(projectRoot, ".claude", "agents", "research", "stale.md");
-    fs.mkdirSync(path.dirname(staleNestedAgent), { recursive: true });
-    fs.writeFileSync(staleNestedAgent, "stale", "utf8");
+    const localNestedAgent = path.join(projectRoot, ".claude", "agents", "custom", "local-agent.md");
+    fs.mkdirSync(path.dirname(localNestedAgent), { recursive: true });
+    fs.writeFileSync(localNestedAgent, "local-agent", "utf8");
 
     const result = runInstall(projectRoot);
     assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
@@ -95,8 +107,8 @@ test("install: agents copied flat to .claude/agents/", () => {
     assert.ok(fs.existsSync(claudeAgentsDir), ".claude/agents should exist");
 
     const entries = fs.readdirSync(claudeAgentsDir, { withFileTypes: true });
-    assert.equal(entries.filter((e) => e.isDirectory()).length, 0, ".claude/agents should be flat (no subdirectories)");
     assert.ok(entries.filter((e) => e.isFile() && e.name.endsWith(".md")).length > 0, ".claude/agents should contain .md files");
+    assert.equal(fs.readFileSync(localNestedAgent, "utf8"), "local-agent", "install should preserve local nested agents");
   } finally {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }
@@ -293,6 +305,46 @@ test("install: running package CLI dry-run works without local node_modules copy
   }
 });
 
+test("preflight: installed package CLI validates current checkout without project npm script", () => {
+  const projectRoot = setup();
+  try {
+    const gitInit = spawnSync("git", ["init", "-b", "main"], {
+      cwd: projectRoot,
+      encoding: "utf8",
+    });
+    assert.equal(gitInit.status, 0, `git init failed: ${gitInit.stderr}\n${gitInit.stdout}`);
+
+    const planPath = path.join(projectRoot, "docs", "plans", "example-plan.md");
+    const todoPath = path.join(projectRoot, "todos", "isolation-checkpoint.md");
+    fs.mkdirSync(path.dirname(planPath), { recursive: true });
+    fs.mkdirSync(path.dirname(todoPath), { recursive: true });
+    fs.writeFileSync(planPath, "# Example plan\n", "utf8");
+    fs.writeFileSync(todoPath, "# Isolation checkpoint\n", "utf8");
+
+    const result = runInstalledCli(projectRoot, [
+      "preflight",
+      "--",
+      "--plan",
+      planPath,
+      "--mode",
+      "current_checkout_approved",
+      "--approval-source",
+      "explicit_argument",
+      "--todo",
+      todoPath,
+    ]);
+
+    assert.equal(result.status, 0, `preflight failed: ${result.stderr}\n${result.stdout}`);
+    const evidence = JSON.parse(result.stdout);
+    assert.equal(evidence.isolation_preflight.status, "passed");
+    assert.equal(evidence.isolation_preflight.mode, "current_checkout_approved");
+    assert.equal(evidence.isolation_preflight.worktree_path, null);
+    assert.equal(evidence.isolation_preflight.branch, "main");
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
 test("install is deterministic: two runs produce identical opencode.json", () => {
   const projectRoot = setup();
   try {
@@ -310,16 +362,27 @@ test("install is deterministic: two runs produce identical opencode.json", () =>
   }
 });
 
-test("install preserves non-managed files in target dirs (e.g. .mdc rules)", () => {
+test("install preserves non-managed files in target dirs", () => {
   const projectRoot = setup();
   try {
     const userRule = path.join(projectRoot, ".cursor", "commands", "stale.mdc");
+    const userCommand = path.join(projectRoot, ".cursor", "commands", "local-command.md");
+    const userSkill = path.join(projectRoot, ".cursor", "skills", "local-skill", "SKILL.md");
+    const userAgent = path.join(projectRoot, ".agents", "agents", "local", "local-agent.md");
     fs.mkdirSync(path.dirname(userRule), { recursive: true });
+    fs.mkdirSync(path.dirname(userSkill), { recursive: true });
+    fs.mkdirSync(path.dirname(userAgent), { recursive: true });
     fs.writeFileSync(userRule, "user-rule", "utf8");
+    fs.writeFileSync(userCommand, "local-command", "utf8");
+    fs.writeFileSync(userSkill, "---\nname: local-skill\ndescription: local skill\n---\n", "utf8");
+    fs.writeFileSync(userAgent, "local-agent", "utf8");
 
     const result = runInstall(projectRoot);
     assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
     assert.equal(fs.readFileSync(userRule, "utf8"), "user-rule", "install should not remove non-.md files");
+    assert.equal(fs.readFileSync(userCommand, "utf8"), "local-command", "install should preserve local .md commands");
+    assert.match(fs.readFileSync(userSkill, "utf8"), /local skill/, "install should preserve local skills");
+    assert.equal(fs.readFileSync(userAgent, "utf8"), "local-agent", "install should preserve local agents");
   } finally {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }

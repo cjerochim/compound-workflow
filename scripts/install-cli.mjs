@@ -118,19 +118,12 @@ function copyDirRecursive(srcDir, destDir) {
 
 /**
  * Copy all .md files from srcDir (recursively) into destDir (flat).
- * Prunes .md files in destDir not in current source.
+ * Preserves unrelated files and directories in destDir.
  */
 function copyAgentsFlat(srcDir, destDir, dryRun, label) {
   const files = walkFiles(srcDir, ".md");
-  const srcNames = new Set(files.map((f) => path.basename(f)));
   if (dryRun) { console.log(`[dry-run] Would copy ${files.length} agents (flat) to ${label}`); return; }
   fs.mkdirSync(destDir, { recursive: true });
-  try {
-    for (const e of fs.readdirSync(destDir, { withFileTypes: true })) {
-      if (e.isDirectory()) fs.rmSync(path.join(destDir, e.name), { recursive: true, force: true });
-      if (e.name.endsWith(".md") && !srcNames.has(e.name)) fs.rmSync(path.join(destDir, e.name), { force: true });
-    }
-  } catch { /* ignore */ }
   for (const f of files) {
     const dest = path.join(destDir, path.basename(f));
     try { if (fs.lstatSync(dest).isSymbolicLink()) fs.rmSync(dest, { force: true }); } catch { /* doesn't exist */ }
@@ -140,29 +133,19 @@ function copyAgentsFlat(srcDir, destDir, dryRun, label) {
 }
 
 /**
- * Copy srcDir recursively to destDir, pruning top-level subdirs no longer in source.
+ * Copy srcDir recursively to destDir, preserving unrelated files and directories.
  */
 function copyAgentsRecursive(srcDir, destDir, dryRun, label) {
   const files = walkFiles(srcDir, ".md");
   if (dryRun) { console.log(`[dry-run] Would copy ${files.length} agents (recursive) to ${label}`); return; }
-  const validSubdirs = new Set();
-  for (const f of files) {
-    const sub = path.relative(srcDir, path.dirname(f));
-    if (sub && sub !== ".") validSubdirs.add(sub.split(path.sep)[0]);
-  }
   fs.mkdirSync(destDir, { recursive: true });
-  try {
-    for (const e of fs.readdirSync(destDir, { withFileTypes: true })) {
-      if (e.isDirectory() && !validSubdirs.has(e.name)) fs.rmSync(path.join(destDir, e.name), { recursive: true, force: true });
-    }
-  } catch { /* ignore */ }
   copyDirRecursive(srcDir, destDir);
   console.log(`Copied ${files.length} agents to ${label}`);
 }
 
 /**
  * Copy skill directories (each containing SKILL.md) to destDir.
- * Prunes skill dirs in destDir no longer in source.
+ * Replaces package skill directories with matching names and preserves all others.
  */
 function copySkills(srcDir, destDir, dryRun, label) {
   if (!fs.existsSync(srcDir)) return;
@@ -170,14 +153,7 @@ function copySkills(srcDir, destDir, dryRun, label) {
     .filter((e) => e.isDirectory() && fs.existsSync(path.join(srcDir, e.name, "SKILL.md")))
     .map((e) => e.name);
   if (dryRun) { console.log(`[dry-run] Would copy ${skillDirs.length} skills to ${label}`); return; }
-  const skillSet = new Set(skillDirs);
   fs.mkdirSync(destDir, { recursive: true });
-  try {
-    for (const e of fs.readdirSync(destDir, { withFileTypes: true })) {
-      if (e.isDirectory() && fs.existsSync(path.join(destDir, e.name, "SKILL.md")) && !skillSet.has(e.name))
-        fs.rmSync(path.join(destDir, e.name), { recursive: true, force: true });
-    }
-  } catch { /* ignore */ }
   for (const name of skillDirs) {
     const dest = path.join(destDir, name);
     fs.rmSync(dest, { recursive: true, force: true });
@@ -188,7 +164,7 @@ function copySkills(srcDir, destDir, dryRun, label) {
 
 /**
  * Copy .md command files from srcDir to destDir (flat).
- * Prunes .md files in destDir not in current source.
+ * Preserves unrelated command files.
  */
 function copyCommands(srcDir, destDir, dryRun, label) {
   if (!fs.existsSync(srcDir)) return;
@@ -196,13 +172,7 @@ function copyCommands(srcDir, destDir, dryRun, label) {
     .filter((e) => e.isFile() && e.name.endsWith(".md"))
     .map((e) => e.name);
   if (dryRun) { console.log(`[dry-run] Would copy ${files.length} commands to ${label}`); return; }
-  const fileSet = new Set(files);
   fs.mkdirSync(destDir, { recursive: true });
-  try {
-    for (const e of fs.readdirSync(destDir, { withFileTypes: true })) {
-      if (e.name.endsWith(".md") && !fileSet.has(e.name)) fs.rmSync(path.join(destDir, e.name), { force: true });
-    }
-  } catch { /* ignore */ }
   for (const name of files) fs.copyFileSync(path.join(srcDir, name), path.join(destDir, name));
   console.log(`Copied ${files.length} commands to ${label}`);
 }
@@ -342,6 +312,7 @@ function usage(exitCode = 0) {
 Usage:
   (automatic) npm install compound-workflow   # runs install via postinstall
   (manual)    npx compound-workflow install [--root <projectDir>] [--dry-run]
+  (manual)    npx compound-workflow preflight -- --plan <path> --mode <mode> --approval-source <source> --todo <path> [--expected-branch <branch>]
 
 Copies agents, skills, and commands into .claude/, .cursor/, and .agents/.
 Also writes opencode.json, AGENTS.md, and standard docs directories.
@@ -354,13 +325,20 @@ Also writes opencode.json, AGENTS.md, and standard docs directories.
 }
 
 function parseArgs(argv) {
-  const out = { root: process.cwd(), dryRun: false };
-  for (let i = 2; i < argv.length; i++) {
+  const out = { command: "install", root: process.cwd(), dryRun: false, passthrough: [] };
+  let i = 2;
+  if (argv[i] === "install" || argv[i] === "preflight") {
+    out.command = argv[i];
+    i++;
+  }
+  if (argv[i] === "--") i++;
+  for (; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--dry-run") out.dryRun = true;
+    else if (arg === "--no-config") { /* retained for postinstall compatibility */ }
     else if (arg === "--root") { const v = argv[++i]; if (!v) usage(1); out.root = v; }
-    else if (arg === "install") { /* subcommand, ignore */ }
     else if (arg === "-h" || arg === "--help") usage(0);
+    else if (out.command === "preflight") out.passthrough.push(arg);
     else usage(1);
   }
   return out;
@@ -398,6 +376,16 @@ const HARNESSES = [
 
 function main() {
   const args = parseArgs(process.argv);
+  if (args.command === "preflight") {
+    const preflightPath = path.join(PACKAGE_ROOT, "scripts", "workflow-preflight.mjs");
+    const result = spawnSync(process.execPath, [preflightPath, ...args.passthrough], {
+      cwd: process.cwd(),
+      stdio: "inherit",
+      env: process.env,
+    });
+    process.exit(result.status ?? 1);
+  }
+
   const targetRoot = realpathSafe(args.root);
   const packageSrc = resolvePackageSrc(targetRoot);
 
