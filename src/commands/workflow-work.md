@@ -50,6 +50,7 @@ This command is responsible for:
 This command is not responsible for:
 
 - implementing the feature directly
+- performing default-build task work itself
 - interpreting subagent outputs or reasoning over implementation content
 - running validation commands, review assessments, or drift checks inline
 - accumulating task outputs in its own context
@@ -76,6 +77,8 @@ This command is not responsible for:
 - Do not skip registry resolution
 - Do not delegate without a valid execution contract
 - Do not delegate without passing the intent alignment gate
+- Do not treat `default_build` as permission for main-agent implementation
+- Do not edit source files or run implementation commands in Phase 5 from the orchestrator context
 - Do not unblock downstream tasks from `implemented`
 - Do not mark tasks complete without required review
 - Do not silently absorb plan ambiguity
@@ -526,7 +529,7 @@ For each implementation phase or task in the plan:
 
 - Check if the plan carries `execution_route` and `agent_selection_rationale` annotations (written during `/workflow:plan`)
 - If `execution_route: specialist`, check that the plan carries `assigned_agent`, validate `assigned_agent` against the Agent Registry, and validate that the task fits the assigned agent boundary and permissions
-- If `execution_route: default_build`, check that `assigned_agent` is omitted or `null`, and validate that the rationale explains why no specialist applies
+- If `execution_route: default_build`, check that `assigned_agent` is omitted or `null`, validate that the rationale explains why no specialist applies, and preserve the task for isolated default build delegation
 - Reject invented fallback agent IDs. `assigned_agent` must name a real Agent Registry entry whenever it is set.
 - Check if the plan already carries `required_skills` annotations (written during `/workflow:plan`)
 - If annotations exist: validate each skill against the registry — confirm it exists and is applicable
@@ -544,6 +547,12 @@ If an assigned specialist agent cannot be resolved from the registry:
 - surface it as a capability gap
 - do not silently substitute another agent
 - do not proceed with that task until the plan is refined or the agent is installed
+
+Default build route:
+
+- `default_build` means no specialist agent is selected; it does not mean the orchestrator becomes the build agent.
+- `default_build` tasks must still be delegated to an isolated build agent using the same execution contract boundaries as specialist tasks.
+- If the runtime cannot dispatch an isolated build agent for a `default_build` task, stop before implementation and report `execution_blocked.reason: subagent_dispatch_unavailable`.
 
 #### Step 5 — Resolve Testing Cadence
 
@@ -638,7 +647,8 @@ Rules:
 - **No control metadata**: the subagent does not see dependencies, status, intent anchors, or review gates.
 - **Single output**: every task produces exactly one artifact.
 - **No formal completion validation commands**: the build agent may run scoped implementation diagnostics when its prompt allows terminal access, but formal completion validation commands are held in the todo file and passed only to the validation agent.
-- **Execution route is contractual**: when `execution_route: specialist`, the build phase must dispatch to `assigned_agent`. When `execution_route: default_build`, the build phase uses the workflow's default build path and no `assigned_agent` is set. The orchestrator may not substitute a different implementation route unless the task is returned to planning/triage as a plan defect.
+- **Execution route is contractual**: when `execution_route: specialist`, the build phase must dispatch to `assigned_agent`. When `execution_route: default_build`, the build phase must dispatch to an isolated default build agent and no `assigned_agent` is set. The orchestrator may not substitute a different implementation route unless the task is returned to planning/triage as a plan defect.
+- **No main-agent implementation fallback**: if no isolated build agent can be dispatched for either route, stop and report `execution_blocked.reason: subagent_dispatch_unavailable`; do not edit files or run implementation commands from the orchestrator context.
 - **Boundary enforcement**: if the execution contract violates the assigned agent's prompt boundary or permissions, mark the todo `blocked` or `plan_conflict`; do not ask the agent to work outside its remit.
 - **Scope is a hint**: when scope is present on an input, it tells the agent where to focus. The agent attempts to resolve the scope target; if the target has moved or changed, the agent resolves to the closest match; if unresolvable, the agent reads the full artifact and continues.
 
@@ -821,6 +831,24 @@ All file writes and terminal commands MUST use the execution context resolved in
 - If `isolation_preflight.mode` is `current_checkout_approved`: use `isolation_preflight.all_subsequent_commands_cwd` and recorded branch only. Do not switch cwd or branch without repeating Phase 2.
 - Every delegated execution contract must carry `isolation_preflight.all_subsequent_commands_cwd` as the command cwd.
 
+#### Orchestrator Implementation Boundary
+
+Phase 5 is delegation-only for the orchestrator. The orchestrator may select todos, check metadata, resolve artifact references, dispatch agents, record structured results, and transition states. It must not edit source files, run implementation commands, or complete task work directly.
+
+This boundary applies to both execution routes:
+
+- `specialist` dispatches the assigned specialist agent from the execution contract.
+- `default_build` dispatches an isolated default build agent with no specialist assignment.
+
+`default_build` is not a main-agent fallback. If isolated build-agent dispatch is unavailable for any ready todo, stop before implementation and report:
+
+```yaml
+execution_blocked:
+  reason: subagent_dispatch_unavailable
+  task: <todo id>
+  route: <specialist | default_build>
+```
+
 #### Orchestrator Context Rule
 
 The orchestrator must not accumulate task outputs across iterations of this loop. After each task completes (or fails), the orchestrator retains only:
@@ -873,6 +901,8 @@ For each ready todo in priority order:
                  - required skills
                  - execution context (worktree path / branch)
                  The build agent does NOT receive formal completion validation commands.
+                 If isolated dispatch is unavailable, stop with
+                 execution_blocked.reason: subagent_dispatch_unavailable.
 5. COLLECT   — receive structured result from build agent:
                  { status: "pass" | "fail", artifact_refs: [...], files_changed: [...] }
                  Do NOT receive or retain implementation reasoning, logs, or summaries.
@@ -919,7 +949,7 @@ For each ready todo in priority order:
 
 Each agent in the execution loop runs with fresh context:
 
-- **Build agent**: is selected from `execution_contract.execution_route`. For `specialist`, dispatch the assigned specialist from `execution_contract.assigned_agent`. For `default_build`, use the workflow's default build path with no specialist agent. It receives execution contract only (objective, inputs as paths with scope hints, output, constraints, acceptance criteria, execution route, assigned agent when present, agent selection rationale, skills, execution context). Does NOT receive formal completion validation commands. It may run scoped implementation diagnostics only when its prompt/tool permissions allow them, and those diagnostics do not replace the validation gate. Resolves scope hints best-effort — if the target has moved, resolves to closest match; if unresolvable, reads full artifact. Produces implementation + artifact. Returns structured status.
+- **Build agent**: is selected from `execution_contract.execution_route`. For `specialist`, dispatch the assigned specialist from `execution_contract.assigned_agent`. For `default_build`, dispatch an isolated default build agent with no specialist assignment. `default_build` does not authorize the orchestrator to implement the task. The build agent receives execution contract only (objective, inputs as paths with scope hints, output, constraints, acceptance criteria, execution route, assigned agent when present, agent selection rationale, skills, execution context). Does NOT receive formal completion validation commands. It may run scoped implementation diagnostics only when its prompt/tool permissions allow them, and those diagnostics do not replace the validation gate. Resolves scope hints best-effort — if the target has moved, resolves to closest match; if unresolvable, reads full artifact. Produces implementation + artifact. Returns structured status.
 - **Validation agent**: receives artifact refs, validation commands (from todo file), files changed. Runs commands only (tests, lint, typecheck). Does NOT interpret acceptance criteria or assess product correctness. Returns structured status + evidence.
 - **Review agent**: receives artifact refs, acceptance criteria, evidence from validation, files changed. Evaluates product correctness against acceptance criteria. Does NOT run commands. Returns structured status + issues.
 - **Drift agent**: receives intent anchor, expected output artifact, actual artifact refs, files changed. Compares expected vs actual outputs and checks intent alignment. Returns structured status + drift notes.

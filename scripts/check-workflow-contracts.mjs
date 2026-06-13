@@ -144,6 +144,16 @@ const requiredChecks = [
   },
   {
     file: "src/commands/workflow-work.md",
+    pattern: "`default_build` is not a main-agent fallback.",
+    description: "work command forbids main-agent implementation fallback for default build route",
+  },
+  {
+    file: "src/commands/workflow-work.md",
+    pattern: "execution_blocked.reason: subagent_dispatch_unavailable",
+    description: "work command blocks when isolated build dispatch is unavailable",
+  },
+  {
+    file: "src/commands/workflow-work.md",
     pattern: "Reject invented fallback agent IDs.",
     description: "work command prevents fake fallback agents",
   },
@@ -425,6 +435,11 @@ const forbiddenChecks = [
     file: "src/commands/workflow-work.md",
     pattern: "Follow project coding standards (see AGENTS.md)",
     description: "legacy advisory-only coding standards wording in work command",
+  },
+  {
+    file: "src/commands/workflow-work.md",
+    pattern: "use the workflow's default build path with no specialist agent",
+    description: "ambiguous default-build wording that can imply main-agent implementation",
   },
   {
     file: "src/commands/workflow-work.md",
