@@ -455,8 +455,32 @@ const forbiddenChecks = [
 
 const failures = [];
 
-const readFile = (relativePath) => {
+const sourceEquivalentPath = (relativePath) => {
+  if (relativePath.startsWith(".agents/commands/")) {
+    return relativePath.replace(".agents/commands/", "src/commands/");
+  }
+  if (relativePath.startsWith(".agents/skills/")) {
+    return relativePath.replace(".agents/skills/", "src/skills/");
+  }
+  if (relativePath.startsWith(".agents/agents/")) {
+    return relativePath.replace(".agents/agents/", "src/agents/");
+  }
+  return null;
+};
+
+const resolveContractPath = (relativePath) => {
   const absolutePath = path.join(root, relativePath);
+  if (fs.existsSync(absolutePath)) return relativePath;
+
+  const sourcePath = sourceEquivalentPath(relativePath);
+  if (sourcePath && fs.existsSync(path.join(root, sourcePath))) return sourcePath;
+
+  return relativePath;
+};
+
+const readRequiredFile = (relativePath) => {
+  const resolvedPath = resolveContractPath(relativePath);
+  const absolutePath = path.join(root, resolvedPath);
   if (!fs.existsSync(absolutePath)) {
     failures.push(`Missing file: ${relativePath}`);
     return "";
@@ -464,8 +488,17 @@ const readFile = (relativePath) => {
   return fs.readFileSync(absolutePath, "utf8");
 };
 
+const readOptionalFile = (relativePath) => {
+  const resolvedPath = resolveContractPath(relativePath);
+  const absolutePath = path.join(root, resolvedPath);
+  if (!fs.existsSync(absolutePath)) {
+    return null;
+  }
+  return fs.readFileSync(absolutePath, "utf8");
+};
+
 for (const check of requiredChecks) {
-  const contents = readFile(check.file);
+  const contents = readRequiredFile(check.file);
   const hasPattern = check.pattern ? contents.includes(check.pattern) : false;
   const hasAnyOf = Array.isArray(check.anyOf)
     ? check.anyOf.some((pattern) => contents.includes(pattern))
@@ -476,7 +509,8 @@ for (const check of requiredChecks) {
 }
 
 for (const check of forbiddenChecks) {
-  const contents = readFile(check.file);
+  const contents = readOptionalFile(check.file);
+  if (contents === null) continue;
   if (contents.includes(check.pattern)) {
     failures.push(`Found forbidden contract text (${check.description}) in ${check.file}`);
   }
