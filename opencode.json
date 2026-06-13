@@ -27,7 +27,7 @@
       "template": "@AGENTS.md\n@.agents/commands/test-browser.md\nArguments: $ARGUMENTS\n"
     },
     "workflow:brainstorm": {
-      "description": "Explore requirements and approaches through collaborative dialogue before planning implementation",
+      "description": "Interrogate a feature idea into a decision-grade WHAT contract before planning implementation",
       "agent": "build",
       "template": "@AGENTS.md\n@.agents/commands/workflow-brainstorm.md\nArguments: $ARGUMENTS\n"
     },
@@ -74,7 +74,8 @@
       "prompt": "{file:.agents/agents/review/agent-native-reviewer.md}",
       "permission": {
         "edit": "deny"
-      }
+      },
+      "model": "inherit"
     },
     "best-practices-researcher": {
       "description": "Researches and synthesizes external best practices, documentation, and examples for any technology or framework. Use when you need industry standards, community conventions, or implementation guidance.",
@@ -82,7 +83,8 @@
       "prompt": "{file:.agents/agents/research/best-practices-researcher.md}",
       "permission": {
         "edit": "deny"
-      }
+      },
+      "model": "inherit"
     },
     "bug-reproduction-validator": {
       "description": "Systematically reproduces and validates bug reports to confirm whether reported behavior is an actual bug. Use when you receive a bug report or issue that needs verification.",
@@ -90,7 +92,8 @@
       "prompt": "{file:.agents/agents/workflow/bug-reproduction-validator.md}",
       "permission": {
         "edit": "deny"
-      }
+      },
+      "model": "inherit"
     },
     "framework-docs-researcher": {
       "description": "Gathers authoritative documentation for frameworks, libraries, and dependencies. Use when you need official docs, version constraints, breaking changes, or implementation patterns.",
@@ -98,7 +101,8 @@
       "prompt": "{file:.agents/agents/research/framework-docs-researcher.md}",
       "permission": {
         "edit": "deny"
-      }
+      },
+      "model": "inherit"
     },
     "git-history-analyzer": {
       "description": "Performs archaeological analysis of git history to trace code evolution, identify contributors, and understand why code patterns exist. Use when you need historical context for code changes.",
@@ -106,7 +110,8 @@
       "prompt": "{file:.agents/agents/research/git-history-analyzer.md}",
       "permission": {
         "edit": "deny"
-      }
+      },
+      "model": "inherit"
     },
     "learnings-researcher": {
       "description": "Searches docs/solutions/ for relevant past solutions by frontmatter metadata. Use before implementing features or fixing problems to surface institutional knowledge and prevent repeated mistakes.",
@@ -114,7 +119,8 @@
       "prompt": "{file:.agents/agents/research/learnings-researcher.md}",
       "permission": {
         "edit": "deny"
-      }
+      },
+      "model": "haiku"
     },
     "lint": {
       "description": "Run repo-configured linting and code quality checks. Use when you need to lint/format or verify code quality.",
@@ -122,7 +128,9 @@
       "prompt": "{file:.agents/agents/workflow/lint.md}",
       "permission": {
         "edit": "deny"
-      }
+      },
+      "color": "yellow",
+      "model": "haiku"
     },
     "planning-technical-reviewer": {
       "description": "Independent technical reviewer for brainstorm/plan outputs before execution.",
@@ -130,7 +138,8 @@
       "prompt": "{file:.agents/agents/review/planning-technical-reviewer.md}",
       "permission": {
         "edit": "deny"
-      }
+      },
+      "model": "inherit"
     },
     "repo-research-analyst": {
       "description": "Conducts thorough research on repository structure, documentation, conventions, and implementation patterns. Use when onboarding to a new codebase or understanding project conventions.",
@@ -138,7 +147,8 @@
       "prompt": "{file:.agents/agents/research/repo-research-analyst.md}",
       "permission": {
         "edit": "deny"
-      }
+      },
+      "model": "inherit"
     },
     "spec-flow-analyzer": {
       "description": "Analyzes specifications and feature descriptions for user flow completeness and gap identification. Use when a spec, plan, or feature description needs flow analysis, edge case discovery, or requirements validation.",
@@ -146,6 +156,35 @@
       "prompt": "{file:.agents/agents/workflow/spec-flow-analyzer.md}",
       "permission": {
         "edit": "deny"
+      },
+      "model": "inherit"
+    },
+    "backend-node-specialist": {
+      "description": "Specialized backend implementation agent for Node.js, Bun, REST APIs, service architecture, persistence, auth, tests, and runtime diagnostics.",
+      "color": "success",
+      "model": "openai/gpt-5.5",
+      "mode": "subagent",
+      "prompt": "{file:.agents/agents/specialists/backend-node-specialist.md}",
+      "permission": {
+        "read": "allow",
+        "edit": "allow",
+        "bash": "allow",
+        "webfetch": "allow",
+        "websearch": "allow"
+      }
+    },
+    "frontend-react-specialist": {
+      "description": "Specialized frontend implementation agent for React, React Router, Vite, Tailwind, UI components, styling, frontend architecture, accessibility, and browser-verified UI work.",
+      "color": "info",
+      "model": "openai/gpt-5.5",
+      "mode": "subagent",
+      "prompt": "{file:.agents/agents/specialists/frontend-react-specialist.md}",
+      "permission": {
+        "read": "allow",
+        "edit": "allow",
+        "bash": "deny",
+        "webfetch": "allow",
+        "websearch": "allow"
       }
     }
   }

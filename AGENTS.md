@@ -82,9 +82,9 @@ Select `High` if any high-risk trigger exists (security, payments, privacy, data
 
 ## Routing Rules
 
-- **Centralized skill routing:** Add new domain/reference skill routing in this file (Skill Index) rather than per-command.
-- **Default selection order:** (1) safety/guardrail standards, (2) domain architecture/reference skills, (3) workflow execution skills. Minimal set that covers the problem.
-- **Explain selection:** Always state which skills were selected and why.
+- **Centralized routing:** Add new domain/reference skill routing in this file (Skill Index) and execution-agent routing in this file (Agent Index) rather than per-command.
+- **Default selection order:** (1) safety/guardrail standards, (2) domain architecture/reference skills, (3) execution agent from the Agent Index, (4) workflow execution skills. Minimal set that covers the problem.
+- **Explain selection:** Always state which skills/agents were selected and why.
 - Run local repo + institutional learnings research first for planning. External research based on fidelity and risk.
 
 ## Repo Config Block
@@ -109,3 +109,22 @@ Select `High` if any high-risk trigger exists (security, payments, privacy, data
 | `pii-protection` | Storing or processing PII. |
 | `financial-workflow-integrity` | Workflows with money or regulatory outcomes. |
 | `audit-traceability` | Append-only auditing with actor attribution. |
+
+## Agent Index
+
+<!-- Default rows — reflects agents shipped with this package. Run /setup-agents to regenerate from installed agents. -->
+
+| Agent | Use when |
+| --- | --- |
+| `frontend-react-specialist` | Implementing React, React Router, Vite, Tailwind, UI component, styling, accessibility, and browser-verified frontend work. |
+| `backend-node-specialist` | Implementing Node.js/Bun REST APIs, backend service architecture, persistence, auth/authz, tests, and runtime diagnostics. |
+| `repo-research-analyst` | Researching local repository structure, patterns, and implementation conventions. |
+| `learnings-researcher` | Finding relevant institutional learnings in `docs/solutions/`. |
+| `best-practices-researcher` | Researching current external best practices when fidelity/risk requires it. |
+| `framework-docs-researcher` | Researching framework or library documentation for version-sensitive work. |
+| `git-history-analyzer` | Inspecting git history for prior decisions, regressions, or ownership context. |
+| `planning-technical-reviewer` | Independently reviewing plans for technical correctness before build. |
+| `agent-native-reviewer` | Reviewing code for agent-native parity and shared-workspace architecture. |
+| `spec-flow-analyzer` | Analyzing feature flows, edge cases, and requirement gaps during planning. |
+| `bug-reproduction-validator` | Validating bug reproduction steps and evidence. |
+| `lint` | Running repo-configured linting and code quality checks. |

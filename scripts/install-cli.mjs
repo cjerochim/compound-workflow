@@ -67,16 +67,37 @@ function ensureObject(v) {
   return v && typeof v === "object" && !Array.isArray(v) ? v : {};
 }
 
+function agentPermission(fm) {
+  const permission = { ...ensureObject(fm.permission) };
+  permission.edit = fm.permission_edit || permission.edit || "deny";
+  if (fm.permission_bash) permission.bash = fm.permission_bash;
+  return permission;
+}
+
 function parseFrontmatter(md) {
   if (!md.startsWith("---\n") && !md.startsWith("---\r\n")) return {};
   const end = md.indexOf("\n---", 4);
   if (end === -1) return {};
   const block = md.slice(4, end + 1);
   const out = {};
+  let currentObjectKey = null;
   for (const line of block.split(/\r?\n/)) {
+    const nestedMatch = line.match(/^\s{2}([A-Za-z0-9_-]+):\s*(.*)\s*$/);
+    if (nestedMatch && currentObjectKey && ensureObject(out[currentObjectKey]) === out[currentObjectKey]) {
+      out[currentObjectKey][nestedMatch[1]] = (nestedMatch[2] ?? "").replace(/^"(.*)"$/, "$1").replace(/^'(.*)'$/, "$1");
+      continue;
+    }
+
     const match = line.match(/^([A-Za-z0-9_-]+):\s*(.*)\s*$/);
     if (!match) continue;
-    out[match[1]] = (match[2] ?? "").replace(/^"(.*)"$/, "$1").replace(/^'(.*)'$/, "$1");
+    currentObjectKey = null;
+    const value = (match[2] ?? "").replace(/^"(.*)"$/, "$1").replace(/^'(.*)'$/, "$1");
+    if (value === "") {
+      out[match[1]] = {};
+      currentObjectKey = match[1];
+    } else {
+      out[match[1]] = value;
+    }
   }
   return out;
 }
@@ -201,7 +222,7 @@ function writeOpenCodeJson(targetRoot, srcRoot, dryRun) {
       const rel = path.relative(agentsDir, f).replaceAll(path.sep, "/");
       const fm = parseFrontmatter(fs.readFileSync(f, "utf8"));
       const id = fm.name || path.basename(f, ".md");
-      agents.push({ id: id.trim(), description: (fm.description || id).trim(), rel });
+      agents.push({ id: id.trim(), description: (fm.description || id).trim(), rel, fm });
     }
   }
 
@@ -232,9 +253,11 @@ function writeOpenCodeJson(targetRoot, srcRoot, dryRun) {
     next.agent[ag.id] = {
       ...ensureObject(next.agent[ag.id]),
       description: ag.description,
-      mode: "subagent",
+      color: ag.fm.color || next.agent[ag.id]?.color,
+      model: ag.fm.model || next.agent[ag.id]?.model,
+      mode: ag.fm.mode || "subagent",
       prompt: `{file:.agents/agents/${ag.rel}}`,
-      permission: { ...ensureObject(next.agent[ag.id]?.permission), edit: "deny" },
+      permission: agentPermission(ag.fm),
     };
   }
 

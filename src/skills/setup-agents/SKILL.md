@@ -59,10 +59,11 @@ Check which directories exist at the project root. Do not assume any are present
 
 Known harness patterns: `.agents`, `.claude`, `.cursor`. Check all three; others may exist.
 
-For each found harness, check `<harness>/skills/`. Record:
+For each found harness, check `<harness>/skills/` and `<harness>/agents/`. Record:
 
 - `$harnesses` — ordered list of harness directories found
 - `$skills_dirs` — map of `<harness>` → `<harness>/skills/` for every harness that has a skills subdirectory
+- `$agents_dirs` — map of `<harness>` → `<harness>/agents/` for every harness that has an agents subdirectory
 
 If **no harness directories exist**, stop:
 
@@ -183,6 +184,22 @@ Never reference a skill not present on disk. Never invent a description.
 
 ---
 
+## Phase 3b: Build the Agent Index
+
+For every entry in `$agents_dirs`, recursively list `*.md` files and read each agent frontmatter (`name`, `description`).
+
+Build `$agent_matrix`: `<agent name>` → `{harnesses where present, source description}`. The **Agent Index** in AGENTS.md is the union of all agent names across all harnesses.
+
+Never reference an agent not present on disk. Never invent a description. If an agent file has no `description`, use the agent `name` as the fallback description and mark it as derived from frontmatter absence in the final summary.
+
+**Include every discovered agent automatically. No user prompt.** If the user wants to exclude an agent, they remove it from the agents directories — this skill does not curate.
+
+**Update mode:** diff against the existing Agent Index silently and write the refreshed list. Do not surface the diff as a question.
+
+If harnesses diverge on agents, do not ask a second alignment question. Preserve the union in the Agent Index and record in the final summary that agent files differ across harnesses. Agent file alignment is handled by `npx compound-workflow install`, not by `/setup-agents`.
+
+---
+
 ## Phase 4: Write AGENTS.md
 
 Using all resolved values, write a clean `AGENTS.md` following this exact template.
@@ -268,9 +285,9 @@ Select `High` if any high-risk trigger exists (security, payments, privacy, data
 
 ## Routing Rules
 
-- **Centralized skill routing:** Add new domain/reference skill routing in this file (Skill Index) rather than per-command.
-- **Default selection order:** (1) safety/guardrail standards, (2) domain architecture/reference skills, (3) workflow execution skills. Minimal set that covers the problem.
-- **Explain selection:** Always state which skills were selected and why.
+- **Centralized routing:** Add new domain/reference skill routing in this file (Skill Index) and execution-agent routing in this file (Agent Index) rather than per-command.
+- **Default selection order:** (1) safety/guardrail standards, (2) domain architecture/reference skills, (3) execution agent from the Agent Index, (4) workflow execution skills. Minimal set that covers the problem.
+- **Explain selection:** Always state which skills/agents were selected and why.
 - Run local repo + institutional learnings research first for planning. External research based on fidelity and risk.
 
 ## Repo Config Block
@@ -299,6 +316,13 @@ worktree_copy_files:
 | ----- | -------- |
 
 [... one row per skill discovered in Phase 3; use the description from each skill's SKILL.md frontmatter ...]
+
+## Agent Index
+
+| Agent | Use when |
+| ----- | -------- |
+
+[... one row per agent discovered in Phase 3b from installed agent markdown frontmatter; use each agent description where available ...]
 ```
 
 Confirm: "AGENTS.md written."
@@ -313,6 +337,7 @@ After writing, verify:
 - [ ] `harnesses` lists only directories detected on disk in Phase 1 — no invented entries
 - [ ] Every skill in the Skill Index was discovered from `$skills_dir` — no invented entries
 - [ ] All skill descriptions come from `SKILL.md` frontmatter — none invented by the agent
+- [ ] Every agent in the Agent Index was discovered from installed agent markdown frontmatter — no invented entries
 - [ ] No hardcoded tool, platform, or directory names
 - [ ] File is under 160 lines
 

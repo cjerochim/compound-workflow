@@ -28,6 +28,21 @@ const requiredChecks = [
   },
   {
     file: "src/AGENTS.md",
+    pattern: "## Agent Index",
+    description: "AGENTS agent registry section",
+  },
+  {
+    file: "src/AGENTS.md",
+    pattern: "frontend-react-specialist",
+    description: "AGENTS frontend React specialist registry entry",
+  },
+  {
+    file: "src/AGENTS.md",
+    pattern: "backend-node-specialist",
+    description: "AGENTS backend Node specialist registry entry",
+  },
+  {
+    file: "src/AGENTS.md",
     pattern: "No ad-hoc artifacts outside canonical outputs",
     description: "canonical artifact policy in AGENTS",
   },
@@ -63,6 +78,41 @@ const requiredChecks = [
     description: "plan command precedence note",
   },
   {
+    file: "src/commands/workflow-plan.md",
+    pattern: "execution_route",
+    description: "plan command assigns execution route per task",
+  },
+  {
+    file: "src/commands/workflow-plan.md",
+    pattern: "Do not invent fallback agent IDs.",
+    description: "plan command prevents fake fallback agents",
+  },
+  {
+    file: "src/commands/workflow-plan.md",
+    pattern: "Agent Registry",
+    description: "plan command reads agent registry for task routing",
+  },
+  {
+    file: "src/commands/workflow-plan.md",
+    pattern: "Agent Index from `AGENTS.md`",
+    description: "plan command uses Agent Index as portable registry source",
+  },
+  {
+    file: ".agents/commands/workflow-plan.md",
+    pattern: "Agent Index from `AGENTS.md`",
+    description: "active plan command uses Agent Index as portable registry source",
+  },
+  {
+    file: "src/commands/workflow-plan.md",
+    pattern: "active harness directories listed in the Repo Config Block `harnesses` value",
+    description: "plan command resolves agents from configured harnesses",
+  },
+  {
+    file: "src/commands/workflow-plan.md",
+    pattern: "execution_route_validity",
+    description: "plan command records execution route validity as part of isolation checks",
+  },
+  {
     file: "src/commands/workflow-triage.md",
     pattern: "Contract precedence:",
     description: "triage command precedence note",
@@ -76,6 +126,46 @@ const requiredChecks = [
     file: "src/commands/workflow-work.md",
     pattern: "Contract precedence:",
     description: "work command precedence note",
+  },
+  {
+    file: "src/commands/workflow-work.md",
+    pattern: "Resolve Agent and Skill Assignments",
+    description: "work command validates assigned agents and skills",
+  },
+  {
+    file: "src/commands/workflow-work.md",
+    pattern: "Execution route is contractual",
+    description: "work command treats execution route as a contract",
+  },
+  {
+    file: "src/commands/workflow-work.md",
+    pattern: "execution_contract.execution_route",
+    description: "work command dispatches build phase by execution route",
+  },
+  {
+    file: "src/commands/workflow-work.md",
+    pattern: "Reject invented fallback agent IDs.",
+    description: "work command prevents fake fallback agents",
+  },
+  {
+    file: "src/commands/workflow-work.md",
+    pattern: "Agent Index from `AGENTS.md`",
+    description: "work command uses Agent Index as portable registry source",
+  },
+  {
+    file: ".agents/commands/workflow-work.md",
+    pattern: "Agent Index from `AGENTS.md`",
+    description: "active work command uses Agent Index as portable registry source",
+  },
+  {
+    file: "src/commands/workflow-work.md",
+    pattern: "No formal completion validation commands",
+    description: "work command separates diagnostics from formal validation",
+  },
+  {
+    file: ".agents/commands/workflow-work.md",
+    pattern: "No formal completion validation commands",
+    description: "active work command separates diagnostics from formal validation",
   },
   {
     file: "src/commands/workflow-plan.md",
@@ -154,6 +244,36 @@ const requiredChecks = [
     description: "setup-agents template records isolation selection first gate",
   },
   {
+    file: "src/skills/setup-agents/SKILL.md",
+    pattern: "## Agent Index",
+    description: "setup-agents template includes agent registry",
+  },
+  {
+    file: "src/skills/setup-agents/SKILL.md",
+    pattern: "$agents_dirs",
+    description: "setup-agents discovers agent directories",
+  },
+  {
+    file: "src/skills/setup-agents/SKILL.md",
+    pattern: "$agent_matrix",
+    description: "setup-agents builds an agent matrix",
+  },
+  {
+    file: "src/skills/setup-agents/SKILL.md",
+    pattern: "Phase 3b: Build the Agent Index",
+    description: "setup-agents has a deterministic Agent Index phase",
+  },
+  {
+    file: "scripts/install-cli.mjs",
+    pattern: "permission.edit = fm.permission_edit || permission.edit || \"deny\";",
+    description: "installer defaults package-managed agents to edit deny unless source allows edit",
+  },
+  {
+    file: "src/agents/specialists/backend-node-specialist.md",
+    pattern: "formal `/workflow:work` validation gate",
+    description: "backend specialist separates diagnostics from validation gate",
+  },
+  {
     file: "README.md",
     pattern: "starts with an Opening Sequence",
     description: "README documents opening sequence",
@@ -182,6 +302,31 @@ const requiredChecks = [
     file: "src/commands/workflow-review.md",
     pattern: "Contract precedence:",
     description: "review command precedence note",
+  },
+  {
+    file: "src/commands/workflow-review.md",
+    pattern: "agent_routing_assessment: pass|pass-with-notes|fail",
+    description: "review command assesses specialist routing quality",
+  },
+  {
+    file: ".agents/commands/workflow-review.md",
+    pattern: "agent_routing_assessment: pass|pass-with-notes|fail",
+    description: "active review command assesses specialist routing quality",
+  },
+  {
+    file: ".agents/commands/workflow-review.md",
+    pattern: "execution_route",
+    description: "active review command verifies execution route",
+  },
+  {
+    file: "src/commands/workflow-review.md",
+    pattern: "Specialist review does not replace independent review.",
+    description: "review command keeps specialist review subordinate to independence gate",
+  },
+  {
+    file: ".agents/commands/workflow-review.md",
+    pattern: "Specialist review does not replace independent review.",
+    description: "active review command keeps specialist review subordinate to independence gate",
   },
   {
     file: "src/commands/workflow-review.md",
@@ -221,6 +366,46 @@ const requiredChecks = [
 ];
 
 const forbiddenChecks = [
+  {
+    file: "src/commands/workflow-plan.md",
+    pattern: "generic-build",
+    description: "fake generic-build agent in plan command",
+  },
+  {
+    file: ".agents/commands/workflow-plan.md",
+    pattern: "generic-build",
+    description: "fake generic-build agent in active plan command",
+  },
+  {
+    file: "src/commands/workflow-work.md",
+    pattern: "generic-build",
+    description: "fake generic-build agent in work command",
+  },
+  {
+    file: ".agents/commands/workflow-work.md",
+    pattern: "generic-build",
+    description: "fake generic-build agent in active work command",
+  },
+  {
+    file: "src/commands/workflow-plan.md",
+    pattern: "Agent Registry from `AGENTS.md` and `.agents/agents/`",
+    description: "hardcoded .agents agent registry lookup in plan command",
+  },
+  {
+    file: ".agents/commands/workflow-plan.md",
+    pattern: "Agent Registry from `AGENTS.md` and `.agents/agents/`",
+    description: "hardcoded .agents agent registry lookup in active plan command",
+  },
+  {
+    file: "src/commands/workflow-work.md",
+    pattern: "Agent Registry from `AGENTS.md` and `.agents/agents/`",
+    description: "hardcoded .agents agent registry lookup in work command",
+  },
+  {
+    file: ".agents/commands/workflow-work.md",
+    pattern: "Agent Registry from `AGENTS.md` and `.agents/agents/`",
+    description: "hardcoded .agents agent registry lookup in active work command",
+  },
   {
     file: "src/commands/workflow-work.md",
     pattern: "## When to Use Reviewer Agents",

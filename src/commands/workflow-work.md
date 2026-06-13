@@ -496,7 +496,7 @@ Extract from the plan:
 - acceptance criteria
 - constraints
 - artifact declarations (IDs, types, producers, final_artifacts)
-- task contracts (IDs, objectives, inputs, output, required_skills)
+- task contracts (IDs, objectives, inputs, output, execution_route, assigned_agent when specialist-routed, required_skills)
 - isolation validation status
 - rollout expectations
 - risk/fidelity/confidence if present
@@ -511,26 +511,39 @@ If any of the following are missing, stop and return the plan for refinement:
 - actionable access/validation contract
 - artifact declarations with IDs and producers
 - task contracts with explicit inputs and output
+- task contracts with explicit `execution_route` and `agent_selection_rationale`
+- specialist-routed task contracts with explicit `assigned_agent`
 - final_artifacts with acceptance criteria mapping
 - `isolation_validation: passed` in frontmatter
 
-#### Step 4 — Resolve Skill Assignments
+#### Step 4 — Resolve Agent and Skill Assignments
 
-The plan selects required skills per task. Work validates them against the Skill Index and allocates them to subagents at delegation — it does not re-decide skills or add universal baselines.
+The plan selects the execution route, assigned specialist agent when applicable, and required skills per task. Work validates them against the Agent Registry and Skill Index, then attaches them to todo contracts at delegation — it does not re-decide agents/skills or add universal baselines.
 
-Read the Skill Index from `AGENTS.md`.
+Read the Skill Index and Agent Index from `AGENTS.md`. Resolve agent definitions from the active harness directories listed in the Repo Config Block `harnesses` value; use `.agents/agents/` only as a fallback when no harness list is available.
 
 For each implementation phase or task in the plan:
 
+- Check if the plan carries `execution_route` and `agent_selection_rationale` annotations (written during `/workflow:plan`)
+- If `execution_route: specialist`, check that the plan carries `assigned_agent`, validate `assigned_agent` against the Agent Registry, and validate that the task fits the assigned agent boundary and permissions
+- If `execution_route: default_build`, check that `assigned_agent` is omitted or `null`, and validate that the rationale explains why no specialist applies
+- Reject invented fallback agent IDs. `assigned_agent` must name a real Agent Registry entry whenever it is set.
 - Check if the plan already carries `required_skills` annotations (written during `/workflow:plan`)
 - If annotations exist: validate each skill against the registry — confirm it exists and is applicable
-- If annotations are missing on a task that needs skills: treat as a plan defect and stop — return to `/workflow:plan` for refinement
-- Record resolved skills per task — these will be attached to todo contracts in Phase 3
+- If execution route or agent annotations are missing, invalid, or boundary-incompatible: treat as a plan defect and stop — return to `/workflow:plan` for refinement
+- If skill annotations are missing on a task that needs skills: treat as a plan defect and stop — return to `/workflow:plan` for refinement
+- Record resolved agent and skills per task — these will be attached to todo contracts in Phase 3
 
 If a required skill cannot be resolved from the registry:
 
 - surface it as a capability gap
 - do not proceed with that task until resolved
+
+If an assigned specialist agent cannot be resolved from the registry:
+
+- surface it as a capability gap
+- do not silently substitute another agent
+- do not proceed with that task until the plan is refined or the agent is installed
 
 #### Step 5 — Resolve Testing Cadence
 
@@ -583,6 +596,7 @@ Every derived todo must be:
 - explicit about the single output artifact it produces
 - explicit about verification
 - explicitly anchored to approved intent
+- carrying resolved agent assignment from Phase 1 Step 4
 - carrying resolved skill assignments from Phase 1 Step 4
 
 If a candidate task is too broad: split it before delegation.
@@ -607,6 +621,9 @@ execution_contract:
     - <boundaries this task must respect>
   acceptance_criteria:
     - <measurable conditions for this task to be complete>
+  execution_route: <specialist | default_build>
+  assigned_agent: <resolved specialist agent from plan annotations or Phase 1 Step 4; null/omitted when execution_route=default_build>
+  agent_selection_rationale: <why this agent owns the task; if default_build, why no specialist applies>
   required_skills:
     - <resolved from plan annotations or Phase 1 Step 4>
   execution_context:
@@ -620,7 +637,9 @@ Rules:
 - **No prior task outputs**: inputs are artifact IDs resolved to paths, not prior task reasoning or summaries.
 - **No control metadata**: the subagent does not see dependencies, status, intent anchors, or review gates.
 - **Single output**: every task produces exactly one artifact.
-- **No validation commands**: the build agent does not run validation. Validation commands are held in the todo file and passed only to the validation agent.
+- **No formal completion validation commands**: the build agent may run scoped implementation diagnostics when its prompt allows terminal access, but formal completion validation commands are held in the todo file and passed only to the validation agent.
+- **Execution route is contractual**: when `execution_route: specialist`, the build phase must dispatch to `assigned_agent`. When `execution_route: default_build`, the build phase uses the workflow's default build path and no `assigned_agent` is set. The orchestrator may not substitute a different implementation route unless the task is returned to planning/triage as a plan defect.
+- **Boundary enforcement**: if the execution contract violates the assigned agent's prompt boundary or permissions, mark the todo `blocked` or `plan_conflict`; do not ask the agent to work outside its remit.
 - **Scope is a hint**: when scope is present on an input, it tells the agent where to focus. The agent attempts to resolve the scope target; if the target has moved or changed, the agent resolves to the closest match; if unresolvable, the agent reads the full artifact and continues.
 
 **Artifact resolution principle:** The orchestrator resolves artifact IDs to file paths or references before delegation. It carries scope through from the plan's task contract — it does not interpret or validate scope, just passes it. Subagents decide what to read from the referenced paths using the scope hint. Large artifacts are handled lazily — the agent reads what it needs from the path, not from context.
@@ -636,6 +655,9 @@ control_metadata:
   status: drafted
   type: build | review | qa | docs | spike | discussion
   responsibility: <primary responsibility domain>
+  execution_route: <specialist | default_build>
+  assigned_agent: <execution agent from plan when specialist-routed; null/omitted when default_build>
+  agent_selection_rationale: <why this route/agent owns the task>
   intent_anchor:
     objective: <from plan>
     scope_notes:
@@ -676,6 +698,7 @@ Rules:
 - **No manual dependencies**: `derived_dependencies` and `unblocks` are computed from the artifact graph. If a task consumes an artifact, it depends on the task that produces it. If a mismatch is found between declared dependencies and the artifact graph, this is a hard stop.
 - The orchestrator reads `result.status` to decide state transitions. It does not interpret implementation details.
 - `artifact_refs` are external references (file paths, artifact IDs). The orchestrator does not load or reason over artifact content.
+- `execution_route` and `assigned_agent` are used only for routing/build delegation. Review, validation, and drift gates remain independent.
 
 #### Step 4 — Context Boundary Check
 
@@ -783,6 +806,8 @@ Contract checksum (all must be true before proceeding to Phase 5):
 - [ ] isolation preflight recorded (`isolation_preflight.status: passed`)
 - [ ] blocking spikes front-loaded
 - [ ] every `ready` todo has a valid execution contract (objective, inputs as artifact IDs, output, constraints, acceptance criteria)
+- [ ] every `ready` todo has a valid `execution_route` and boundary-compatible `agent_selection_rationale`
+- [ ] every specialist-routed `ready` todo has a valid `assigned_agent`
 - [ ] every `ready` todo has validation commands recorded in the todo file (for the validation agent)
 - [ ] every `ready` todo has control metadata (intent anchor, derived dependencies, verification requirements)
 
@@ -843,9 +868,11 @@ For each ready todo in priority order:
                  - output (expected artifact ID)
                  - constraints
                  - acceptance criteria
+                 - assigned agent
+                 - agent selection rationale
                  - required skills
                  - execution context (worktree path / branch)
-                 The build agent does NOT receive validation commands.
+                 The build agent does NOT receive formal completion validation commands.
 5. COLLECT   — receive structured result from build agent:
                  { status: "pass" | "fail", artifact_refs: [...], files_changed: [...] }
                  Do NOT receive or retain implementation reasoning, logs, or summaries.
@@ -892,7 +919,7 @@ For each ready todo in priority order:
 
 Each agent in the execution loop runs with fresh context:
 
-- **Build agent**: receives execution contract only (objective, inputs as paths with scope hints, output, constraints, acceptance criteria, skills, execution context). Does NOT receive validation commands. Resolves scope hints best-effort — if the target has moved, resolves to closest match; if unresolvable, reads full artifact. Produces implementation + artifact. Returns structured status.
+- **Build agent**: is selected from `execution_contract.execution_route`. For `specialist`, dispatch the assigned specialist from `execution_contract.assigned_agent`. For `default_build`, use the workflow's default build path with no specialist agent. It receives execution contract only (objective, inputs as paths with scope hints, output, constraints, acceptance criteria, execution route, assigned agent when present, agent selection rationale, skills, execution context). Does NOT receive formal completion validation commands. It may run scoped implementation diagnostics only when its prompt/tool permissions allow them, and those diagnostics do not replace the validation gate. Resolves scope hints best-effort — if the target has moved, resolves to closest match; if unresolvable, reads full artifact. Produces implementation + artifact. Returns structured status.
 - **Validation agent**: receives artifact refs, validation commands (from todo file), files changed. Runs commands only (tests, lint, typecheck). Does NOT interpret acceptance criteria or assess product correctness. Returns structured status + evidence.
 - **Review agent**: receives artifact refs, acceptance criteria, evidence from validation, files changed. Evaluates product correctness against acceptance criteria. Does NOT run commands. Returns structured status + issues.
 - **Drift agent**: receives intent anchor, expected output artifact, actual artifact refs, files changed. Compares expected vs actual outputs and checks intent alignment. Returns structured status + drift notes.

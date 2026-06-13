@@ -274,6 +274,62 @@ test("install: opencode.json written with .agents/ paths", () => {
     const researchAgent = opencode.agent["repo-research-analyst"];
     assert.ok(researchAgent, "repo-research-analyst agent should exist");
     assert.match(researchAgent.prompt, /\.agents\/agents\//, "agent prompt should reference .agents/agents/");
+
+    const frontendAgent = opencode.agent["frontend-react-specialist"];
+    assert.ok(frontendAgent, "frontend-react-specialist agent should exist");
+    assert.equal(frontendAgent.model, "openai/gpt-5.5");
+    assert.equal(frontendAgent.mode, "subagent");
+    assert.equal(frontendAgent.color, "info");
+    assert.match(frontendAgent.prompt, /\.agents\/agents\/specialists\/frontend-react-specialist\.md/);
+    assert.deepEqual(frontendAgent.permission, {
+      read: "allow",
+      edit: "allow",
+      bash: "deny",
+      webfetch: "allow",
+      websearch: "allow",
+    });
+
+    const backendAgent = opencode.agent["backend-node-specialist"];
+    assert.ok(backendAgent, "backend-node-specialist agent should exist");
+    assert.equal(backendAgent.model, "openai/gpt-5.5");
+    assert.equal(backendAgent.mode, "subagent");
+    assert.equal(backendAgent.color, "success");
+    assert.match(backendAgent.prompt, /\.agents\/agents\/specialists\/backend-node-specialist\.md/);
+    assert.deepEqual(backendAgent.permission, {
+      read: "allow",
+      edit: "allow",
+      bash: "allow",
+      webfetch: "allow",
+      websearch: "allow",
+    });
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("install: package-managed agents default to edit deny unless source explicitly allows edit", () => {
+  const projectRoot = setup();
+  try {
+    fs.writeFileSync(
+      path.join(projectRoot, "opencode.json"),
+      JSON.stringify({
+        agent: {
+          "repo-research-analyst": {
+            permission: { edit: "allow", bash: "allow" },
+          },
+        },
+      }, null, 2) + "\n",
+      "utf8"
+    );
+
+    const result = runInstall(projectRoot);
+    assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
+
+    const opencode = JSON.parse(fs.readFileSync(path.join(projectRoot, "opencode.json"), "utf8"));
+    assert.equal(opencode.agent["repo-research-analyst"].permission.edit, "deny");
+    assert.equal(opencode.agent["repo-research-analyst"].permission.bash, undefined);
+    assert.equal(opencode.agent["backend-node-specialist"].permission.edit, "allow");
+    assert.equal(opencode.agent["backend-node-specialist"].permission.bash, "allow");
   } finally {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }

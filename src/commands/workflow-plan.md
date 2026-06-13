@@ -107,13 +107,14 @@ Run these agents **in parallel** to gather local context:
 - Task repo-research-analyst(feature_description)
 - Task learnings-researcher(feature_description)
 
-Also read the Skill Index from `AGENTS.md` directly — capture which skills are available and their trigger conditions. This is a read-and-hold step; you will assign skills to tasks in Step 6.
+Also read the Skill Index and Agent Index from `AGENTS.md`. Resolve available agent definitions from the active harness directories listed in the Repo Config Block `harnesses` value; use `.agents/agents/` only as a fallback when no harness list is available. Capture which skills are available, which agents are available, and their trigger conditions/capability boundaries. This is a read-and-hold step; you will assign agents and skills to tasks in Step 6.
 
 **What to look for:**
 
 - **Repo research:** existing patterns, AGENTS.md guidance, technology familiarity, pattern consistency
 - **Learnings:** documented solutions in `docs/solutions/` that might apply (gotchas, patterns, lessons learned)
 - **Skill Index:** available skills, their purpose, and when to apply them
+- **Agent Registry:** available agents, their capability boundaries, model/tool permissions, and when to delegate to them
 
 These findings inform the next step.
 
@@ -237,7 +238,17 @@ After all research steps complete, consolidate findings:
 - List related issues or PRs discovered
 - Capture AGENTS.md conventions
 - **Identify candidate artifacts:** from research findings, note existing files, schemas, configs, and fixtures that tasks will read or modify. These become `produced_by: input` artifacts in Step 8.
+- **Annotate execution routing:** for each planned implementation area, identify whether the task should run through a specialist agent or the default build path. Record this as `execution_route`. When `execution_route: specialist`, also record the responsible execution agent from the Agent Registry as `assigned_agent`. These fields will be attached to task contracts in Step 9 and consumed by `/workflow:work` when delegating.
 - **Annotate skill assignments:** for each planned implementation area, identify the relevant skills from the Skill Index. Record these as `required_skills` — they will be attached to task contracts in Step 9 and consumed by `/workflow:work` when delegating to subagents.
+
+Agent assignment rules:
+
+- Treat agents and skills as separate routing layers: agents own specialist execution responsibility; skills provide task-specific guidance and guardrails.
+- Prefer the most specific available agent whose boundary matches the task, such as `frontend-react-specialist` for React UI work or `backend-node-specialist` for Node/Bun backend work.
+- Use `execution_route: default_build` when no available specialist cleanly owns the task. In that route, omit `assigned_agent` or set it to `null`, and record why no specialist was selected in `agent_selection_rationale`.
+- Do not invent fallback agent IDs. `assigned_agent` must name a real Agent Registry entry whenever it is set.
+- Do not assign a task to an agent whose prompt boundary forbids the work. Split mixed-responsibility tasks instead.
+- Keep validation, review, drift, discussion, and spike tasks assigned to their existing workflow agents unless the task is explicitly an implementation task.
 
 **Optional validation:** Briefly summarize findings and ask if anything looks off or missing before proceeding to planning.
 
@@ -317,6 +328,9 @@ task_contracts:
       - <boundaries this task must respect>
     acceptance_criteria:
       - <measurable conditions for this task to be complete>
+    execution_route: specialist | default_build
+    assigned_agent: <required when execution_route=specialist; resolved from Agent Registry in Step 6, e.g. frontend-react-specialist | backend-node-specialist; null/omitted when execution_route=default_build>
+    agent_selection_rationale: <why this agent owns the task; if execution_route=default_build, why no specialist applies>
     required_skills:
       - <resolved from Skill Index in Step 6>
 ```
@@ -329,6 +343,8 @@ Rules:
 - **Input scoping**: when an input artifact is large (e.g., an entire service file or schema), use the `scope` field to narrow what the subagent needs to read. Scope is a **best-effort targeting hint**, not a strict contract. It uses the structured format: `type` (one of `file`, `function`, `lines`, `section`) and `value` (an identifier that helps the subagent locate the relevant region). If `type: file`, the subagent reads the full file. If `type: function`, `value` should be the function name. If `type: lines`, `value` should be a line range (e.g., `42-78`). If `type: section`, `value` should be the heading text. The `scope` field is optional — when omitted, the agent reads the full artifact. Scope resolution at execution time is best-effort: if the exact target has moved or changed, the agent resolves to the closest match; if unresolvable, the agent falls back to the full artifact and continues execution.
 - **References only**: tasks receive artifact IDs resolved to file paths at execution time. Subagents read from those paths using the scope hint. The plan and the orchestrator never inline artifact content into task contracts or agent prompts.
 - **No mixed responsibility**: a task must not combine analysis with build, or design with validation. If it does, split it.
+- **Explicit execution routing**: every implementation task must declare exactly one `execution_route`. If `execution_route: specialist`, it must declare exactly one valid `assigned_agent`. If `execution_route: default_build`, `assigned_agent` must be omitted or `null`, and the rationale must explain why no specialist applies. Missing or invalid routing makes the plan not execution-ready.
+- **Boundary fit**: the assigned agent must be allowed to perform the work under its prompt and permissions. If the task crosses agent boundaries, split it.
 - **Stateless**: a task contract must contain everything a subagent needs. If executing the task requires reading the full plan or knowing what another task did, the contract is incomplete — refine it.
 - **No manual dependencies**: do not declare a `dependencies` field. Dependencies are derived automatically from artifacts — if a task consumes an artifact, it depends on the task that produces that artifact. This is enforced in Step 10.
 
@@ -353,6 +369,7 @@ Before assembling the final plan, validate that the artifact model and task cont
 7. **Consumer completeness**: is every produced artifact either consumed by another task (as an input) OR listed in `final_artifacts`? Orphan outputs that are neither consumed nor final indicate missing tasks or over-specification. Consumption is determined solely by scanning task inputs — not by a `consumed_by` field on artifacts.
 8. **Final artifact coverage**: is every artifact listed in `final_artifacts` produced by a task? Does every final artifact map to at least one plan-level acceptance criterion?
 9. **Plan completeness**: taken together, do the `final_artifacts` and their mapped acceptance criteria cover all plan-level acceptance criteria? If any plan acceptance criterion is not satisfied by a final artifact, either a final artifact is missing or the acceptance criteria are incomplete.
+10. **Execution route validity**: does every implementation task declare exactly one valid `execution_route`? If routed to `specialist`, does it declare one valid `assigned_agent` from the Agent Registry with clear boundary fit? If routed to `default_build`, is `assigned_agent` omitted or `null` with a clear rationale for why no specialist applies?
 
 **If any check fails:**
 
@@ -376,6 +393,7 @@ isolation_validation:
     consumer_completeness: passed | failed
     final_artifact_coverage: passed | failed
     plan_completeness: passed | failed
+    execution_route_validity: passed | failed
   notes: <any refinements made during validation>
 ```
 
@@ -604,6 +622,9 @@ final_artifacts:
   output: [single artifact ID]
   constraints: [boundaries]
   acceptance_criteria: [measurable conditions]
+  execution_route: [specialist|default_build]
+  assigned_agent: [frontend-react-specialist|backend-node-specialist|null]
+  agent_selection_rationale: [why this agent owns the task; if default_build, why no specialist applies]
   required_skills: [skill1, skill2]
 
 ## References
@@ -724,6 +745,9 @@ final_artifacts:
   output: [single artifact ID]
   constraints: [boundaries]
   acceptance_criteria: [measurable conditions]
+  execution_route: [specialist|default_build]
+  assigned_agent: [frontend-react-specialist|backend-node-specialist|null]
+  agent_selection_rationale: [why this agent owns the task; if default_build, why no specialist applies]
   required_skills: [skill1, skill2]
 
 ## Agentic Access & Validation Contract
@@ -828,6 +852,9 @@ final_artifacts:
   output: [single artifact ID]
   constraints: [boundaries]
   acceptance_criteria: [measurable conditions]
+  execution_route: [specialist|default_build]
+  assigned_agent: [frontend-react-specialist|backend-node-specialist|null]
+  agent_selection_rationale: [why this agent owns the task; if default_build, why no specialist applies]
   required_skills: [skill1, skill2]
   failure_modes: [what happens if this task fails]
   rollback_notes: [how to undo this task's output]
@@ -996,11 +1023,14 @@ Apply best practices for clarity and actionability, making the issue easy to sca
 - [ ] No task has `secondary_outputs` — one task, one output
 - [ ] No task has manually declared `dependencies` — dependencies are artifact-derived
 - [ ] No task exceeds 5 input artifacts
-- [ ] Task isolation validation passed (Step 10) — all 9 checks passed
+- [ ] Task isolation validation passed (Step 10) — all 10 checks passed
 - [ ] `isolation_validation: passed` — plan MUST NOT be written if this is `failed`
 - [ ] Plan completeness check passed — all plan acceptance criteria are covered by final artifacts
 - [ ] Every task contract input references a declared artifact ID
 - [ ] Every task contract output is a declared artifact
+- [ ] Every implementation task declares `execution_route` and `agent_selection_rationale`
+- [ ] Every `execution_route: specialist` task declares an `assigned_agent` available in the Agent Registry
+- [ ] Every `execution_route: default_build` task omits `assigned_agent` or sets it to `null`, with rationale explaining why no specialist applies
 - [ ] Every produced artifact is either consumed by a task (as an input) or listed in `final_artifacts`
 - [ ] Artifact resolution is references only — no content inlined in contracts
 - [ ] `## Agentic Access & Validation Contract` is present and executable (no hidden/manual-only steps)

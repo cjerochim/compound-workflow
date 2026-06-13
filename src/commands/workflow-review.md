@@ -95,7 +95,8 @@ Protected artifacts:
    - `origin/${default_branch}...HEAD`
    - `HEAD~1..HEAD`
 2. Summarize surface area (which files, high-risk areas).
-3. Infer risk tier for conditional passes:
+3. If plan/todo artifacts are present, extract declared `execution_route`, `assigned_agent`, `agent_selection_rationale`, and `required_skills` for changed tasks.
+4. Infer risk tier for conditional passes:
    - If the branch/PR references a plan file (e.g. in description or linked in changes), and that plan has `fidelity`/`confidence`, use them to decide review depth (high fidelity or low confidence => more scrutiny, more conditional passes).
    - Otherwise infer from scope and domain (security/auth/payments/data migration/infra => higher).
 
@@ -113,6 +114,11 @@ Protected artifacts:
 - Verify agentic executability from plan/todo artifacts when available:
   - access prerequisites are explicit
   - validation commands are explicit and reproducible
+  - `execution_route` is present and valid
+  - specialist-routed tasks have an `assigned_agent` that is present, available, and boundary-compatible
+  - default-build routed tasks omit `assigned_agent` or set it to `null`
+  - `agent_selection_rationale` explains why the route/agent owns the task
+  - `required_skills` are present and applicable without being hardcoded into the agent role
   - success-criteria evidence is traceable in todo Work Logs
 - For type-checking coverage:
   - if `typecheck_command` is configured, run it (or verify recent evidence if command execution is not feasible in this context)
@@ -137,12 +143,20 @@ Mode rules:
 - `independent` (default): run a distinct fresh-context reviewer pass (separate reviewer/agent perspective from the main synthesis).
 - `degraded`: only when independent reviewer tooling/path is unavailable. Must include explicit disclosure that confidence is reduced and why fallback was used.
 
+When changed files map clearly to a specialist boundary, run or request a specialist-informed review pass in addition to the independent pass:
+
+- React/frontend UI changes: `frontend-react-specialist` evaluates frontend boundary fit, accessibility-sensitive behavior, responsive UI risk, and whether frontend-only scope was respected.
+- Node/backend/API/persistence/auth changes: `backend-node-specialist` evaluates backend boundary fit, API/data/auth risk, operational validation, and whether backend-only scope was respected.
+
+Specialist review does not replace independent review. It is evidence for synthesis and must be listed under `selected_agents`; if skipped, record why.
+
 Then perform the main review synthesis across:
 
 - change summary (surface area, high-risk files)
 - correctness
 - tests/verification adequacy
 - agentic validation adequacy (can another agent execute and verify deterministically?)
+- agent/skill routing adequacy (were `execution_route`, `assigned_agent`, `agent_selection_rationale`, and `required_skills` appropriate?)
 - risk and failure modes
 - operational considerations (monitoring, rollback)
 - readability/maintainability
@@ -160,6 +174,10 @@ Provide:
   - `pass-with-notes`: no MUST violations, but SHOULD-level maintainability concerns
   - `pass`: no material standards violations
 - Top risks (1–5 bullets)
+- `agent_routing_assessment: pass|pass-with-notes|fail`
+  - `fail`: missing/invalid assigned agent, boundary violation, or required specialist/skill omitted for material changed work
+  - `pass-with-notes`: assignment is workable but rationale or skill coverage is incomplete
+  - `pass`: agent and skill routing are appropriate and traceable
 - Findings list:
   - severity (`critical | high | medium | low`)
   - evidence (file references or commands/output)
@@ -171,6 +189,7 @@ Provide:
   - what independent pass ran
   - what was skipped and why
 - What ran vs skipped (selected agents/passes)
+  - include any specialist review passes and skipped specialist passes with reasons
 - Validation coverage summary:
   - tests: pass|fail|not-run
   - lint: pass|fail|not-configured|not-run
