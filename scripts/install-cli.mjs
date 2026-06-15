@@ -154,11 +154,31 @@ function readCompoundConfig(targetRoot, packageSrc) {
   };
 }
 
-function resolveModelTier(config, harnessId, tier) {
+function resolveTierConfig(config, harnessId, tier) {
   if (!tier) return null;
   const harnessTiers = ensureObject(ensureObject(config.model_tiers)[harnessId]);
-  const model = harnessTiers[tier];
-  return typeof model === "string" && model.trim() ? model.trim() : null;
+  const tierConfig = harnessTiers[tier];
+  if (typeof tierConfig === "string") {
+    return tierConfig.trim() ? { model: tierConfig.trim() } : null;
+  }
+  if (tierConfig && typeof tierConfig === "object" && !Array.isArray(tierConfig)) {
+    const model = typeof tierConfig.model === "string" && tierConfig.model.trim()
+      ? tierConfig.model.trim()
+      : null;
+    const reasoningEffort = typeof tierConfig.reasoning_effort === "string" && tierConfig.reasoning_effort.trim()
+      ? tierConfig.reasoning_effort.trim()
+      : null;
+    return model || reasoningEffort ? { model, reasoningEffort } : null;
+  }
+  return null;
+}
+
+function resolveModelTier(config, harnessId, tier) {
+  return resolveTierConfig(config, harnessId, tier)?.model ?? null;
+}
+
+function resolveReasoningEffortTier(config, harnessId, tier) {
+  return resolveTierConfig(config, harnessId, tier)?.reasoningEffort ?? null;
 }
 
 function transformAgentMarkdown(contents, harnessId, config) {
@@ -356,13 +376,6 @@ function tomlMultilineString(value) {
   return `"""${String(value).replaceAll('"""', '\\"\\"\\"').trim()}\n"""`;
 }
 
-function reasoningEffortForTier(tier) {
-  if (tier === "senior") return "high";
-  if (tier === "economy") return "low";
-  if (tier === "standard") return "medium";
-  return null;
-}
-
 function writeCodexAgents(targetRoot, srcRoot, config, dryRun) {
   const agentsDir = path.join(srcRoot, "agents");
   const destDir = path.join(targetRoot, ".codex", "agents");
@@ -380,7 +393,7 @@ function writeCodexAgents(targetRoot, srcRoot, config, dryRun) {
     const id = (fm.name || path.basename(f, ".md")).trim();
     const tier = fm.model_tier;
     const model = resolveModelTier(config, "codex", tier) || null;
-    const effort = reasoningEffortForTier(tier);
+    const effort = resolveReasoningEffortTier(config, "codex", tier);
 
     const lines = [
       `name = ${tomlString(id)}`,

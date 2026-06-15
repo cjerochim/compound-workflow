@@ -293,6 +293,11 @@ test("install: opencode.json written with .agents/ paths", () => {
     const opencode = JSON.parse(fs.readFileSync(path.join(projectRoot, "opencode.json"), "utf8"));
     assert.ok(opencode.skills.paths.includes(".agents/skills"), "skills.paths should include .agents/skills");
 
+    const config = JSON.parse(fs.readFileSync(path.join(projectRoot, "compound-workflow.config.json"), "utf8"));
+    assert.equal(config.model_tiers.opencode.standard.model, "openai/gpt-5");
+    assert.equal(config.model_tiers.codex.standard.model, "gpt-5.4-mini");
+    assert.equal(config.model_tiers.codex.standard.reasoning_effort, "medium");
+
     const workCmd = opencode.command["workflow:work"];
     assert.ok(workCmd, "workflow:work command should exist in opencode.json");
     assert.match(workCmd.template, /@\.agents\/commands\//, "command template should reference .agents/commands/");
