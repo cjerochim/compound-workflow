@@ -1,0 +1,24 @@
+{
+  "model_tiers": {
+    "opencode": {
+      "economy": "haiku",
+      "standard": "openai/gpt-5",
+      "senior": "openai/gpt-5.5"
+    },
+    "claude": {
+      "economy": "haiku",
+      "standard": "sonnet",
+      "senior": "opus"
+    },
+    "cursor": {
+      "economy": null,
+      "standard": null,
+      "senior": null
+    },
+    "codex": {
+      "economy": "gpt-5.4-mini",
+      "standard": "gpt-5.4-mini",
+      "senior": "gpt-5.5"
+    }
+  }
+}

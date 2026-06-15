@@ -43,6 +43,36 @@ const requiredChecks = [
   },
   {
     file: "src/AGENTS.md",
+    pattern: "senior-frontend-react-specialist",
+    description: "AGENTS senior frontend specialist registry entry",
+  },
+  {
+    file: "src/AGENTS.md",
+    pattern: "senior-backend-node-specialist",
+    description: "AGENTS senior backend specialist registry entry",
+  },
+  {
+    file: "src/agents/specialists/frontend-react-specialist.md",
+    pattern: "model_tier: standard",
+    description: "standard frontend specialist uses portable model tier",
+  },
+  {
+    file: "src/agents/specialists/backend-node-specialist.md",
+    pattern: "model_tier: standard",
+    description: "standard backend specialist uses portable model tier",
+  },
+  {
+    file: "src/agents/specialists/senior-frontend-react-specialist.md",
+    pattern: "model_tier: senior",
+    description: "senior frontend specialist uses portable senior model tier",
+  },
+  {
+    file: "src/agents/specialists/senior-backend-node-specialist.md",
+    pattern: "model_tier: senior",
+    description: "senior backend specialist uses portable senior model tier",
+  },
+  {
+    file: "src/AGENTS.md",
     pattern: "No ad-hoc artifacts outside canonical outputs",
     description: "canonical artifact policy in AGENTS",
   },
@@ -435,6 +465,16 @@ const forbiddenChecks = [
     file: "src/commands/workflow-work.md",
     pattern: "Follow project coding standards (see AGENTS.md)",
     description: "legacy advisory-only coding standards wording in work command",
+  },
+  {
+    file: "src/agents/specialists/frontend-react-specialist.md",
+    pattern: "model: openai/gpt-5.5",
+    description: "provider-specific high-cost model pinned on standard frontend specialist source",
+  },
+  {
+    file: "src/agents/specialists/backend-node-specialist.md",
+    pattern: "model: openai/gpt-5.5",
+    description: "provider-specific high-cost model pinned on standard backend specialist source",
   },
   {
     file: "src/commands/workflow-work.md",

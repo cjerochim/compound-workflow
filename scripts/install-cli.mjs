@@ -2,16 +2,19 @@
 /**
  * compound-workflow install
  *
- * Copies agents, skills, and commands from the package into every harness dir.
- * Harnesses are declared in HARNESSES below; every harness receives all three
- * asset kinds so skills and commands stay in parity across .claude/, .cursor/,
- * and .agents/. Only agent layout varies per harness (flat vs. recursive).
+ * Copies agents, skills, and commands from the package into every Markdown
+ * harness dir. Harnesses are declared in HARNESSES below; every Markdown
+ * harness receives all three asset kinds so skills and commands stay in parity
+ * across .claude/, .cursor/, and .agents/. Agent layout varies per harness.
+ * Codex receives TOML custom agents under .codex/agents/.
  *
  *   .claude/{agents,skills,commands}  — Claude Code (flat agents)
  *   .cursor/{agents,skills,commands}  — Cursor (recursive agents)
  *   .agents/{agents,skills,commands}  — OpenCode / generic (recursive agents)
+ *   .codex/agents/*.toml              — Codex custom agents
  *
- * Also writes opencode.json, AGENTS.md, and standard docs directories.
+ * Also writes opencode.json, compound-workflow.config.json, AGENTS.md, and
+ * standard docs directories.
  *
  * Usage:
  *   (automatic) npm install compound-workflow   # runs via postinstall
@@ -102,6 +105,74 @@ function parseFrontmatter(md) {
   return out;
 }
 
+function splitFrontmatter(md) {
+  if (!md.startsWith("---\n") && !md.startsWith("---\r\n")) return { fm: {}, body: md };
+  const end = md.indexOf("\n---", 4);
+  if (end === -1) return { fm: {}, body: md };
+  const closeEnd = md.indexOf("\n", end + 4);
+  const bodyStart = closeEnd === -1 ? md.length : closeEnd + 1;
+  return {
+    fm: parseFrontmatter(md),
+    body: md.slice(bodyStart),
+  };
+}
+
+function stringifyFrontmatterValue(value) {
+  const text = String(value);
+  if (text === "" || /[:#\n\r]/.test(text)) return JSON.stringify(text);
+  return text;
+}
+
+function stringifyFrontmatter(fm) {
+  const lines = ["---"];
+  for (const [key, value] of Object.entries(fm)) {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      lines.push(`${key}:`);
+      for (const [nestedKey, nestedValue] of Object.entries(value)) {
+        lines.push(`  ${nestedKey}: ${stringifyFrontmatterValue(nestedValue)}`);
+      }
+    } else if (value !== undefined && value !== null) {
+      lines.push(`${key}: ${stringifyFrontmatterValue(value)}`);
+    }
+  }
+  lines.push("---", "");
+  return lines.join("\n");
+}
+
+function readCompoundConfig(targetRoot, packageSrc) {
+  const defaultsPath = path.join(packageSrc, "compound-workflow.config.json");
+  const projectPath = path.join(targetRoot, "compound-workflow.config.json");
+  const defaults = readJsonMaybe(defaultsPath) ?? {};
+  const project = readJsonMaybe(projectPath) ?? {};
+  return {
+    ...defaults,
+    ...project,
+    model_tiers: {
+      ...ensureObject(defaults.model_tiers),
+      ...ensureObject(project.model_tiers),
+    },
+  };
+}
+
+function resolveModelTier(config, harnessId, tier) {
+  if (!tier) return null;
+  const harnessTiers = ensureObject(ensureObject(config.model_tiers)[harnessId]);
+  const model = harnessTiers[tier];
+  return typeof model === "string" && model.trim() ? model.trim() : null;
+}
+
+function transformAgentMarkdown(contents, harnessId, config) {
+  const { fm, body } = splitFrontmatter(contents);
+  const tier = fm.model_tier;
+  if (!tier) return contents;
+
+  const nextFm = { ...fm };
+  delete nextFm.model;
+  const model = resolveModelTier(config, harnessId, tier);
+  if (model) nextFm.model = model;
+  return stringifyFrontmatter(nextFm) + body;
+}
+
 function walkFiles(dirAbs, ext) {
   const out = [];
   const stack = [dirAbs];
@@ -141,14 +212,19 @@ function copyDirRecursive(srcDir, destDir) {
  * Copy all .md files from srcDir (recursively) into destDir (flat).
  * Preserves unrelated files and directories in destDir.
  */
-function copyAgentsFlat(srcDir, destDir, dryRun, label) {
+function copyAgentFile(srcPath, destPath, harnessId, config) {
+  try { if (fs.lstatSync(destPath).isSymbolicLink()) fs.rmSync(destPath, { force: true }); } catch { /* doesn't exist */ }
+  const contents = fs.readFileSync(srcPath, "utf8");
+  fs.writeFileSync(destPath, transformAgentMarkdown(contents, harnessId, config), "utf8");
+}
+
+function copyAgentsFlat(srcDir, destDir, dryRun, label, harnessId, config) {
   const files = walkFiles(srcDir, ".md");
   if (dryRun) { console.log(`[dry-run] Would copy ${files.length} agents (flat) to ${label}`); return; }
   fs.mkdirSync(destDir, { recursive: true });
   for (const f of files) {
     const dest = path.join(destDir, path.basename(f));
-    try { if (fs.lstatSync(dest).isSymbolicLink()) fs.rmSync(dest, { force: true }); } catch { /* doesn't exist */ }
-    fs.copyFileSync(f, dest);
+    copyAgentFile(f, dest, harnessId, config);
   }
   console.log(`Copied ${files.length} agents to ${label}`);
 }
@@ -156,11 +232,16 @@ function copyAgentsFlat(srcDir, destDir, dryRun, label) {
 /**
  * Copy srcDir recursively to destDir, preserving unrelated files and directories.
  */
-function copyAgentsRecursive(srcDir, destDir, dryRun, label) {
+function copyAgentsRecursive(srcDir, destDir, dryRun, label, harnessId, config) {
   const files = walkFiles(srcDir, ".md");
   if (dryRun) { console.log(`[dry-run] Would copy ${files.length} agents (recursive) to ${label}`); return; }
   fs.mkdirSync(destDir, { recursive: true });
-  copyDirRecursive(srcDir, destDir);
+  for (const f of files) {
+    const rel = path.relative(srcDir, f);
+    const dest = path.join(destDir, rel);
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    copyAgentFile(f, dest, harnessId, config);
+  }
   console.log(`Copied ${files.length} agents to ${label}`);
 }
 
@@ -202,7 +283,7 @@ function copyCommands(srcDir, destDir, dryRun, label) {
 // opencode.json
 // ---------------------------------------------------------------------------
 
-function writeOpenCodeJson(targetRoot, srcRoot, dryRun) {
+function writeOpenCodeJson(targetRoot, srcRoot, config, dryRun) {
   const commandsDir = path.join(srcRoot, "commands");
   const agentsDir = path.join(srcRoot, "agents");
 
@@ -250,11 +331,12 @@ function writeOpenCodeJson(targetRoot, srcRoot, dryRun) {
   }
 
   for (const ag of agents) {
+    const tierModel = resolveModelTier(config, "opencode", ag.fm.model_tier);
     next.agent[ag.id] = {
       ...ensureObject(next.agent[ag.id]),
       description: ag.description,
       color: ag.fm.color || next.agent[ag.id]?.color,
-      model: ag.fm.model || next.agent[ag.id]?.model,
+      model: tierModel || ag.fm.model || next.agent[ag.id]?.model,
       mode: ag.fm.mode || "subagent",
       prompt: `{file:.agents/agents/${ag.rel}}`,
       permission: agentPermission(ag.fm),
@@ -264,6 +346,54 @@ function writeOpenCodeJson(targetRoot, srcRoot, dryRun) {
   if (dryRun) { console.log("[dry-run] Would write opencode.json"); return; }
   fs.writeFileSync(opencodeAbs, JSON.stringify(next, null, 2) + "\n", "utf8");
   console.log("Wrote: opencode.json");
+}
+
+function tomlString(value) {
+  return JSON.stringify(String(value));
+}
+
+function tomlMultilineString(value) {
+  return `"""${String(value).replaceAll('"""', '\\"\\"\\"').trim()}\n"""`;
+}
+
+function reasoningEffortForTier(tier) {
+  if (tier === "senior") return "high";
+  if (tier === "economy") return "low";
+  if (tier === "standard") return "medium";
+  return null;
+}
+
+function writeCodexAgents(targetRoot, srcRoot, config, dryRun) {
+  const agentsDir = path.join(srcRoot, "agents");
+  const destDir = path.join(targetRoot, ".codex", "agents");
+  const files = fs.existsSync(agentsDir) ? walkFiles(agentsDir, ".md") : [];
+
+  if (dryRun) {
+    console.log(`[dry-run] Would write ${files.length} Codex TOML agents to .codex/agents/`);
+    return;
+  }
+
+  fs.mkdirSync(destDir, { recursive: true });
+  for (const f of files) {
+    const source = fs.readFileSync(f, "utf8");
+    const { fm, body } = splitFrontmatter(source);
+    const id = (fm.name || path.basename(f, ".md")).trim();
+    const tier = fm.model_tier;
+    const model = resolveModelTier(config, "codex", tier) || null;
+    const effort = reasoningEffortForTier(tier);
+
+    const lines = [
+      `name = ${tomlString(id)}`,
+      `description = ${tomlString((fm.description || id).trim())}`,
+    ];
+    if (model) lines.push(`model = ${tomlString(model)}`);
+    if (effort) lines.push(`model_reasoning_effort = ${tomlString(effort)}`);
+    lines.push("", `developer_instructions = ${tomlMultilineString(body)}`);
+
+    fs.writeFileSync(path.join(destDir, `${id}.toml`), lines.join("\n") + "\n", "utf8");
+  }
+
+  console.log(`Wrote ${files.length} Codex agents to .codex/agents/`);
 }
 
 // ---------------------------------------------------------------------------
@@ -326,6 +456,18 @@ function ensureDirs(targetRoot, dryRun) {
   }
 }
 
+function writeCompoundConfig(targetRoot, packageSrc, dryRun) {
+  const sourcePath = path.join(packageSrc, "compound-workflow.config.json");
+  const targetPath = path.join(targetRoot, "compound-workflow.config.json");
+  if (!fs.existsSync(sourcePath) || fs.existsSync(targetPath)) return;
+  if (dryRun) {
+    console.log("[dry-run] Would write compound-workflow.config.json");
+    return;
+  }
+  fs.copyFileSync(sourcePath, targetPath);
+  console.log("Wrote: compound-workflow.config.json");
+}
+
 // ---------------------------------------------------------------------------
 // CLI args
 // ---------------------------------------------------------------------------
@@ -338,7 +480,9 @@ Usage:
   (manual)    npx compound-workflow preflight -- --plan <path> --mode <mode> --approval-source <source> --todo <path> [--expected-branch <branch>]
 
 Copies agents, skills, and commands into .claude/, .cursor/, and .agents/.
-Also writes opencode.json, AGENTS.md, and standard docs directories.
+Also writes Codex custom agents into .codex/agents/.
+Writes opencode.json, compound-workflow.config.json, AGENTS.md, and standard
+docs directories.
 
   --root <dir>    Project directory (default: cwd)
   --dry-run       Print planned changes only
@@ -388,9 +532,9 @@ function resolvePackageSrc(targetRoot) {
 // ---------------------------------------------------------------------------
 
 const HARNESSES = [
-  { name: ".claude", agentsMode: "flat" },
-  { name: ".cursor", agentsMode: "recursive" },
-  { name: ".agents", agentsMode: "recursive" },
+  { name: ".claude", id: "claude", agentsMode: "flat" },
+  { name: ".cursor", id: "cursor", agentsMode: "recursive" },
+  { name: ".agents", id: "opencode", agentsMode: "recursive" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -411,6 +555,7 @@ function main() {
 
   const targetRoot = realpathSafe(args.root);
   const packageSrc = resolvePackageSrc(targetRoot);
+  const compoundConfig = readCompoundConfig(targetRoot, packageSrc);
 
   const srcAgents = path.join(packageSrc, "agents");
   const srcSkills = path.join(packageSrc, "skills");
@@ -426,12 +571,14 @@ function main() {
     const commandsDest = path.join(targetRoot, h.name, "commands");
 
     const copyAgents = h.agentsMode === "flat" ? copyAgentsFlat : copyAgentsRecursive;
-    copyAgents(srcAgents, agentsDest, args.dryRun, `${h.name}/agents/`);
+    copyAgents(srcAgents, agentsDest, args.dryRun, `${h.name}/agents/`, h.id, compoundConfig);
     copySkills(srcSkills, skillsDest, args.dryRun, `${h.name}/skills/`);
     copyCommands(srcCommands, commandsDest, args.dryRun, `${h.name}/commands/`);
   }
 
-  writeOpenCodeJson(targetRoot, packageSrc, args.dryRun);
+  writeCodexAgents(targetRoot, packageSrc, compoundConfig, args.dryRun);
+  writeOpenCodeJson(targetRoot, packageSrc, compoundConfig, args.dryRun);
+  writeCompoundConfig(targetRoot, packageSrc, args.dryRun);
   writeAgentsMd(targetRoot, packageSrc, args.dryRun);
   ensureDirs(targetRoot, args.dryRun);
 

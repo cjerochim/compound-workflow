@@ -55,6 +55,10 @@ function copyMinimalPackageIntoNodeModules(projectRoot) {
     path.join(pkgDir, "scripts", "workflow-preflight.mjs")
   );
   fs.copyFileSync(path.join(repoRoot, "src", "AGENTS.md"), path.join(pkgDir, "src", "AGENTS.md"));
+  fs.copyFileSync(
+    path.join(repoRoot, "src", "compound-workflow.config.json"),
+    path.join(pkgDir, "src", "compound-workflow.config.json")
+  );
   copyDirRecursiveForTest(path.join(repoRoot, "src", "agents"), path.join(pkgDir, "src", "agents"));
   copyDirRecursiveForTest(path.join(repoRoot, "src", "skills"), path.join(pkgDir, "src", "skills"));
   copyDirRecursiveForTest(path.join(repoRoot, "src", "commands"), path.join(pkgDir, "src", "commands"));
@@ -138,6 +142,29 @@ test("install: .agents/ gets agents, skills, and commands", () => {
     assert.ok(fs.existsSync(path.join(projectRoot, ".agents", "agents")), ".agents/agents should exist");
     assert.ok(fs.existsSync(path.join(projectRoot, ".agents", "skills")), ".agents/skills should exist");
     assert.ok(fs.existsSync(path.join(projectRoot, ".agents", "commands")), ".agents/commands should exist");
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("install: .codex gets generated TOML custom agents", () => {
+  const projectRoot = setup();
+  try {
+    const result = runInstall(projectRoot);
+    assert.equal(result.status, 0, `installer failed: ${result.stderr}\n${result.stdout}`);
+
+    const codexAgentsDir = path.join(projectRoot, ".codex", "agents");
+    assert.ok(fs.existsSync(path.join(codexAgentsDir, "frontend-react-specialist.toml")));
+    assert.ok(fs.existsSync(path.join(codexAgentsDir, "senior-frontend-react-specialist.toml")));
+
+    const standard = fs.readFileSync(path.join(codexAgentsDir, "frontend-react-specialist.toml"), "utf8");
+    assert.match(standard, /model = "gpt-5\.4-mini"/);
+    assert.match(standard, /model_reasoning_effort = "medium"/);
+    assert.match(standard, /developer_instructions = """/);
+
+    const senior = fs.readFileSync(path.join(codexAgentsDir, "senior-frontend-react-specialist.toml"), "utf8");
+    assert.match(senior, /model = "gpt-5\.5"/);
+    assert.match(senior, /model_reasoning_effort = "high"/);
   } finally {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }
@@ -277,7 +304,7 @@ test("install: opencode.json written with .agents/ paths", () => {
 
     const frontendAgent = opencode.agent["frontend-react-specialist"];
     assert.ok(frontendAgent, "frontend-react-specialist agent should exist");
-    assert.equal(frontendAgent.model, "openai/gpt-5.5");
+    assert.equal(frontendAgent.model, "openai/gpt-5");
     assert.equal(frontendAgent.mode, "subagent");
     assert.equal(frontendAgent.color, "info");
     assert.match(frontendAgent.prompt, /\.agents\/agents\/specialists\/frontend-react-specialist\.md/);
@@ -291,7 +318,7 @@ test("install: opencode.json written with .agents/ paths", () => {
 
     const backendAgent = opencode.agent["backend-node-specialist"];
     assert.ok(backendAgent, "backend-node-specialist agent should exist");
-    assert.equal(backendAgent.model, "openai/gpt-5.5");
+    assert.equal(backendAgent.model, "openai/gpt-5");
     assert.equal(backendAgent.mode, "subagent");
     assert.equal(backendAgent.color, "success");
     assert.match(backendAgent.prompt, /\.agents\/agents\/specialists\/backend-node-specialist\.md/);
@@ -302,6 +329,18 @@ test("install: opencode.json written with .agents/ paths", () => {
       webfetch: "allow",
       websearch: "allow",
     });
+
+    const seniorFrontendAgent = opencode.agent["senior-frontend-react-specialist"];
+    assert.ok(seniorFrontendAgent, "senior frontend specialist agent should exist");
+    assert.equal(seniorFrontendAgent.model, "openai/gpt-5.5");
+    assert.match(seniorFrontendAgent.prompt, /\.agents\/agents\/specialists\/senior-frontend-react-specialist\.md/);
+
+    const cursorFrontend = fs.readFileSync(
+      path.join(projectRoot, ".cursor", "agents", "specialists", "frontend-react-specialist.md"),
+      "utf8"
+    );
+    assert.match(cursorFrontend, /model_tier: standard/);
+    assert.doesNotMatch(cursorFrontend, /model: openai\/gpt-5/);
   } finally {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }
@@ -343,6 +382,8 @@ test("install: running package CLI can install into a project without local node
 
     assert.ok(fs.existsSync(path.join(projectRoot, ".agents", "commands", "workflow-brainstorm.md")));
     assert.ok(fs.existsSync(path.join(projectRoot, ".agents", "skills", "brainstorming", "SKILL.md")));
+    assert.ok(fs.existsSync(path.join(projectRoot, ".codex", "agents", "frontend-react-specialist.toml")));
+    assert.ok(fs.existsSync(path.join(projectRoot, "compound-workflow.config.json")));
     assert.ok(fs.existsSync(path.join(projectRoot, "AGENTS.md")));
   } finally {
     fs.rmSync(projectRoot, { recursive: true, force: true });

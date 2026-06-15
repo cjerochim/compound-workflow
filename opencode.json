@@ -162,7 +162,7 @@
     "backend-node-specialist": {
       "description": "Specialized backend implementation agent for Node.js, Bun, REST APIs, service architecture, persistence, auth, tests, and runtime diagnostics.",
       "color": "success",
-      "model": "openai/gpt-5.5",
+      "model": "openai/gpt-5",
       "mode": "subagent",
       "prompt": "{file:.agents/agents/specialists/backend-node-specialist.md}",
       "permission": {
@@ -176,9 +176,37 @@
     "frontend-react-specialist": {
       "description": "Specialized frontend implementation agent for React, React Router, Vite, Tailwind, UI components, styling, frontend architecture, accessibility, and browser-verified UI work.",
       "color": "info",
-      "model": "openai/gpt-5.5",
+      "model": "openai/gpt-5",
       "mode": "subagent",
       "prompt": "{file:.agents/agents/specialists/frontend-react-specialist.md}",
+      "permission": {
+        "read": "allow",
+        "edit": "allow",
+        "bash": "deny",
+        "webfetch": "allow",
+        "websearch": "allow"
+      }
+    },
+    "senior-backend-node-specialist": {
+      "description": "Senior backend implementation agent for high-risk, ambiguous, or architecture-sensitive Node.js, Bun, REST API, persistence, auth, migration, security, and operational backend work.",
+      "color": "warning",
+      "model": "openai/gpt-5.5",
+      "mode": "subagent",
+      "prompt": "{file:.agents/agents/specialists/senior-backend-node-specialist.md}",
+      "permission": {
+        "read": "allow",
+        "edit": "allow",
+        "bash": "allow",
+        "webfetch": "allow",
+        "websearch": "allow"
+      }
+    },
+    "senior-frontend-react-specialist": {
+      "description": "Senior frontend implementation agent for high-risk, ambiguous, or architecture-sensitive React, React Router, Vite, Tailwind, UI, accessibility, and browser-verified frontend work.",
+      "color": "warning",
+      "model": "openai/gpt-5.5",
+      "mode": "subagent",
+      "prompt": "{file:.agents/agents/specialists/senior-frontend-react-specialist.md}",
       "permission": {
         "read": "allow",
         "edit": "allow",

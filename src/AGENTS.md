@@ -135,6 +135,8 @@ harnesses: []
 | --- | --- |
 | `frontend-react-specialist` | Implementing React, React Router, Vite, Tailwind, UI component, styling, accessibility, and browser-verified frontend work. |
 | `backend-node-specialist` | Implementing Node.js/Bun REST APIs, backend service architecture, persistence, auth/authz, tests, and runtime diagnostics. |
+| `senior-frontend-react-specialist` | High-risk, ambiguous, or architecture-sensitive frontend implementation requiring deeper React/UI/accessibility judgment. |
+| `senior-backend-node-specialist` | High-risk, ambiguous, or architecture-sensitive backend implementation involving auth, PII, migrations, data integrity, concurrency, or production concerns. |
 | `repo-research-analyst` | Researching local repository structure, patterns, and implementation conventions. |
 | `learnings-researcher` | Finding relevant institutional learnings in `docs/solutions/`. |
 | `best-practices-researcher` | Researching current external best practices when fidelity/risk requires it. |
